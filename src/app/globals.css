@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #faf5f9;
+  --bg-end: #f0e8f5;
+  --surface: rgba(255,255,255,0.6);
+  --surface-border: rgba(26,10,30,0.14);
+  --text-primary: #1a0a1e;
+  --text-secondary: rgba(26,10,30,0.60);
+  --text-muted: rgba(26,10,30,0.45);
+  --text-disabled: rgba(26,10,30,0.25);
+
+  --accent-hotpink: #FF1493;
+  --accent-pink: #FF9EC4;
+  --accent-purple: #C9B1FF;
+  --rarity-legendary: #E8B65A;
+  --parchment: #F5F0E1;
+
+  --holo-c: #9EE6FF;
+  --holo-d: #FFE9A8;
+
+  /* Currency */
+  --currency-tickets: #FF1493;
+  --currency-gems: #1a90b8;
+
+  /* Rarity colors */
+  --rarity-common: rgba(26,10,30,0.3);
+  --rarity-rare: #FF9EC4;
+  --rarity-epic: #C9B1FF;
+  --rarity-secret: #ffffff;
+  --rarity-secret-ink: #1a0a1e;
+  --rarity-legendary-badge: #DAA520;
+  --rarity-common-graphic: #C4B5D6;
+
+  /* Rarity banner colors */
+  --banner-common: #E8E0F0;
+  --banner-rare: #1a0a1e;
+  --banner-epic: #2E1F4D;
+  --banner-legendary: #F5F0E1;
+  --banner-secret-start: #FF9EC4;
+  --banner-secret-mid: #C9B1FF;
+  --banner-secret-end: #ffffff;
+
+  --surface-glass: rgba(255,255,255,0.5);
+  --surface-white: #ffffff;
+
+  --lilac-text-tint: #7A5FBF;
+  --lilac-text-bold: #8B5FBF;
+  --state-danger: #e0447a;
+
+  --card-stock-start: #FAF6EF;
+  --card-stock-end: #F3EDE2;
+  --foil-1: #2A2A2A;
+  --foil-2: #4A3A4A;
+
+  --effect-glow-default: #FF1493;
+  --effect-leak-default: #FF9EC4;
+
+  --text-primary-rgb: 26, 10, 30;
+  --surface-white-rgb: 255, 255, 255;
+
+  /* Glow / ambient */
+  --glow-lilac-06: rgba(201,177,255,0.06);
+  --glow-lilac-40: rgba(201,177,255,0.4);
+  --glow-lilac-45: rgba(201,177,255,0.45);
+  --glow-petal-10: rgba(255,158,196,0.10);
+  --glow-petal-40: rgba(255,158,196,0.4);
+  --glow-petal-50: rgba(255,158,196,0.5);
+  --glow-petal-80: rgba(255,158,196,0.8);
+  --glow-bloom-40: rgba(255,20,147,0.4);
+  --glow-bloom-60: rgba(255,20,147,0.6);
+  --glow-white-60: rgba(255,255,255,0.6);
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Unbounded', system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-end) 50%, var(--bg) 100%);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overscroll-behavior: none;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

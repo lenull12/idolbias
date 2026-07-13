@@ -1,0 +1,24 @@
+<svg width="160" height="160" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>IdolBias, icône</title>
+  <desc>Icône carte holographique du logo IdolBias, pour favicon ou icône d'application.</desc>
+  <defs>
+    <clipPath id="cardClipIcon">
+      <rect x="10" y="10" width="140" height="140" rx="32" />
+    </clipPath>
+    <linearGradient id="holoFoilIcon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF9EC4" />
+      <stop offset="28%" stop-color="#C9B1FF" />
+      <stop offset="55%" stop-color="#9EE6FF" />
+      <stop offset="80%" stop-color="#FFE9A8" />
+      <stop offset="100%" stop-color="#FF1493" />
+    </linearGradient>
+  </defs>
+
+  <rect x="10" y="10" width="140" height="140" rx="32" fill="url(#holoFoilIcon)" />
+  <g clip-path="url(#cardClipIcon)">
+    <polygon points="0,120 55,10 95,10 30,150 -10,150" fill="#ffffff" opacity="0.22" />
+    <polygon points="110,10 150,10 85,150 45,150" fill="#ffffff" opacity="0.14" />
+  </g>
+  <path d="M80 58 L88 76 L106 84 L88 92 L80 110 L72 92 L54 84 L72 76 Z" fill="#ffffff" opacity="0.95" />
+  <rect x="10" y="10" width="140" height="140" rx="32" fill="none" stroke="#ffffff" stroke-width="5" />
+</svg>

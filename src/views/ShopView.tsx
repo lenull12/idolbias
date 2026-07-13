@@ -1,0 +1,1161 @@
+
+"use client";
+
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { getAllPacks, getCardsByPack, rarityFromReference } from "@/data/cards";
+import type { PackInfo, PackTag, PackDropRates, CardEntry } from "@/data/cards";
+import type { Rarity } from "@/components/CardEffects";
+import { RARITY_ORDER } from "@/lib/gameConfig";
+import { GROUPS } from "@/data/artists";
+import RaffleTicketBadge from "@/components/RaffleTicketBadge";
+import HeroPullSlot from "@/components/HeroPullSlot";
+import PackPriceAction from "@/components/PackPriceAction";
+import GemShopSection from "@/components/shop/GemShopSection";
+import EventCountdown from "@/components/EventCountdown";
+
+const RARITY_LETTER: Record<Rarity, string> = {
+  common: "C", rare: "R", epic: "E", legendary: "L", secret: "S",
+};
+
+const RARITY_LABELS: Record<Rarity, string> = {
+  common: "COMMON", rare: "RARE", epic: "EPIC", legendary: "LEGENDARY", secret: "SECRET",
+};
+
+const RARITY_BADGE_COLORS: Record<Rarity, { bg: string; fg: string }> = {
+  common: { bg: "rgba(var(--text-primary-rgb),0.03)", fg: "rgba(var(--text-primary-rgb),0.4)" },
+  rare: { bg: "rgba(255,158,196,0.06)", fg: "var(--accent-pink)" },
+  epic: { bg: "rgba(201,177,255,0.06)", fg: "var(--accent-purple)" },
+  legendary: { bg: "rgba(255,215,0,0.06)", fg: "var(--rarity-legendary-badge)" },
+  secret: { bg: "rgba(var(--text-primary-rgb),0.04)", fg: "var(--text-primary)" },
+};
+
+const BADGE_CONFIG: Record<PackTag, { label: (p: PackInfo) => string; bg: string; fg: string }> = {
+  featured: { label: () => "★ FEATURED", bg: "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))", fg: "var(--text-primary)" },
+  limited: { label: () => "LIMITED EDITION", bg: "var(--text-primary)", fg: "var(--surface-white)" },
+  discount: { label: (p) => `-${p.discountPercent ?? 50}%`, bg: "var(--accent-hotpink)", fg: "var(--surface-white)" },
+  new: { label: () => "✦ NEW", bg: "var(--holo-c)", fg: "var(--text-primary)" },
+};
+
+// ─── Countdown ──────────────────────────────────────────────────────────────
+
+function useCountdown(endsAt?: string): string | null {
+  const [remaining, setRemaining] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!endsAt) { setRemaining(null); return; }
+    const end = new Date(endsAt).getTime();
+    const tick = () => setRemaining(end - Date.now());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [endsAt]);
+
+  if (!endsAt || remaining === null) return null;
+  const totalSec = Math.max(0, Math.floor(remaining / 1000));
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+// ─── Badge sticker ──────────────────────────────────────────────────────────
+
+function PackBadge({ pack, size = "md" }: { pack: PackInfo; size?: "sm" | "md" }) {
+  if (!pack.tag) return null;
+  const cfg = BADGE_CONFIG[pack.tag];
+  return (
+    <span style={{
+      display: "inline-block",
+      padding: size === "sm" ? "3px 8px" : "4px 10px",
+      borderRadius: 6,
+      background: cfg.bg,
+      color: cfg.fg,
+      fontSize: size === "sm" ? 9 : 11,
+      fontWeight: 800,
+      letterSpacing: "0.5px",
+      fontFamily: "var(--font-sans, monospace)",
+      border: "1.5px solid var(--text-primary)",
+      boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
+      transform: "rotate(-3deg)",
+      whiteSpace: "nowrap",
+    }}>
+      {cfg.label(pack)}
+    </span>
+  );
+}
+
+// ─── Artwork avec placeholder gracieux ─────────────────────────────────────
+
+function PackArt({ src, alt, locked }: { src?: string; alt: string; locked?: boolean }) {
+  if (locked) {
+    return (
+      <div style={{
+        width: "100%", height: "100%",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(var(--text-primary-rgb),0.06)",
+      }}>
+        <span style={{ fontSize: 22, opacity: 0.3 }}>🔒</span>
+      </div>
+    );
+  }
+  if (!src) {
+    return (
+      <div style={{
+        width: "100%", height: "100%",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "linear-gradient(135deg, var(--accent-pink) 0%, var(--accent-purple) 35%, var(--holo-c) 70%, var(--holo-d) 100%)",
+      }}>
+        <span style={{ fontSize: 26, color: "var(--surface-white)" }}>✦</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      draggable={false}
+      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+    />
+  );
+}
+
+// ─── Pastilles de drop rates ────────────────────────────────────────────────
+
+const RARITY_BADGE_COLORS_BANNER: Record<Rarity, { bg: string; fg: string }> = {
+  common: { bg: "rgba(var(--text-primary-rgb),0.55)", fg: "var(--surface-white)" },
+  rare: { bg: "rgba(255,158,196,0.92)", fg: "var(--text-primary)" },
+  epic: { bg: "rgba(201,177,255,0.92)", fg: "var(--text-primary)" },
+  legendary: { bg: "rgba(255,215,0,0.92)", fg: "var(--text-primary)" },
+  secret: { bg: "var(--surface-white)", fg: "var(--surface-white)" },
+};
+
+function RarityOdds({ dropRates, size = "md", variant = "default" }: {
+  dropRates: PackDropRates; size?: "sm" | "md"; variant?: "default" | "banner";
+}) {
+  const colors = variant === "banner" ? RARITY_BADGE_COLORS_BANNER : RARITY_BADGE_COLORS;
+  const total = RARITY_ORDER.reduce((s, r) => s + dropRates[r], 0);
+  return (
+    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      {RARITY_ORDER.map((r) => {
+        const pct = total > 0 ? (dropRates[r] / total) * 100 : 0;
+        const label = pct.toFixed(0) + "% " + (variant === "banner" && size !== "sm" ? RARITY_LABELS[r] : RARITY_LETTER[r]);
+        if (variant === "banner" && r === "secret") {
+          return (
+            <span key={r} style={{
+              padding: size === "sm" ? "1px 6px" : "2px 7px", borderRadius: 4,
+              background: "var(--surface-white)",
+              fontSize: size === "sm" ? 9 : 10, fontWeight: 700,
+              fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px",
+            }}>
+              <span style={{
+                backgroundImage: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple), var(--holo-c))",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+              }}>
+                {label}
+              </span>
+            </span>
+          );
+        }
+        return (
+          <span key={r} style={{
+            padding: size === "sm" ? "1px 6px" : "2px 7px", borderRadius: 4,
+            background: colors[r].bg, color: colors[r].fg,
+            fontSize: size === "sm" ? 9 : 10, fontWeight: 700,
+            fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px",
+          }}>
+            {label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+const RARITY_BAR_COLOR: Record<Rarity, string> = {
+  common: "var(--rarity-common-graphic)", rare: "var(--accent-pink)", epic: "var(--accent-purple)", legendary: "var(--rarity-legendary-badge)", secret: "var(--text-primary)",
+};
+
+  // ─── Segmented drop rates bar ──────────────────────────────────────────────
+
+function RarityBar({ dropRates }: { dropRates: PackDropRates }) {
+  const total = RARITY_ORDER.reduce((s, r) => s + dropRates[r], 0);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", width: "100%", height: 10, borderRadius: 6, overflow: "hidden", border: "1.5px solid var(--text-primary)" }}>
+        {RARITY_ORDER.map((r) => {
+          const pct = total > 0 ? (dropRates[r] / total) * 100 : 0;
+          if (pct <= 0) return null;
+          return <div key={r} style={{ width: `${pct}%`, background: RARITY_BAR_COLOR[r] }} />;
+        })}
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+        {RARITY_ORDER.map((r) => {
+          const pct = total > 0 ? (dropRates[r] / total) * 100 : 0;
+          return (
+            <span key={r} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "var(--text-muted)", fontFamily: "var(--font-sans, monospace)" }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: RARITY_BAR_COLOR[r] }} />
+              {RARITY_LETTER[r]} {pct.toFixed(0)}%
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Chase cards (legendary + teaser secret unique) ─────────────────────────
+
+function getChaseCards(cards: CardEntry[]) {
+  return cards
+    .map((c) => ({ card: c, rarity: rarityFromReference(c.reference) }))
+    .filter((c) => c.rarity === "legendary" || c.rarity === "secret");
+}
+
+function ChaseCardCarousel({ chase }: { chase: ReturnType<typeof getChaseCards> }) {
+  if (chase.length === 0) return null;
+  const legendary = Array.from(
+    new Map(chase.filter((c) => c.rarity === "legendary").map((c) => [c.card.idol, c])).values()
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", color: "var(--text-muted)", textTransform: "uppercase" }}>
+        Featured cards
+      </span>
+      <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4 }}>
+        {legendary.map(({ card }) => (
+          <div key={card.id} style={{
+            position: "relative", flex: "0 0 auto", width: "min(112px, 28vw)", aspectRatio: "896/1152",
+            borderRadius: 12, overflow: "hidden", border: "1.5px solid rgba(var(--text-primary-rgb),0.08)",
+            boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
+          }}>
+            <img src={card.imageSrc} alt={card.idol} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <span style={{
+              position: "absolute", bottom: 4, left: 4, right: 4, fontSize: 9, fontWeight: 800,
+              letterSpacing: "0.5px", textAlign: "center", color: "var(--surface-white)",
+              textShadow: "1px 1px 0 rgba(var(--text-primary-rgb),0.9)", fontFamily: "var(--font-sans, monospace)",
+            }}>
+              ★ {card.idol}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+  // ─── "About" block (group, members, style, lore) ────────────────────────────
+
+function findMemberColor(stageName: string): string {
+  for (const g of GROUPS) {
+    const m = g.members.find((mem) => mem.stageName === stageName);
+    if (m) return m.color;
+  }
+  return "var(--accent-purple)";
+}
+
+function findMemberProfile(stageName: string): string | undefined {
+  for (const g of GROUPS) {
+    const m = g.members.find((mem) => mem.stageName === stageName);
+    if (m?.profileImage) return m.profileImage;
+  }
+}
+
+function PackAbout({ pack, cards }: { pack: PackInfo; cards: CardEntry[] }) {
+  const group = cards[0]?.group;
+  const idols = Array.from(new Set(cards.map((c) => c.idol)));
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {group && (
+        <span style={{
+          fontFamily: "var(--font-display, cursive)", fontSize: 20, fontWeight: 800,
+          color: "var(--accent-hotpink)", letterSpacing: "0.5px",
+        }}>
+          {group}
+        </span>
+      )}
+      {pack.tags && pack.tags.length > 0 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {pack.tags.map((t) => (
+            <span key={t} style={{
+              padding: "2px 8px", borderRadius: 6, background: "rgba(201,177,255,0.15)",
+              color: "var(--lilac-text-tint)", fontSize: 10, fontWeight: 700, letterSpacing: "0.5px",
+              fontFamily: "var(--font-sans, monospace)",
+            }}>
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
+      {idols.length > 0 && (
+        <div style={{ display: "flex", gap: 6 }}>
+          {idols.map((name) => {
+            const pfp = findMemberProfile(name);
+            const color = findMemberColor(name);
+            return (
+              <div key={name} title={name} style={{
+                width: 24, height: 24, borderRadius: "50%", overflow: "hidden",
+                background: pfp ? "none" : color,
+                border: "1.5px solid var(--text-primary)", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {pfp ? (
+                  <img src={pfp} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                ) : (
+                  <span style={{ fontSize: 9, fontWeight: 800, color: "var(--surface-white)", fontFamily: "var(--font-sans, monospace)" }}>
+                    {name[0]}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {pack.description && (
+        <p style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5, margin: 0 }}>
+          {pack.description}
+        </p>
+      )}
+
+    </div>
+  );
+}
+
+// ─── Wallet (tickets + gems) ────────────────────────────────────────────────
+  // Balance received via props from AppShell, shared with PullOverlay.
+
+function WalletPill({ icon, value, tone, onIncrement }: { icon: string; value: number; tone: "pink" | "cyan"; onIncrement?: () => void }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 6,
+      padding: "6px 12px", borderRadius: "10px 10px 6px 6px",
+      background: "var(--surface-white, #fff)",
+      border: "2px solid var(--text-primary)",
+      boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
+      position: "relative",
+    }}>
+      <span style={{ fontSize: 14 }}>{icon}</span>
+      <span style={{
+        fontFamily: "var(--font-display, cursive)", fontSize: 13, fontWeight: 700,
+        color: tone === "pink" ? "var(--accent-hotpink)" : "var(--currency-gems)",
+      }}>
+        {value}
+      </span>
+      {tone === "cyan" && onIncrement && (
+        <button onClick={(e) => { e.stopPropagation(); onIncrement(); }} style={{
+          position: "absolute", top: -6, right: -6,
+          width: 18, height: 18, borderRadius: "50%", border: "1.5px solid var(--accent-hotpink)",
+          background: "var(--accent-hotpink)", color: "#fff", fontSize: 10, fontWeight: 800,
+          cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+        }}>
+          +
+        </button>
+      )}
+    </div>
+  );
+}
+
+function WalletBar({ tickets, gems, onAddGems }: { tickets: number; gems: number; onAddGems?: () => void }) {
+  return (
+    <div style={{ display: "flex", gap: 8 }}>
+      <WalletPill icon="🎟️" value={tickets} tone="pink" />
+      <WalletPill icon="💎" value={gems} tone="cyan" onIncrement={onAddGems} />
+    </div>
+  );
+}
+
+  // ─── Pack detail modal ─────────────────────────────────────────────────────
+
+function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose }: {
+  code: string; pack: PackInfo; tickets: number; gems: number; bias: string | null;
+  onPull: (method: "tickets" | "gems") => void; onClose: () => void;
+}) {
+  const cards = getCardsByPack(code);
+  const chase = getChaseCards(cards);
+  const countdown = useCountdown(pack.endsAt);
+  const hasBias = bias !== null && cards.some((c) => c.idol === bias);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 100,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(250,245,249,0.85)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+        cursor: "pointer", padding: 20,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%", maxWidth: 560, maxHeight: "92vh", overflowY: "auto",
+          background: "var(--surface-white)", borderRadius: 20, border: "2px solid var(--text-primary)",
+          boxShadow: "6px 6px 0px rgba(var(--text-primary-rgb),0.9)", cursor: "default",
+          animation: "modalIn 0.2s ease-out",
+        }}
+      >
+        <style>{`@keyframes modalIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }`}</style>
+
+        <div style={{ position: "relative", height: "clamp(180px, 40vw, 300px)", overflow: "visible" }}>
+          <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+            <PackArt src={pack.bannerImage} alt={pack.name} locked={pack.locked} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(var(--text-primary-rgb),0.1) 0%, rgba(var(--text-primary-rgb),0.82) 100%)" }} />
+          </div>
+
+          {pack.coverImage && !pack.locked && (
+            <div style={{
+              position: "absolute", bottom: -36, left: 24,
+              width: 120, aspectRatio: "896/1152", borderRadius: 12,
+              overflow: "hidden", border: "3px solid var(--surface-white)",
+              boxShadow: "6px 6px 0px rgba(var(--text-primary-rgb),0.9)",
+              transform: "rotate(-6deg)", zIndex: 2,
+            }}>
+              <img src={pack.coverImage} alt={pack.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+          )}
+
+          <div style={{ position: "absolute", top: 12, right: 12, zIndex: 2 }}>
+            <button
+              onClick={onClose}
+              style={{
+                width: 28, height: 28, borderRadius: 8,
+                border: "2px solid var(--text-primary)", background: "var(--surface-white)", cursor: "pointer",
+                fontSize: 13, fontWeight: 700, lineHeight: "22px", padding: 0,
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6, zIndex: 2 }}>
+            {pack.tag && <PackBadge pack={pack} />}
+            {hasBias && (
+              <span style={{
+                display: "inline-block", padding: "4px 10px", borderRadius: 6,
+                background: "var(--surface-white)", color: "var(--accent-hotpink)", fontSize: 11, fontWeight: 800,
+                fontFamily: "var(--font-sans, monospace)", border: "1.5px solid var(--text-primary)",
+                boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)", transform: "rotate(2deg)", whiteSpace: "nowrap",
+              }}>
+                💖 YOUR BIAS
+              </span>
+            )}
+          </div>
+          <div style={{ position: "absolute", bottom: 14, left: pack.coverImage && !pack.locked ? 156 : 18, right: 18, zIndex: 2 }}>
+            <span style={{
+              fontFamily: "var(--font-display, cursive)", fontSize: 28, fontWeight: 700,
+              color: "var(--surface-white)", textShadow: "2px 2px 0 rgba(var(--text-primary-rgb),0.4)",
+            }}>
+              {pack.name}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ padding: "44px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+          {pack.locked ? (
+            <span style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>
+              This pack isn't available yet. Check back soon ✨
+            </span>
+          ) : (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <PackAbout pack={pack} cards={cards} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
+                  <PackPriceAction pack={pack} tickets={tickets} gems={gems} size="md" onPull={onPull} />
+                </div>
+              </div>
+
+              {pack.tag === "discount" && pack.originalCostGems !== undefined && pack.costGems !== undefined && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: "rgba(255,20,147,0.06)", border: "1.5px dashed var(--accent-hotpink)" }}>
+                  <span style={{ fontSize: 16 }}>💸</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent-hotpink)", fontFamily: "var(--font-sans, monospace)" }}>
+                    You save {pack.originalCostGems - pack.costGems} 💎 on this pack
+                  </span>
+                </div>
+              )}
+              {pack.tag === "limited" && countdown && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: "rgba(var(--text-primary-rgb),0.04)", border: "1.5px dashed var(--text-primary)" }}>
+                  <span style={{ fontSize: 16 }}>⏳</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-sans, monospace)" }}>
+                    Ends in {countdown} — won't be back
+                  </span>
+                </div>
+              )}
+
+              {chase.length > 0 && (
+                <>
+                  <div style={{ height: 1, background: "rgba(var(--text-primary-rgb),0.06)", margin: "4px 0" }} />
+                  <ChaseCardCarousel chase={chase} />
+                </>
+              )}
+
+              <div style={{ height: 1, background: "rgba(var(--text-primary-rgb),0.06)", margin: "4px 0" }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Drop rates
+                </span>
+                <RarityOdds dropRates={pack.dropRates} variant="banner" />
+              </div>
+
+              <div style={{ height: 1, background: "rgba(var(--text-primary-rgb),0.06)", margin: "4px 0" }} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                  Card list
+                </span>
+                <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
+                  {cards.length} cards in total
+                </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {[...RARITY_ORDER].reverse().map((r) => {
+                    const count = cards.filter(c => rarityFromReference(c.reference) === r).length;
+                    if (count === 0) return null;
+                    const pct = cards.length > 0 ? (count / cards.length) * 100 : 0;
+                    const isSecret = r === "secret";
+                    const dotColors: Record<string, string> = {
+                      secret: "transparent",
+                      legendary: "var(--rarity-legendary-badge)",
+                      epic: "var(--accent-purple)",
+                      rare: "var(--accent-pink)",
+                      common: "var(--rarity-common-graphic)",
+                    };
+                    const barColor = isSecret ? "linear-gradient(90deg, var(--accent-pink), var(--accent-purple))" : dotColors[r];
+                    return (
+                      <div key={r} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "8px 12px", borderRadius: 8,
+                        background: "var(--surface-white)",
+                        border: "1.5px solid rgba(var(--text-primary-rgb),0.08)",
+                        fontSize: 12, fontWeight: 700,
+                        fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
+                      }}>
+                        <span style={{
+                          display: "flex", alignItems: "center", gap: 8,
+                          color: isSecret ? "var(--text-primary)" : "var(--text-secondary)",
+                          textTransform: "uppercase",
+                          ...(isSecret ? {
+                            backgroundImage: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple), var(--holo-c))",
+                            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                          } : {}),
+                        }}>
+                          <span style={{
+                            width: 6, height: 6, borderRadius: "50%",
+                            background: isSecret ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : dotColors[r],
+                            display: "inline-block",
+                          }} />
+                          {r}
+                        </span>
+                        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{
+                            width: 48, height: 4, borderRadius: 2, overflow: "hidden",
+                            background: "rgba(var(--text-primary-rgb),0.08)",
+                          }}>
+                            <span style={{ display: "block", height: "100%", width: `${pct}%`, background: barColor, borderRadius: 2 }} />
+                          </span>
+                          <span style={{
+                            color: isSecret ? "var(--text-primary)" : "var(--text-muted)",
+                            ...(isSecret ? {
+                              backgroundImage: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple), var(--holo-c))",
+                              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                            } : {}),
+                          }}>
+                            {count} card{count > 1 ? "s" : ""}
+                          </span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Hero : pack mis en avant ───────────────────────────────────────────────
+
+function FeaturedPackCard({ featuredPacks, tickets, gems, bias, onPull, onPreview }: {
+  featuredPacks: Array<[string, PackInfo]>; tickets: number; gems: number; bias: string | null;
+  onPull: (code: string, method: "tickets" | "gems") => void; onPreview: (code: string) => void;
+}) {
+  const [current, setCurrent] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const touchStart = useRef(0);
+  const goTo = useCallback((i: number) => {
+    setCurrent((i + featuredPacks.length) % featuredPacks.length);
+  }, [featuredPacks.length]);
+  const next = useCallback(() => goTo(current + 1), [current, goTo]);
+  const prev = useCallback(() => goTo(current - 1), [current, goTo]);
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(next, 5000);
+  }, [next]);
+
+  useEffect(() => {
+    if (featuredPacks.length < 2) return;
+    resetTimer();
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [resetTimer, featuredPacks.length]);
+
+  const [code, pack] = featuredPacks[current];
+  const countdown = useCountdown(pack.endsAt);
+  const cards = getCardsByPack(code);
+  const chase = getChaseCards(cards);
+  const group = cards[0]?.group;
+  const hasBias = bias !== null && cards.some((c) => c.idol === bias);
+
+  const defaultMethod = useMemo(() => {
+    if (pack.costTickets !== undefined && tickets >= pack.costTickets) return "tickets" as const;
+    if (pack.costGems !== undefined && gems >= pack.costGems) return "gems" as const;
+    if (pack.costTickets !== undefined) return "tickets" as const;
+    if (pack.costGems !== undefined) return "gems" as const;
+    return null;
+  }, [pack, tickets, gems]);
+  const [manualMethod, setManualMethod] = useState<"tickets" | "gems" | null>(null);
+  useEffect(() => { setManualMethod(null); }, [code]);
+  const selectedMethod = manualMethod ?? defaultMethod;
+
+  const handleBannerClick = () => {
+    if (!selectedMethod) { onPreview(code); return; }
+    const cost = selectedMethod === "tickets" ? pack.costTickets! : pack.costGems!;
+    const balance = selectedMethod === "tickets" ? tickets : gems;
+    if (balance >= cost) onPull(code, selectedMethod);
+    else onPreview(code);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => { touchStart.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStart.current;
+    if (Math.abs(dx) > 50) {
+      dx > 0 ? prev() : next();
+      resetTimer();
+    }
+  };
+
+  return (
+    <div style={{ position: "relative" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div style={{
+        borderRadius: 20, overflow: "hidden", position: "relative",
+        border: "2px solid var(--text-primary)", boxShadow: "5px 5px 0px rgba(var(--text-primary-rgb),0.9)", height: "min(280px, 50vw)",
+      }}>
+        <PackArt src={pack.bannerImage} alt={pack.name} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(var(--text-primary-rgb),0.05) 0%, rgba(var(--text-primary-rgb),0.78) 100%)" }} />
+
+        {/* Top badge */}
+        <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 4, alignItems: "center", zIndex: 2, pointerEvents: "none" }}>
+          <PackBadge pack={pack} />
+          {hasBias && (
+            <span style={{
+              padding: "2px 8px", borderRadius: 5, background: "var(--surface-white)", color: "var(--accent-hotpink)",
+              fontSize: 10, fontWeight: 800, fontFamily: "var(--font-sans, monospace)",
+              border: "1.5px solid var(--text-primary)", whiteSpace: "nowrap",
+            }}>
+              💖 YOUR BIAS
+            </span>
+          )}
+        </div>
+
+        {/* Bottom content row */}
+        <div style={{
+          position: "absolute", bottom: 10, left: 10, right: 10,
+          display: "flex", alignItems: "flex-end", gap: 8,
+          pointerEvents: "none", zIndex: 4,
+        }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, minWidth: 0, pointerEvents: "none" }}>
+            {group && (
+              <span style={{
+                fontWeight: 800, letterSpacing: "1px", color: "var(--accent-pink)",
+                textTransform: "uppercase", fontFamily: "var(--font-sans, monospace)",
+                fontSize: "clamp(10px, 2.5vw, 12px)",
+              }}>
+                {group}
+              </span>
+            )}
+            <span style={{
+              fontFamily: "var(--font-display, cursive)", fontWeight: 700,
+              color: "var(--surface-white)", textShadow: "1px 1px 0 rgba(var(--text-primary-rgb),0.4)",
+              fontSize: "clamp(18px, 5vw, 26px)",
+            }}>
+              {pack.name}
+            </span>
+            <span style={{
+              color: "rgba(var(--surface-white-rgb),0.75)", letterSpacing: "1px",
+              fontFamily: "var(--font-sans, monospace)", fontWeight: 600,
+              fontSize: "clamp(10px, 2.5vw, 12px)",
+            }}>
+              {pack.edition.toUpperCase()} · {cards.length} CARDS
+            </span>
+            <span className="hidden sm:block">
+              <RarityOdds dropRates={pack.dropRates} variant="banner" />
+            </span>
+            <span className="block sm:hidden">
+              <RarityOdds dropRates={pack.dropRates} size="sm" variant="banner" />
+            </span>
+          </div>
+          <HeroPullSlot
+            pack={pack}
+            tickets={tickets}
+            gems={gems}
+            selected={selectedMethod ?? "tickets"}
+            onSelect={setManualMethod}
+            onPull={() => handleBannerClick()}
+          />
+        </div>
+
+        {/* Countdown */}
+        {countdown && (
+          <div style={{
+            position: "absolute", bottom: 14, right: 10, zIndex: 2,
+            background: "rgba(var(--text-primary-rgb),0.6)", borderRadius: 5, padding: "2px 8px",
+            fontSize: 10, color: "var(--surface-white)", letterSpacing: "0.5px",
+            fontFamily: "var(--font-sans, monospace)", fontWeight: 600, pointerEvents: "none",
+          }}>
+            ENDS {countdown}
+          </div>
+        )}
+
+        {/* Chase badge */}
+        {chase.filter(c => c.rarity === "secret").length > 0 && (
+          <RaffleTicketBadge
+            packCode={code}
+            secretCount={chase.filter(c => c.rarity === "secret").length}
+          />
+        )}
+
+        {/* Dots */}
+        {featuredPacks.length > 1 && (
+          <div style={{
+            position: "absolute", bottom: 4, left: "50%", translate: "-50% 0", zIndex: 3,
+            display: "flex", gap: 4, pointerEvents: "none",
+          }}>
+            {featuredPacks.map((_, i) => (
+              <div key={i} style={{
+                width: 5, height: 5, borderRadius: "50%",
+                background: i === current ? "var(--surface-white)" : "rgba(var(--surface-white-rgb),0.35)",
+              }} />
+            ))}
+          </div>
+        )}
+
+        {/* Click on banner background → details, NOT pull */}
+        <div onClick={() => onPreview(code)} style={{ position: "absolute", inset: 0, zIndex: 2, cursor: "pointer" }} />
+      </div>
+
+      {/* Arrows */}
+      {featuredPacks.length > 1 && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); prev(); resetTimer(); }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.5)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.25)"; }}
+            style={{
+              position: "absolute", top: "50%", left: 4, translate: "0 -50%", zIndex: 5,
+              width: 30, height: 30, borderRadius: "50%",
+              border: "2px solid var(--text-primary)", background: "rgba(0,0,0,0.25)",
+              boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
+              color: "var(--surface-white)", fontSize: 16, fontWeight: 700,
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 0.15s", padding: 0,
+            }}
+          >‹</button>
+          <button
+            onClick={(e) => { e.stopPropagation(); next(); resetTimer(); }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.5)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.25)"; }}
+            style={{
+              position: "absolute", top: "50%", right: 4, translate: "0 -50%", zIndex: 5,
+              width: 30, height: 30, borderRadius: "50%",
+              border: "2px solid var(--text-primary)", background: "rgba(0,0,0,0.25)",
+              boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
+              color: "var(--surface-white)", fontSize: 16, fontWeight: 700,
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 0.15s", padding: 0,
+            }}
+          >›</button>
+        </>
+      )}
+    </div>
+  );
+}
+
+  // ─── Carousel: swipable mini banners ───────────────────────────────────────
+
+function CarouselPackCard({ code, pack, bias, onPreview }: {
+  code: string; pack: PackInfo; bias: string | null;
+  onPreview: (code: string) => void;
+}) {
+  const locked = pack.locked;
+  const hasBias = !locked && bias !== null && getCardsByPack(code).some((c) => c.idol === bias);
+  return (
+    <div
+      style={{
+        position: "relative",
+        flex: "0 0 auto",
+        width: "min(200px, 42vw)", height: "min(130px, 28vw)",
+        borderRadius: 14, overflow: "hidden",
+        border: "2px solid var(--text-primary)",
+        boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
+        scrollSnapAlign: "start",
+        opacity: locked ? 0.6 : 1,
+      }}
+    >
+      <div onClick={() => onPreview(code)} style={{ position: "absolute", inset: 0, cursor: "pointer" }}>
+        <PackArt src={pack.bannerImage} alt={pack.name} locked={locked} />
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(180deg, rgba(var(--text-primary-rgb),0.05) 0%, rgba(var(--text-primary-rgb),0.72) 100%)",
+        }} />
+      </div>
+      <div style={{ position: "absolute", top: 8, left: 8, display: "flex", gap: 4, pointerEvents: "none" }}>
+        <PackBadge pack={pack} size="sm" />
+        {hasBias && <span style={{ fontSize: 13 }} title="Your bias is in this pack">💖</span>}
+      </div>
+      {!locked && (
+        <div style={{ position: "absolute", bottom: 8, left: 10, right: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+          <span
+            onClick={() => onPreview(code)}
+            style={{
+              fontFamily: "var(--font-display, cursive)", fontSize: 15, fontWeight: 700,
+              color: "var(--surface-white)", textShadow: "1px 1px 0 rgba(var(--text-primary-rgb),0.5)",
+              display: "block", cursor: "pointer",
+            }}
+          >
+            {pack.name}
+          </span>
+          <button
+            onClick={() => onPreview(code)}
+            style={{
+              alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 4,
+              padding: "6px 12px", borderRadius: 8, border: "none",
+              background: "linear-gradient(120deg, #ffb8dd, #c9b3ff)", color: "#3f2f57",
+              fontFamily: "var(--font-sans)", fontSize: 11, fontWeight: 700,
+              cursor: "pointer", whiteSpace: "nowrap",
+            }}
+          >
+            View details
+          </button>
+        </div>
+      )}
+      {locked && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+          <span style={{
+            fontSize: 11, fontWeight: 700, color: "var(--surface-white)",
+            letterSpacing: "1px", fontFamily: "var(--font-sans, monospace)",
+          }}>
+            🔒 SOON
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Ligne : catalogue complet ──────────────────────────────────────────────
+
+function PackListRow({ code, pack, bias, onPreview }: {
+  code: string; pack: PackInfo; bias: string | null;
+  onPreview: (code: string) => void;
+}) {
+  const locked = pack.locked;
+  const cards = getCardsByPack(code);
+  const group = cards[0]?.group;
+  const hasBias = !locked && bias !== null && cards.some((c) => c.idol === bias);
+
+  return (
+    <div style={{
+      borderRadius: 16, overflow: "hidden", position: "relative",
+      background: locked ? "rgba(var(--text-primary-rgb),0.04)" : undefined,
+      border: "1px solid rgba(255,158,196,0.08)", opacity: locked ? 0.6 : 1,
+    }}>
+      {!locked && pack.bannerImage && (
+        <img src={pack.bannerImage} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      )}
+      {!locked && pack.bannerImage && (
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(var(--text-primary-rgb),0.35) 0%, rgba(var(--text-primary-rgb),0.75) 100%)" }} />
+      )}
+      <div style={{ position: "relative", zIndex: 1, display: "flex", gap: 16, padding: 16 }}>
+        <div onClick={() => onPreview(code)} style={{ display: "flex", gap: 16, flex: 1, minWidth: 0, cursor: "pointer" }}>
+          <div style={{ width: "min(88px, 22vw)", height: "min(113px, 28vw)", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
+            <PackArt src={pack.coverImage ?? pack.bannerImage} alt={pack.name} locked={locked} />
+          </div>
+
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4, justifyContent: "center", minWidth: 0 }}>
+            {!locked && group && (
+              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1px", color: "var(--accent-pink)", textTransform: "uppercase" }}>
+                {group}
+              </span>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              {pack.tag && <PackBadge pack={pack} size="sm" />}
+              <span style={{ fontFamily: "var(--font-display, cursive)", fontSize: 17, color: "var(--surface-white)", letterSpacing: "-0.2px", textShadow: "1px 1px 0 rgba(var(--text-primary-rgb),0.4)" }}>
+                {pack.name}
+              </span>
+              {hasBias && <span style={{ fontSize: 13 }} title="Your bias is in this pack">💖</span>}
+            </div>
+            <span style={{ fontSize: 13, color: "rgba(var(--surface-white-rgb),0.75)", fontWeight: 500 }}>
+              {locked ? "Coming soon" : `${cards.length} cards · ${pack.edition}`}
+            </span>
+            {!locked && <RarityOdds dropRates={pack.dropRates} size="sm" variant="banner" />}
+          </div>
+        </div>
+
+        {locked ? (
+          <span style={{ alignSelf: "center", flexShrink: 0, padding: "9px 14px", fontSize: 12, fontWeight: 800, color: "var(--text-disabled)" }}>
+            LOCKED
+          </span>
+        ) : (
+          <button
+            onClick={() => onPreview(code)}
+            style={{
+              alignSelf: "center", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4,
+              padding: "10px 16px", borderRadius: 10, border: "none",
+              background: "linear-gradient(120deg, #ffb8dd, #c9b3ff)", color: "#3f2f57",
+              fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 700,
+              cursor: "pointer", whiteSpace: "nowrap",
+            }}
+          >
+            View details
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Shop ───────────────────────────────────────────────────────────────────
+
+export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseComplete }: {
+  tickets: number;
+  gems: number;
+  bias: string | null;
+  onOpenPull?: (packCode: string, method: "tickets" | "gems") => void;
+  onPurchaseComplete?: () => void;
+}) {
+  const [previewCode, setPreviewCode] = useState<string | null>(null);
+  const [shopTab, setShopTab] = useState<"packs" | "gems">("packs");
+  const [activeRateUps, setActiveRateUps] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/events/active", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        const all: any[] = [];
+        if (data.rateUps) all.push(...data.rateUps);
+        if (data.hybrids) all.push(...data.hybrids);
+        setActiveRateUps(all);
+      })
+      .catch(() => {});
+  }, []);
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  const packs = getAllPacks();
+  const featuredPacks = packs.filter(([, p]) => p.tag === "featured");
+  const carouselEntries = packs.filter(
+    ([code, p]) => !featuredPacks.some(([fc]) => fc === code) && (p.tag === "limited" || p.tag === "discount" || p.tag === "new")
+  );
+  const previewPack = previewCode ? packs.find(([c]) => c === previewCode)?.[1] : null;
+
+  const handlePull = (code: string, method: "tickets" | "gems") => {
+    onOpenPull?.(code, method);
+  };
+
+  return (
+    <div
+      className="mx-auto max-w-[600px] lg:max-w-[1100px]"
+      style={{ padding: "24px 16px 40px", display: "flex", flexDirection: "column", gap: 28 }}
+    >
+      <style>{`
+        .shop-carousel::-webkit-scrollbar { display: none; }
+        .shop-carousel { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+
+      {/* ─── Header ─── */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
+            ✦ Shop
+          </span>
+          <h1 style={{ fontFamily: "var(--font-display, cursive)", fontSize: 28, letterSpacing: "-0.3px", color: "var(--accent-hotpink)", margin: 0 }}>
+            {shopTab === "packs" ? "available packs" : "gem shop"}
+          </h1>
+          <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
+            {shopTab === "packs" ? "Pick a pack and try your luck ✨" : "Buy gems to unlock premium content 💎"}
+          </span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+          <WalletBar tickets={tickets} gems={gems} onAddGems={() => setShopTab("gems")} />
+          {bias && (
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: "var(--accent-hotpink)",
+              fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
+            }}>
+              🎯 Bias boost active: {bias}
+            </span>
+          )}
+        </div>
+      </div>
+
+
+
+      {/* ─── Tab bar ─── */}
+      <div style={{
+        display: "flex", gap: 2, padding: 2, borderRadius: 10, width: "fit-content",
+        background: "rgba(var(--text-primary-rgb),0.04)",
+      }}>
+        <button onClick={() => setShopTab("packs")} style={{
+          padding: "8px 18px", borderRadius: 8, border: "none",
+          background: shopTab === "packs" ? "var(--surface-white)" : "transparent",
+          color: shopTab === "packs" ? "var(--accent-hotpink)" : "var(--text-muted)",
+          fontSize: 12, fontWeight: 700, cursor: "pointer",
+          fontFamily: "var(--font-sans, monospace)",
+          boxShadow: shopTab === "packs" ? "1px 1px 0px rgba(var(--text-primary-rgb),0.1)" : "none",
+        }}>
+          📦 Packs
+        </button>
+        <button onClick={() => setShopTab("gems")} style={{
+          padding: "8px 18px", borderRadius: 8, border: "none",
+          background: shopTab === "gems" ? "var(--surface-white)" : "transparent",
+          color: shopTab === "gems" ? "var(--accent-hotpink)" : "var(--text-muted)",
+          fontSize: 12, fontWeight: 700, cursor: "pointer",
+          fontFamily: "var(--font-sans, monospace)",
+          boxShadow: shopTab === "gems" ? "1px 1px 0px rgba(var(--text-primary-rgb),0.1)" : "none",
+        }}>
+          💎 Gems
+        </button>
+      </div>
+      {shopTab === "packs" && (<>
+        {/* ─── Rate-up events banner ─── */}
+        {activeRateUps.length > 0 && activeRateUps.map((ev) => (
+          <div key={ev.id} style={{
+            padding: 16, borderRadius: 12,
+            border: "2px solid var(--accent-hotpink)",
+            background: "linear-gradient(135deg, rgba(255,20,147,0.06), rgba(201,177,255,0.06))",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+              <div>
+                <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", color: "var(--accent-hotpink)" }}>
+                  ★ RATE-UP EVENT
+                </span>
+                <h3 style={{ margin: "4px 0", fontFamily: "var(--font-display)", fontSize: 18 }}>
+                  {ev.label}
+                </h3>
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
+                  {ev.rateUpRarities?.join(", ")}: ×{ev.rateUpMultiplier} chance
+                </p>
+              </div>
+              <EventCountdown endsAt={ev.endsAt} label={ev.label} />
+            </div>
+          </div>
+        ))}
+
+      {/* ─── Pack en avant (carousel) ─── */}
+      {featuredPacks.length > 0 && (
+        <FeaturedPackCard
+          featuredPacks={featuredPacks} tickets={tickets} gems={gems} bias={bias}
+          onPull={handlePull} onPreview={setPreviewCode}
+        />
+      )}
+
+      {/* ─── Carousel horizontal ─── */}
+
+      {carouselEntries.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "2px", color: "var(--text-disabled)", textTransform: "uppercase" }}>
+            ✦ Limited & special drops
+          </span>
+          <div style={{ position: "relative" }}>
+            <div
+              ref={carouselRef}
+              className="shop-carousel"
+              style={{ display: "flex", gap: 12, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 4 }}
+            >
+              {carouselEntries.map(([code, pack]) => (
+                <CarouselPackCard key={code} code={code} pack={pack} bias={bias} onPreview={setPreviewCode} />
+              ))}
+            </div>
+            {carouselEntries.length > 2 && (
+              <>
+                <div style={{
+                  position: "absolute", top: 0, bottom: 4, right: 0, width: 40,
+                  background: "linear-gradient(to right, transparent, var(--bg) 70%)",
+                  pointerEvents: "none",
+                }} />
+                <button
+                  onClick={() => carouselRef.current?.scrollBy({ left: 220, behavior: "smooth" })}
+                  aria-label="Scroll for more packs"
+                  style={{
+                    position: "absolute", top: "50%", right: 6, transform: "translateY(-50%)",
+                    width: 28, height: 28, borderRadius: "50%",
+                    border: "2px solid var(--text-primary)", background: "var(--surface-white)",
+                    boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    cursor: "pointer", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", padding: 0,
+                  }}
+                >
+                  ›
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Catalogue complet ─── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "2px", color: "var(--text-disabled)", textTransform: "uppercase" }}>
+          All packs
+        </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {packs.map(([code, pack]) => (
+            <PackListRow key={code} code={code} pack={pack} bias={bias} onPreview={setPreviewCode} />
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Info section ─── */}
+      <div style={{
+        padding: "16px 20px", borderRadius: 12, background: "rgba(var(--surface-white-rgb),0.5)",
+        backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+        border: "1px solid rgba(255,158,196,0.04)", display: "flex", flexDirection: "column", gap: 8,
+      }}>
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "2px", color: "var(--text-disabled)", textTransform: "uppercase" }}>
+          💎 About
+        </span>
+        <span style={{ fontSize: 15, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+          Each pack contains 5 random cards from <strong style={{ color: "var(--accent-hotpink)" }}>{GROUPS.map(g => g.name).join(" · ")}</strong>.
+          Rarities range from Common to Secret. Reveal each card one by one by swiping.
+        </span>
+        <span style={{ fontSize: 15, color: "var(--text-disabled)" }}>
+          ✦ New packs and limited editions coming soon
+        </span>
+      </div>
+
+      </>)}
+      {shopTab === "gems" && <GemShopSection onPurchaseComplete={onPurchaseComplete} />}
+      {/* ─── Footer ─── */}
+      <div style={{
+        textAlign: "center", fontSize: 10, letterSpacing: "3px", textTransform: "uppercase",
+        color: "var(--text-disabled)", marginTop: 16,
+      }}>
+        Ⓒ IDOLBIAS — COLLECT YOUR BIAS
+      </div>
+
+
+      {/* ─── Detail modal ─── */}
+      {previewPack && previewCode && (
+        <PackDetailModal
+          code={previewCode}
+          pack={previewPack}
+          tickets={tickets}
+          gems={gems}
+          bias={bias}
+          onPull={(method) => { handlePull(previewCode, method); setPreviewCode(null); }}
+          onClose={() => setPreviewCode(null)}
+        />
+      )}
+    </div>
+  );
+}

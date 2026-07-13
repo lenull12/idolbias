@@ -1,0 +1,40 @@
+<svg width="700" height="170" viewBox="0 0 700 170" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>IdolBias</title>
+  <desc>Logo IdolBias : une mini carte holographique suivie du wordmark "IdolBias", "Bias" en dégradé holo rose-violet-blanc.</desc>
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@800&amp;family=Inter:wght@500;600&amp;display=swap');
+    </style>
+    <clipPath id="cardClip">
+      <rect x="24" y="25" width="96" height="120" rx="16" />
+    </clipPath>
+    <linearGradient id="holoFoil" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF9EC4" />
+      <stop offset="28%" stop-color="#C9B1FF" />
+      <stop offset="55%" stop-color="#9EE6FF" />
+      <stop offset="80%" stop-color="#FFE9A8" />
+      <stop offset="100%" stop-color="#FF1493" />
+    </linearGradient>
+    <linearGradient id="textHolo" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0%" stop-color="#FF9EC4" />
+      <stop offset="35%" stop-color="#C9B1FF" />
+      <stop offset="70%" stop-color="#9EE6FF" />
+      <stop offset="100%" stop-color="#FFE9A8" />
+    </linearGradient>
+  </defs>
+
+  <rect x="24" y="25" width="96" height="120" rx="16" fill="url(#holoFoil)" />
+  <g clip-path="url(#cardClip)">
+    <polygon points="0,90 40,25 70,25 20,145 -10,145" fill="#ffffff" opacity="0.22" />
+    <polygon points="80,25 110,25 60,145 30,145" fill="#ffffff" opacity="0.14" />
+  </g>
+  <path d="M72 62 L78 79 L96 85 L78 91 L72 108 L66 91 L48 85 L66 79 Z" fill="#ffffff" opacity="0.92" />
+  <rect x="24" y="25" width="96" height="120" rx="16" fill="none" stroke="#ffffff" stroke-width="3" />
+
+  <text x="150" y="42" font-family="'Inter', system-ui, sans-serif" font-size="13" font-weight="600" letter-spacing="4" fill="rgba(26,10,30,0.35)">&#10022; COLLECT YOUR BIAS</text>
+
+  <text x="150" y="108" font-family="'Unbounded', system-ui, sans-serif" font-size="66" font-weight="800" letter-spacing="-2" fill="url(#textHolo)" stroke="#1a0a1e" stroke-width="0.6" stroke-opacity="0.12">IdolBias</text>
+
+  <path d="M623 40 L626 48 L634 51 L626 54 L623 62 L620 54 L612 51 L620 48 Z" fill="#FF1493" opacity="0.8" />
+  <path d="M155 130 L157 135 L162 137 L157 139 L155 144 L153 139 L148 137 L153 135 Z" fill="#C9B1FF" opacity="0.85" />
+</svg>

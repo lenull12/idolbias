@@ -1,0 +1,121 @@
+
+"use client";
+
+import { useState } from "react";
+import type { PackInfo } from "@/data/cards";
+
+export type Method = "tickets" | "gems";
+type Size = "sm" | "md" | "lg";
+
+const SIZE_CONFIG: Record<Size, { chipPad: string; chipFont: number; btnPad: string; btnFont: number; gap: number }> = {
+  sm: { chipPad: "5px 9px", chipFont: 11, btnPad: "8px 14px", btnFont: 12, gap: 4 },
+  md: { chipPad: "6px 11px", chipFont: 12, btnPad: "10px 18px", btnFont: 13, gap: 5 },
+  lg: { chipPad: "7px 12px", chipFont: 13, btnPad: "12px 22px", btnFont: 14, gap: 6 },
+};
+
+// ─── Toggle de devise : ne fait QUE choisir, jamais d'action — s'auto-protège du clic parent ─
+
+export function CurrencyToggle({ pack, tickets, gems, size, selected, onSelect, ticket }: {
+  pack: PackInfo; tickets: number; gems: number; size: Size; selected: Method; onSelect: (m: Method) => void; ticket?: boolean;
+}) {
+  const cfg = SIZE_CONFIG[size];
+  const options: { method: Method; icon: string; cost: number; original?: number; canAfford: boolean }[] = [];
+  if (pack.costTickets !== undefined) {
+    options.push({ method: "tickets", icon: "🎟️", cost: pack.costTickets, canAfford: tickets >= pack.costTickets });
+  }
+  if (pack.costGems !== undefined) {
+    options.push({ method: "gems", icon: "💎", cost: pack.costGems, original: pack.originalCostGems, canAfford: gems >= pack.costGems });
+  }
+  if (options.length < 2) return null;
+
+  return (
+    <div onClick={(e) => e.stopPropagation()} style={{
+      display: "inline-flex", borderRadius: 8, overflow: "hidden",
+      border: ticket ? "1.5px solid #3a2a1a" : "1.5px solid var(--text-primary)",
+    }}>
+      {options.map((opt, i) => {
+        const active = selected === opt.method;
+        return (
+          <button
+            key={opt.method}
+            onClick={() => onSelect(opt.method)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: cfg.gap,
+              padding: cfg.chipPad, border: "none",
+              borderLeft: i > 0 ? (ticket ? "1.5px solid #3a2a1a" : "1.5px solid var(--text-primary)") : "none",
+              background: ticket
+                ? (active ? "#3a2a1a" : "#f0e3d0")
+                : (active ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "var(--surface-white)"),
+              color: ticket
+                ? (active ? "#fcf5e8" : (opt.canAfford ? "#5a4a3a" : "#b0a090"))
+                : (active ? "var(--text-primary)" : (opt.canAfford ? "var(--text-secondary)" : "var(--text-disabled)")),
+              fontFamily: "var(--font-sans, monospace)", fontSize: cfg.chipFont, fontWeight: 700,
+              cursor: "pointer", whiteSpace: "nowrap",
+            }}
+          >
+            {opt.icon}
+            {opt.original !== undefined && (
+              <span style={{ textDecoration: "line-through", opacity: 0.6, fontWeight: 600 }}>{opt.original}</span>
+            )}
+            {opt.cost}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Bouton PULL : tap = pull immédiat, prix affiché dessus ────────────────
+
+function PullButton({ cost, balance, size, icon, onPull }: {
+  cost: number; balance: number; size: Size; icon: string; onPull: () => void;
+}) {
+  const cfg = SIZE_CONFIG[size];
+  const canAfford = balance >= cost;
+  return (
+    <button
+      onClick={() => canAfford && onPull()}
+      disabled={!canAfford}
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "center", gap: cfg.gap,
+        padding: cfg.btnPad, border: "none", borderRadius: 10,
+        cursor: canAfford ? "pointer" : "default",
+        background: canAfford ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "rgba(var(--text-primary-rgb),0.08)",
+        color: canAfford ? "var(--text-primary)" : "var(--text-disabled)",
+        fontFamily: "var(--font-display, cursive)", fontSize: cfg.btnFont, fontWeight: 700, letterSpacing: "0.5px",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {canAfford ? `PULL · ${cost} ${icon}` : `Need ${cost - balance} more`}
+    </button>
+  );
+}
+
+// ─── Composant public ───────────────────────────────────────────────────────
+
+export default function PackPriceAction({ pack, tickets, gems, size = "md", align = "end", onPull }: {
+  pack: PackInfo; tickets: number; gems: number; size?: Size; align?: "start" | "center" | "end";
+  onPull: (method: Method) => void;
+}) {
+  const defaultMethod: Method | null =
+    pack.costTickets !== undefined && tickets >= pack.costTickets ? "tickets"
+    : pack.costGems !== undefined && gems >= pack.costGems ? "gems"
+    : pack.costTickets !== undefined ? "tickets"
+    : pack.costGems !== undefined ? "gems"
+    : null;
+
+  const [selected, setSelected] = useState<Method | null>(defaultMethod);
+
+  if (pack.locked || !selected) return null;
+
+  const cost = selected === "tickets" ? pack.costTickets! : pack.costGems!;
+  const balance = selected === "tickets" ? tickets : gems;
+  const alignItems = align === "start" ? "flex-start" : align === "center" ? "center" : "flex-end";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems, gap: 6 }}>
+      <CurrencyToggle pack={pack} tickets={tickets} gems={gems} size={size} selected={selected} onSelect={setSelected} />
+      <PullButton cost={cost} balance={balance} size={size} icon={selected === "tickets" ? "🎟️" : "💎"} onPull={() => onPull(selected)} />
+    </div>
+  );
+}

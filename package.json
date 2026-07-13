@@ -1,0 +1,41 @@
+{
+  "name": "idolbias-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "cf:build": "npx opennextjs-cloudflare build",
+    "cf:deploy": "npx opennextjs-cloudflare deploy",
+    "cf:preview": "npx opennextjs-cloudflare preview",
+    "dev:cf": "npx opennextjs-cloudflare build && npx opennextjs-cloudflare preview",
+    "build": "next build",
+    "lint": "eslint",
+    "db:generate": "npx drizzle-kit generate",
+    "db:migrate:local": "npx wrangler d1 migrations apply idolbias-db --local",
+    "db:migrate:remote": "npx wrangler d1 migrations apply idolbias-db --remote"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.1",
+    "better-auth": "^1.6.23",
+    "drizzle-orm": "^0.45.2",
+    "next": "16.2.9",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "resend": "^6.17.2",
+    "stripe": "^22.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260702.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/stripe": "^8.0.416",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "sharp": "^0.35.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
