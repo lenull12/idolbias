@@ -80,6 +80,7 @@ export default function AppShell() {
   const [weeklyResetAt, setWeeklyResetAt] = useState<number | null>(null);
 
   useEffect(() => {
+    if (!player) return;
     fetch("/api/missions/templates", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
@@ -90,19 +91,19 @@ export default function AppShell() {
         if (data.weeklyResetAt) setWeeklyResetAt(data.weeklyResetAt);
       })
       .catch(() => {});
-  }, []);
+  }, [player]);
 
   // ─── Daily missions ──────────────────────────────────────────────────
-  const dailyMissions: MissionState[] = prog
-    ? (dailyTemplates.length > 0 ? dailyTemplates : MISSIONS).map((m) => {
+  const dailyMissions: MissionState[] = prog && dailyTemplates.length > 0
+    ? dailyTemplates.map((m) => {
         const progress = Math.min(prog.missionProgress[m.id] ?? 0, m.target);
         return { ...m, progress, complete: progress >= m.target, claimed: prog.missionsClaimed.includes(m.id) };
       })
     : [];
 
   // ─── Weekly missions ─────────────────────────────────────────────────
-  const weeklyMissions: MissionState[] = prog
-    ? (weeklyTemplates.length > 0 ? weeklyTemplates : MISSIONS_WEEKLY).map((m) => {
+  const weeklyMissions: MissionState[] = prog && weeklyTemplates.length > 0
+    ? weeklyTemplates.map((m) => {
         const progress = Math.min(prog.weeklyMissionProgress[m.id] ?? 0, m.target);
         return { ...m, progress, complete: progress >= m.target, claimed: prog.weeklyMissionsClaimed.includes(m.id) };
       })
@@ -315,6 +316,7 @@ export default function AppShell() {
             owned={player?.collection ?? {}}
             dust={player?.wallet.dust ?? 0}
             onChanged={refresh}
+            onBumpMission={handleBumpMission}
           />
         );
       case "groups":

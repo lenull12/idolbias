@@ -884,15 +884,16 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
             REVEAL ALL
           </button>
         )}
-        {phase === "cards" && <RarityTally pullResults={pullResults} revealedIds={revealedIds} />}
       </div>
 
-      {/* Desktop bottom controls — REVEAL ALL / PULL AGAIN + BACK TO SHOP */}
+      {/* Desktop bottom controls — RarityTally + REVEAL ALL / PULL AGAIN + BACK TO SHOP */}
       {!isMobile && phase === "cards" && !showZoom && (
         <div style={{
           position: "absolute", bottom: 44, left: 0, right: 0, zIndex: 2,
-          display: "flex", justifyContent: "center", gap: 10,
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
         }}>
+          <RarityTally pullResults={pullResults} revealedIds={revealedIds} />
+          <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
           {allRevealed ? (
             <>
               <button onClick={handlePullAgain} style={{
@@ -924,6 +925,7 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
             </button>
           )}
         </div>
+      </div>
       )}
 
       {/* Recap overlay */}

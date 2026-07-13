@@ -23,10 +23,12 @@ export default function WorkshopView({
   owned = {},
   dust = 0,
   onChanged = () => {},
+  onBumpMission,
 }: {
   owned?: Record<string, number>;
   dust?: number;
   onChanged?: () => void;
+  onBumpMission?: (id: string) => void;
 }) {
   const [tab, setTab] = useState<Tab>("disenchant");
 
@@ -59,7 +61,7 @@ export default function WorkshopView({
       </div>
 
       {tab === "disenchant" && <DisenchantTab owned={owned} onChanged={onChanged} />}
-      {tab === "craft" && <CraftTab dust={dust} onChanged={onChanged} />}
+      {tab === "craft" && <CraftTab dust={dust} onChanged={onChanged} onBumpMission={onBumpMission} />}
       {tab === "trade" && <TradeTab owned={owned} onChanged={onChanged} />}
     </div>
   );
@@ -141,7 +143,7 @@ function DisenchantTab({ owned, onChanged }: { owned: Record<string, number>; on
 
 // ─── Craft ──────────────────────────────────────────────────────────────────
 
-function CraftTab({ dust, onChanged }: { dust: number; onChanged: () => void }) {
+function CraftTab({ dust, onChanged, onBumpMission }: { dust: number; onChanged: () => void; onBumpMission?: (id: string) => void }) {
   const [rarity, setRarity] = useState<Rarity>("common");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -157,6 +159,7 @@ function CraftTab({ dust, onChanged }: { dust: number; onChanged: () => void }) 
       const res = await craftCard(rarity);
       setResult(res.card as CardEntry);
       onChanged();
+      onBumpMission?.("craft_card");
     } catch (e) {
       setError((e as Error).message);
     } finally { setBusy(false); }

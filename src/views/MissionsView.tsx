@@ -81,6 +81,7 @@ export default function MissionsView({
 
   const dailyClaimed = dailyMissions.filter((m) => m.claimed).length;
   const weeklyClaimed = weeklyMissions.filter((m) => m.claimed).length;
+  const claimableLifetime = lifetimeMissions.filter((lm) => lm.nextTier !== null && lm.currentValue >= lm.nextTier.threshold).length;
   const lifetimeUnlocked = lifetimeMissions.reduce((acc, lm) => acc + lm.claimedTierKeys.length, 0);
   const lifetimeTotal = lifetimeMissions.reduce((acc, lm) => acc + lm.def.tiers.length, 0);
 
@@ -110,7 +111,7 @@ export default function MissionsView({
       }}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
-          const badgeCount = tab.key === "daily" ? claimableDaily : tab.key === "weekly" ? claimableWeekly : 0;
+          const badgeCount = tab.key === "daily" ? claimableDaily : tab.key === "weekly" ? claimableWeekly : claimableLifetime;
           return (
             <button
               key={tab.key}

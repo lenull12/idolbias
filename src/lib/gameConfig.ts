@@ -140,7 +140,7 @@ export interface PoolMissionDef extends MissionDef {
 export const DAILY_POOL: PoolMissionDef[] = [
   { id: "open_pack", label: "Open 1 pack", target: 1, reward: { gems: 20 }, difficulty: "easy", weight: 4 },
   { id: "view_artist", label: "Visit an artist profile", target: 1, reward: { tickets: 1 }, difficulty: "easy", weight: 4 },
-  { id: "view_collection", label: "Browse your card index", target: 1, reward: { gems: 10 }, difficulty: "easy", weight: 4 },
+  { id: "view_collection", label: "Browse the card catalogue", target: 1, reward: { gems: 10 }, difficulty: "easy", weight: 4 },
   { id: "like_posts", label: "Like 3 posts", target: 3, reward: { tickets: 1 }, difficulty: "normal", weight: 3 },
   { id: "comment_posts", label: "Comment 1 time", target: 1, reward: { gems: 15 }, difficulty: "normal", weight: 3 },
   { id: "collect_rare_plus", label: "Collect 2 Rare+ cards", target: 2, reward: { dust: 20 }, difficulty: "normal", weight: 2 },

@@ -8,6 +8,7 @@ import type { GemPackage } from "@/lib/gemShop";
 export default function GemShopSection({ onPurchaseComplete }: { onPurchaseComplete?: () => void }) {
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const [pendingPkg, setPendingPkg] = useState<GemPackage | null>(null);
+  const [guestError, setGuestError] = useState(false);
 
   const bestValueId = useMemo(() => {
     let best = GEM_PACKAGES[0]?.id ?? "";
@@ -39,7 +40,11 @@ export default function GemShopSection({ onPurchaseComplete }: { onPurchaseCompl
         window.location.href = url;
       } else {
         const err = await res.json();
-        console.error("Checkout error:", err);
+        if (err.error === "guest") {
+          setGuestError(true);
+        } else {
+          console.error("Checkout error:", err);
+        }
         setBuyingId(null);
       }
     } catch (err) {
@@ -97,6 +102,43 @@ export default function GemShopSection({ onPurchaseComplete }: { onPurchaseCompl
           Secured by Stripe · Visa · Mastercard · Apple Pay
         </span>
       </div>
+
+      {/* Guest account required modal */}
+      {guestError && (
+        <div onClick={() => setGuestError(false)} style={{
+          position: "fixed", inset: 0, zIndex: 100,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", padding: 20,
+        }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            width: "100%", maxWidth: 380, background: "rgba(var(--surface-white-rgb),0.95)",
+            borderRadius: 16, padding: 24, display: "flex", flexDirection: "column", gap: 16,
+            boxShadow: "0 8px 40px rgba(0,0,0,0.3)",
+          }}>
+            <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 900, color: "var(--text-primary)", margin: 0 }}>
+              Account required
+            </h3>
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text-muted)", margin: 0 }}>
+              You need to sign in or create an account before purchasing gems. This ensures your gems are saved and linked to your profile.
+            </p>
+            <a href="/login" style={{
+              display: "block", textAlign: "center", padding: "12px 0", borderRadius: 8, border: "none",
+              background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
+              color: "var(--surface-white)", fontWeight: 700, fontSize: 14, cursor: "pointer",
+              fontFamily: "var(--font-display)", textDecoration: "none", letterSpacing: "0.5px",
+            }}>
+              Sign in / Create account
+            </a>
+            <button onClick={() => setGuestError(false)} style={{
+              background: "none", border: "none", padding: "4px 0", cursor: "pointer",
+              fontSize: 12, fontWeight: 600, color: "var(--text-disabled)",
+              fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
+            }}>
+              ✕ Maybe later
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Waiver modal */}
       {pendingPkg && (

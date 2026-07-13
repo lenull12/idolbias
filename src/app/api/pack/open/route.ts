@@ -83,6 +83,12 @@ export async function POST(request: Request) {
   const currentProgress = prog.missionProgress["open_pack"] ?? 0;
   const openPackProgress = openPackDef ? Math.min(currentProgress + 1, openPackDef.target) : currentProgress;
 
+  // Pool missions tracking
+  const rarePlusCount = cards.filter((c) => c.rarity !== "common").length;
+  const open3packsProg = Math.min((prog.missionProgress["open_3_packs"] ?? 0) + 1, 3);
+  const collectRareProg = Math.min((prog.missionProgress["collect_rare_plus"] ?? 0) + rarePlusCount, 2);
+  const collect5newProg = Math.min((prog.missionProgress["collect_5_new"] ?? 0) + newCardIds.length, 5);
+
   const monday = getMondayStr();
   const isSameWeek = prog.weeklyMissionsDate === monday;
   const weeklyProgress = { ...(isSameWeek ? prog.weeklyMissionProgress : {}) };
@@ -111,7 +117,13 @@ export async function POST(request: Request) {
 
   await db.batch([
     db.update(progression).set({
-      missionProgress: { ...prog.missionProgress, open_pack: openPackProgress },
+      missionProgress: {
+        ...prog.missionProgress,
+        open_pack: openPackProgress,
+        open_3_packs: open3packsProg,
+        collect_rare_plus: collectRareProg,
+        collect_5_new: collect5newProg,
+      },
       weeklyMissionProgress: weeklyProgress,
       weeklyMissionsDate: monday,
       fanXp,

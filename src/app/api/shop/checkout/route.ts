@@ -2,9 +2,10 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { getDb } from "@/db/client";
-import { gemPurchases } from "@/db/schema";
+import { players, gemPurchases } from "@/db/schema";
 import { getGemPackage } from "@/lib/gemShop";
 
 const COOKIE_NAME = "idolbias_player_id";
@@ -23,6 +24,13 @@ export async function POST(request: Request) {
   const cookieStore = await cookies();
   const playerId = cookieStore.get(COOKIE_NAME)?.value;
   if (!playerId) return NextResponse.json({ error: "No player" }, { status: 401 });
+
+  // Block guest purchases — require linked account
+  const db = getDb();
+  const [player] = await db.select().from(players).where(eq(players.id, playerId)).limit(1);
+  if (!player?.email) {
+    return NextResponse.json({ error: "guest" }, { status: 403 });
+  }
 
   const body = await request.json();
   if (body.waiverConfirmed !== true) {

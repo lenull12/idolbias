@@ -22,6 +22,22 @@ export async function GET() {
   let dailyTemplates: MissionDef[] = (prog.dailyTemplates ?? []) as MissionDef[];
   let weeklyTemplates: MissionDef[] = (prog.weeklyTemplates ?? []) as MissionDef[];
 
+  // Repick immediately if templates are empty (e.g. after migration)
+  if (dailyTemplates.length === 0) {
+    dailyTemplates = pickWeightedMissions(DAILY_POOL, DAILY_SLOT_COUNT);
+    await db.update(progression).set({
+      dailyTemplates, missionsDate: today,
+      missionProgress: {}, missionsClaimed: [], updatedAt: new Date(),
+    }).where(eq(progression.playerId, playerId));
+  }
+  if (weeklyTemplates.length === 0) {
+    weeklyTemplates = pickWeightedMissions(WEEKLY_POOL, WEEKLY_SLOT_COUNT);
+    await db.update(progression).set({
+      weeklyTemplates, weeklyMissionsDate: monday,
+      weeklyMissionProgress: {}, weeklyMissionsClaimed: [], updatedAt: new Date(),
+    }).where(eq(progression.playerId, playerId));
+  }
+
   if (prog.missionsDate !== today) {
     dailyTemplates = pickWeightedMissions(DAILY_POOL, DAILY_SLOT_COUNT);
     await db.update(progression).set({

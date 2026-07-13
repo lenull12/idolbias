@@ -87,7 +87,7 @@ export default function FeedView({
     }
   }, [mode]);
 
-  useEffect(() => { fetchPosts(null); }, [fetchPosts]);
+  useEffect(() => { fetchPosts(null); onBumpMission?.("view_feed"); }, [fetchPosts, onBumpMission]);
 
   const handleModeChange = (newMode: FeedMode) => {
     if (newMode === mode) return;
@@ -108,7 +108,7 @@ export default function FeedView({
     );
     try {
       const res =       await fetch(`/api/feed/${postId}/like`, { method: "POST", headers: apiHeaders() });
-      if (res.ok) { onBumpMission?.("like_posts"); onBumpWeekly?.("like_20_posts"); }
+      if (res.ok) { onBumpMission?.("like_posts"); onBumpMission?.("like_10_posts"); onBumpWeekly?.("like_20_posts"); }
       else console.error("Like failed:", await res.text());
     } catch (err) {
       console.error("Like network error:", err);
@@ -172,7 +172,7 @@ export default function FeedView({
         headers: { "Content-Type": "application/json", ...apiHeaders() },
         body: JSON.stringify({ memberId, groupId }),
       });
-      if (subRes.ok && !currentlySubscribed) { onBumpMission?.("follow_artist"); onBumpWeekly?.("follow_5_artists"); }
+      if (subRes.ok && !currentlySubscribed) { onBumpMission?.("follow_artist"); onBumpMission?.("follow_member"); onBumpWeekly?.("follow_5_artists"); }
       setHasSubs(true);
     } catch {
       setPosts((prev) =>

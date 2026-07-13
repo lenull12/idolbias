@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { progression } from "@/db/schema";
-import { MISSIONS_WEEKLY, getMondayStr } from "@/lib/gameConfig";
+import { MISSIONS_WEEKLY, WEEKLY_POOL, getMondayStr } from "@/lib/gameConfig";
 import type { MissionDef } from "@/lib/gameConfig";
 
 const COOKIE_NAME = "idolbias_player_id";
@@ -23,7 +23,8 @@ export async function POST(
 
   const templateDef = ((prog.weeklyTemplates ?? []) as MissionDef[]).find((m) => m.id === missionId);
   const staticDef = MISSIONS_WEEKLY.find((m) => m.id === missionId);
-  const def = templateDef || staticDef;
+  const poolDef = WEEKLY_POOL.find((m) => m.id === missionId);
+  const def = templateDef || staticDef || poolDef;
   if (!def) return NextResponse.json({ error: "Unknown mission" }, { status: 400 });
 
   const serverTracked = ["open_5_packs", "collect_3_new", "daily_streak_5"];
