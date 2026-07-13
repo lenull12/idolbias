@@ -30,6 +30,16 @@ export async function POST(
 
   const now = new Date();
 
+  // Atomic status update: only succeeds if still "open" (prevents double-accept)
+  const updated = await db.update(tradeOffers)
+    .set({ status: "completed", resolvedAt: now, resolvedBy: playerId })
+    .where(and(eq(tradeOffers.id, offer.id), eq(tradeOffers.status, "open")))
+    .returning({ id: tradeOffers.id });
+
+  if (updated.length === 0) {
+    return NextResponse.json({ error: "Offer already resolved" }, { status: 400 });
+  }
+
   await db.batch([
     db.update(ownedCards).set({ quantity: sql`${ownedCards.quantity} - 1` })
       .where(and(eq(ownedCards.playerId, playerId), eq(ownedCards.cardId, offer.requestedCardId))),
@@ -45,8 +55,6 @@ export async function POST(
         target: [ownedCards.playerId, ownedCards.cardId],
         set: { quantity: sql`${ownedCards.quantity} + 1`, lastObtainedAt: now },
       }),
-    db.update(tradeOffers).set({ status: "completed", resolvedAt: now, resolvedBy: playerId })
-      .where(eq(tradeOffers.id, offer.id)),
   ]);
 
   return NextResponse.json({ ok: true });

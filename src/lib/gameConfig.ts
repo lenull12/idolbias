@@ -32,26 +32,8 @@ export type LifetimeMissionDef = {
   tiers: LifetimeTier[];
 };
 
-export const MISSIONS: MissionDef[] = [
-  { id: "open_pack", label: "Open 1 pack", target: 1, reward: { gems: 20 } },
-  { id: "view_artist", label: "Visit an artist profile", target: 1, reward: { tickets: 1 } },
-  { id: "view_collection", label: "Browse your card index", target: 1, reward: { gems: 10 } },
-  { id: "follow_artist", label: "Follow an artist", target: 1, reward: { gems: 15 } },
-  { id: "like_posts", label: "Like 3 posts", target: 3, reward: { tickets: 1 } },
-  { id: "comment_posts", label: "Comment 1 time", target: 1, reward: { gems: 10 } },
-];
-
-export const MISSIONS_WEEKLY: MissionDef[] = [
-  { id: "open_5_packs", label: "Open 5 packs", target: 5, reward: { gems: 100 } },
-  { id: "collect_3_new", label: "Collect 3 new cards", target: 3, reward: { tickets: 3 } },
-  { id: "visit_3_artists", label: "Visit 3 distinct artists", target: 3, reward: { tickets: 5 } },
-  { id: "daily_streak_5", label: "Complete daily missions 5 days this week", target: 5, reward: { gems: 100 } },
-  { id: "like_20_posts", label: "Like 20 posts", target: 20, reward: { gems: 150 } },
-  { id: "comment_10_posts", label: "Comment 10 times", target: 10, reward: { tickets: 5 } },
-  { id: "follow_5_artists", label: "Follow 5 artists", target: 5, reward: { gems: 100 } },
-];
-
 export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
+  // ─── Collection ──────────────────────────────────────────
   {
     id: "collect_cards",
     label: "Collection Mastery",
@@ -60,8 +42,58 @@ export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
       { threshold: 25, reward: { gems: 100 } },
       { threshold: 50, reward: { gems: 250 } },
       { threshold: 100, reward: { gems: 500 } },
+      { threshold: 150, reward: { gems: 750 } },
+      { threshold: 250, reward: { gems: 1000 } },
     ],
   },
+  {
+    id: "complete_sets",
+    label: "Set Completionist",
+    tiers: [
+      { threshold: 1, reward: { dust: 200, gems: 100 } },
+      { threshold: 2, reward: { dust: 500, gems: 250 } },
+      { threshold: 4, reward: { dust: 1000, gems: 500 } },
+    ],
+  },
+  {
+    id: "collect_legendary",
+    label: "Legendary Hunter",
+    tiers: [
+      { threshold: 5, reward: { gems: 100 } },
+      { threshold: 15, reward: { gems: 300 } },
+      { threshold: 30, reward: { gems: 750 } },
+    ],
+  },
+  {
+    id: "collect_secret",
+    label: "Secret Seeker",
+    tiers: [
+      { threshold: 1, reward: { dust: 300, gems: 100 } },
+      { threshold: 3, reward: { dust: 800, gems: 300 } },
+    ],
+  },
+  // ─── Social ─────────────────────────────────────────────
+  {
+    id: "follow_all_artists",
+    label: "Devoted Fan",
+    tiers: [
+      { threshold: 1, reward: { gems: 50 } },
+      { threshold: 2, reward: { gems: 100 } },
+      { threshold: 3, reward: { gems: 200 } },
+      { threshold: 4, reward: { tickets: 5, gems: 300 } },
+    ],
+  },
+  {
+    id: "likes_given",
+    label: "Feed Lover",
+    tiers: [
+      { threshold: 50, reward: { gems: 50 } },
+      { threshold: 200, reward: { gems: 150 } },
+      { threshold: 500, reward: { gems: 400 } },
+      { threshold: 1000, reward: { tickets: 5, gems: 500 } },
+    ],
+  },
+  // ─── Progression ─────────────────────────────────────────
   {
     id: "fan_level",
     label: "Fan Devotion",
@@ -70,6 +102,8 @@ export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
       { threshold: 10, reward: { tickets: 5, gems: 50 } },
       { threshold: 20, reward: { tickets: 10, gems: 100 } },
       { threshold: 30, reward: { tickets: 15, gems: 250 } },
+      { threshold: 50, reward: { tickets: 20, gems: 500 } },
+      { threshold: 75, reward: { tickets: 30, gems: 1000 } },
     ],
   },
   {
@@ -79,12 +113,69 @@ export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
       { threshold: 7, reward: { gems: 50 } },
       { threshold: 30, reward: { gems: 150, tickets: 5 } },
       { threshold: 100, reward: { gems: 500, tickets: 10 } },
+      { threshold: 365, reward: { gems: 2000, tickets: 30 } },
+    ],
+  },
+  {
+    id: "streak_record",
+    label: "Unstoppable",
+    tiers: [
+      { threshold: 7, reward: { gems: 100 } },
+      { threshold: 30, reward: { tickets: 10 } },
+      { threshold: 100, reward: { tickets: 30, gems: 500 } },
+    ],
+  },
+  // ─── Économie / Workshop ────────────────────────────────
+  {
+    id: "packs_opened",
+    label: "Pack Addict",
+    tiers: [
+      { threshold: 10, reward: { gems: 50 } },
+      { threshold: 50, reward: { gems: 200 } },
+      { threshold: 200, reward: { tickets: 10, gems: 500 } },
+      { threshold: 1000, reward: { tickets: 30, gems: 2000 } },
+    ],
+  },
+  {
+    id: "craft_master",
+    label: "Craft Master",
+    tiers: [
+      { threshold: 5, reward: { dust: 100 } },
+      { threshold: 25, reward: { dust: 300, gems: 100 } },
+      { threshold: 100, reward: { dust: 800, gems: 500 } },
+    ],
+  },
+  {
+    id: "disenchant_veteran",
+    label: "Disenchant Veteran",
+    tiers: [
+      { threshold: 10, reward: { dust: 100 } },
+      { threshold: 50, reward: { dust: 300, gems: 100 } },
+      { threshold: 200, reward: { dust: 800, gems: 300 } },
+    ],
+  },
+  {
+    id: "trades_completed",
+    label: "Master Trader",
+    tiers: [
+      { threshold: 1, reward: { gems: 50 } },
+      { threshold: 10, reward: { gems: 200 } },
+      { threshold: 50, reward: { tickets: 10, gems: 500 } },
     ],
   },
 ];
 
-export const STREAK_TICKETS = [1, 1, 1, 2, 2, 3, 5];
-export const STREAK_DAY7_GEMS = 50;
+// ─── Fixed daily/weekly (always present) ────────────────────────────────
+export const FIXED_DAILY: MissionDef[] = [
+  { id: "open_pack", label: "Open 1 pack", target: 1, reward: { gems: 20 } },
+];
+export const FIXED_WEEKLY: MissionDef[] = [
+  { id: "open_5_packs", label: "Open 5 packs", target: 5, reward: { gems: 100 } },
+];
+export const ROTATING_DAILY_SLOT_COUNT = 3;
+
+export const STREAK_TICKETS = [0, 0, 0, 1, 1, 1, 3];
+export const STREAK_BONUS_GEMS = [15, 30, 50, 0, 30, 50, 0];
 
 export const XP_PER_LEVEL = 100;
 export const XP_PER_RARITY: Record<string, number> = {
@@ -139,27 +230,27 @@ export interface PoolMissionDef extends MissionDef {
 
 export const DAILY_POOL: PoolMissionDef[] = [
   { id: "open_pack", label: "Open 1 pack", target: 1, reward: { gems: 20 }, difficulty: "easy", weight: 4 },
-  { id: "view_artist", label: "Visit an artist profile", target: 1, reward: { tickets: 1 }, difficulty: "easy", weight: 4 },
+  { id: "view_artist", label: "Visit an artist profile", target: 1, reward: { gems: 10 }, difficulty: "easy", weight: 4 },
   { id: "view_collection", label: "Browse the card catalogue", target: 1, reward: { gems: 10 }, difficulty: "easy", weight: 4 },
-  { id: "like_posts", label: "Like 3 posts", target: 3, reward: { tickets: 1 }, difficulty: "normal", weight: 3 },
+  { id: "like_posts", label: "Like 3 posts", target: 3, reward: { gems: 15 }, difficulty: "normal", weight: 3 },
   { id: "comment_posts", label: "Comment 1 time", target: 1, reward: { gems: 15 }, difficulty: "normal", weight: 3 },
   { id: "collect_rare_plus", label: "Collect 2 Rare+ cards", target: 2, reward: { dust: 20 }, difficulty: "normal", weight: 2 },
   { id: "open_3_packs", label: "Open 3 packs", target: 3, reward: { gems: 50 }, difficulty: "normal", weight: 2 },
-  { id: "like_10_posts", label: "Like 10 posts", target: 10, reward: { tickets: 3 }, difficulty: "hard", weight: 1 },
-  { id: "collect_5_new", label: "Collect 5 new cards", target: 5, reward: { dust: 50 }, difficulty: "hard", weight: 1 },
+  { id: "like_10_posts", label: "Like 10 posts", target: 10, reward: { tickets: 1 }, difficulty: "hard", weight: 1 },
+  { id: "collect_5_new", label: "Collect 5 cards", target: 5, reward: { dust: 50 }, difficulty: "hard", weight: 1 },
   { id: "craft_card", label: "Craft 1 card", target: 1, reward: { gems: 40 }, difficulty: "hard", weight: 1 },
   { id: "view_feed", label: "Visit the feed", target: 1, reward: { gems: 10 }, difficulty: "easy", weight: 3 },
-  { id: "follow_member", label: "Follow a member", target: 1, reward: { tickets: 1 }, difficulty: "easy", weight: 3 },
+  // removed: follow_member (not enough artists at launch)
 ];
 
 export const WEEKLY_POOL: PoolMissionDef[] = [
   { id: "open_5_packs", label: "Open 5 packs", target: 5, reward: { gems: 100 }, difficulty: "normal", weight: 3 },
-  { id: "collect_3_new", label: "Collect 3 new cards", target: 3, reward: { tickets: 3 }, difficulty: "normal", weight: 3 },
-  { id: "visit_3_artists", label: "Visit 3 distinct artists", target: 3, reward: { tickets: 5 }, difficulty: "normal", weight: 2 },
+  { id: "collect_3_new", label: "Collect 3 cards", target: 3, reward: { gems: 60 }, difficulty: "normal", weight: 3 },
+  { id: "visit_3_artists", label: "Visit 3 distinct artists", target: 3, reward: { gems: 60 }, difficulty: "normal", weight: 2 },
   { id: "daily_streak_5", label: "Complete dailies 5 days this week", target: 5, reward: { gems: 100 }, difficulty: "hard", weight: 2 },
   { id: "like_20_posts", label: "Like 20 posts", target: 20, reward: { gems: 150 }, difficulty: "normal", weight: 2 },
-  { id: "comment_10_posts", label: "Comment 10 times", target: 10, reward: { tickets: 5 }, difficulty: "normal", weight: 2 },
-  { id: "follow_5_artists", label: "Follow 5 artists", target: 5, reward: { gems: 100 }, difficulty: "easy", weight: 3 },
+  { id: "comment_10_posts", label: "Comment 10 times", target: 10, reward: { gems: 60 }, difficulty: "normal", weight: 2 },
+  // removed: follow_5_artists (not enough artists at launch)
   { id: "craft_3_cards", label: "Craft 3 cards", target: 3, reward: { dust: 100, gems: 50 }, difficulty: "hard", weight: 1 },
 ];
 

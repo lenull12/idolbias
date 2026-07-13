@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, gte } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { wallets, ownedCards } from "@/db/schema";
 import { getCardById, rarityFromReference } from "@/data/cards";
@@ -32,12 +32,22 @@ export async function POST(request: Request) {
   const dustGained = (DISENCHANT_VALUES[rarity] ?? 0) * quantity;
   const now = new Date();
 
-  await db.batch([
-    db.update(ownedCards).set({ quantity: sql`${ownedCards.quantity} - ${quantity}` })
-      .where(and(eq(ownedCards.playerId, playerId), eq(ownedCards.cardId, cardId))),
-    db.update(wallets).set({ dust: sql`dust + ${dustGained}`, updatedAt: now })
-      .where(eq(wallets.playerId, playerId)),
-  ]);
+  // Atomic decrement: only succeeds if quantity >= quantity + 1 (keep at least 1)
+  const debitResult = await db.update(ownedCards)
+    .set({ quantity: sql`${ownedCards.quantity} - ${quantity}` })
+    .where(and(
+      eq(ownedCards.playerId, playerId),
+      eq(ownedCards.cardId, cardId),
+      gte(ownedCards.quantity, quantity + 1),
+    ))
+    .returning({ cardId: ownedCards.cardId });
+
+  if (debitResult.length === 0) {
+    return NextResponse.json({ error: "Not enough duplicates to disenchant" }, { status: 400 });
+  }
+
+  await db.update(wallets).set({ dust: sql`dust + ${dustGained}`, updatedAt: now })
+    .where(eq(wallets.playerId, playerId));
 
   const [wallet] = await db.select().from(wallets).where(eq(wallets.playerId, playerId)).limit(1);
 

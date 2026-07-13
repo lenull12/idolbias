@@ -63,7 +63,10 @@ export async function GET() {
     const collection: Record<string, number> = {};
     for (const row of ownedRows) collection[row.cardId] = row.quantity;
 
-    const res = NextResponse.json({ playerId, isNew, wallet, progression: prog, collection });
+    const [playerRow] = await db.select().from(players).where(eq(players.id, playerId)).limit(1);
+    const createdAt = playerRow?.createdAt ?? new Date();
+
+    const res = NextResponse.json({ playerId, isNew, wallet, progression: prog, collection, createdAt });
     res.cookies.set(COOKIE_NAME, playerId, {
       httpOnly: true, sameSite: "lax", maxAge: COOKIE_MAX_AGE, path: "/",
     });

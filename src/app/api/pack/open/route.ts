@@ -7,7 +7,7 @@ import { getDb } from "@/db/client";
 import { wallets, progression, ownedCards, events, eventParticipation } from "@/db/schema";
 import { getPackInfo, getCardsByPack } from "@/data/cards";
 import { generatePull, type ServerCard } from "@/lib/gachaEngine";
-import { MISSIONS, MISSIONS_WEEKLY, XP_PER_RARITY, getMondayStr } from "@/lib/gameConfig";
+import { XP_PER_RARITY, getMondayStr } from "@/lib/gameConfig";
 
 const COOKIE_NAME = "idolbias_player_id";
 
@@ -79,9 +79,8 @@ export async function POST(request: Request) {
     fanXp[card.idol] = (fanXp[card.idol] ?? 0) + gain;
   }
 
-  const openPackDef = MISSIONS.find((m) => m.id === "open_pack");
   const currentProgress = prog.missionProgress["open_pack"] ?? 0;
-  const openPackProgress = openPackDef ? Math.min(currentProgress + 1, openPackDef.target) : currentProgress;
+  const openPackProgress = Math.min(currentProgress + 1, 1);
 
   // Pool missions tracking
   const rarePlusCount = cards.filter((c) => c.rarity !== "common").length;
@@ -93,13 +92,11 @@ export async function POST(request: Request) {
   const isSameWeek = prog.weeklyMissionsDate === monday;
   const weeklyProgress = { ...(isSameWeek ? prog.weeklyMissionProgress : {}) };
 
-  const open5Def = MISSIONS_WEEKLY.find((m) => m.id === "open_5_packs");
-  if (open5Def) weeklyProgress["open_5_packs"] = Math.min((weeklyProgress["open_5_packs"] ?? 0) + 1, open5Def.target);
+  weeklyProgress["open_5_packs"] = Math.min((weeklyProgress["open_5_packs"] ?? 0) + 1, 5);
 
-  const collectDef = MISSIONS_WEEKLY.find((m) => m.id === "collect_3_new");
-  if (collectDef) {
+  {
     const prev = weeklyProgress["collect_3_new"] ?? 0;
-    weeklyProgress["collect_3_new"] = Math.min(prev + newCardIds.length, collectDef.target);
+    weeklyProgress["collect_3_new"] = Math.min(prev + newCardIds.length, 3);
   }
 
   const cardCounts = new Map<string, number>();

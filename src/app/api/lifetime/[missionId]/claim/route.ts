@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { eq, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { wallets, progression, ownedCards } from "@/db/schema";
+import { wallets, progression, ownedCards, feedSubscriptions, feedLikes, tradeOffers } from "@/db/schema";
 import { LIFETIME_MISSIONS, getFanLevel } from "@/lib/gameConfig";
+import CARDS, { getCardsByPack } from "@/data/cards";
 
 const COOKIE_NAME = "idolbias_player_id";
 
@@ -30,6 +31,47 @@ export async function POST(
       currentValue = rows.length;
       break;
     }
+    case "complete_sets": {
+      const allCards = await db.select({ cardId: ownedCards.cardId }).from(ownedCards)
+        .where(eq(ownedCards.playerId, playerId));
+      const ownedSet = new Set(allCards.map(r => r.cardId));
+      const packCodes = [...new Set(CARDS.map(c => c.packCode))];
+      let completed = 0;
+      for (const code of packCodes) {
+        const packCards = getCardsByPack(code);
+        if (packCards.length > 0 && packCards.every(c => ownedSet.has(c.id))) completed++;
+      }
+      currentValue = completed;
+      break;
+    }
+    case "collect_legendary": {
+      const rows = await db.select().from(ownedCards).where(and(
+        eq(ownedCards.playerId, playerId),
+        sql`substr(card_id, -2, 1) = 'l'`,
+      ));
+      currentValue = rows.length;
+      break;
+    }
+    case "collect_secret": {
+      const rows = await db.select().from(ownedCards).where(and(
+        eq(ownedCards.playerId, playerId),
+        sql`substr(card_id, -2, 1) = 's'`,
+      ));
+      currentValue = rows.length;
+      break;
+    }
+    case "follow_all_artists": {
+      const subs = await db.select().from(feedSubscriptions)
+        .where(eq(feedSubscriptions.playerId, playerId));
+      currentValue = new Set(subs.map(s => s.memberId)).size;
+      break;
+    }
+    case "likes_given": {
+      const rows = await db.select().from(feedLikes)
+        .where(eq(feedLikes.userId, playerId));
+      currentValue = rows.length;
+      break;
+    }
     case "fan_level": {
       const allXp = Object.values(prog.fanXp);
       const totalXp = allXp.reduce((a, b) => a + b, 0);
@@ -39,6 +81,24 @@ export async function POST(
     case "login_dedication":
       currentValue = prog.totalLogins ?? 0;
       break;
+    case "streak_record":
+      currentValue = prog.streak ?? 0;
+      break;
+    case "packs_opened":
+      currentValue = (prog.missionProgress as any)?.["open_pack"] ?? 0;
+      break;
+    case "craft_master":
+      currentValue = (prog.missionProgress as any)?.["craft_card"] ?? 0;
+      break;
+    case "disenchant_veteran":
+      currentValue = 0;
+      break;
+    case "trades_completed": {
+      const rows = await db.select().from(tradeOffers)
+        .where(and(eq(tradeOffers.offererId, playerId), eq(tradeOffers.status, "completed")));
+      currentValue = rows.length;
+      break;
+    }
     default:
       currentValue = 0;
   }

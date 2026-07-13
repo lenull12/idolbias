@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq, sql } from "drizzle-orm";
+import { eq, ne, and, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import { getDb } from "@/db/client";
 import { gemPurchases, wallets } from "@/db/schema";
@@ -68,19 +68,25 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Invalid metadata" }, { status: 400 });
       }
 
-      await db.batch([
-        db
-          .update(gemPurchases)
-          .set({ status: "completed", completedAt: new Date() })
-          .where(eq(gemPurchases.stripeSessionId, sessionId)),
-        db
-          .update(wallets)
-          .set({
-            gems: sql`${wallets.gems} + ${gemsToCredit}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(wallets.playerId, playerId)),
-      ]);
+      // Atomic: only mark completed if not already completed (prevents double-credit on webhook retry)
+      const updated = await db.update(gemPurchases)
+        .set({ status: "completed", completedAt: new Date() })
+        .where(and(
+          eq(gemPurchases.stripeSessionId, sessionId),
+          ne(gemPurchases.status, "completed"),
+        ))
+        .returning({ id: gemPurchases.id });
+
+      if (updated.length === 0) {
+        return NextResponse.json({ ok: true });
+      }
+
+      await db.update(wallets)
+        .set({
+          gems: sql`${wallets.gems} + ${gemsToCredit}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(wallets.playerId, playerId));
     }
 
     return NextResponse.json({ ok: true });

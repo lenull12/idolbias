@@ -15,6 +15,7 @@ import MissionsView from "@/views/MissionsView";
 import FeedView from "@/components/feed/FeedView";
 import CosmoRoomView from "@/components/cosmo/CosmoRoomView";
 import IdolProfileView from "@/components/feed/IdolProfileView";
+import StreakModal from "@/components/StreakModal";
 import AuthStatus from "@/components/AuthStatus";
 import { authClient } from "@/lib/auth/client";
 import { usePlayer } from "@/lib/usePlayer";
@@ -23,9 +24,10 @@ import {
   bumpWeeklyMissionProgress, claimWeeklyMissionReward, claimLifetimeTier,
   changeBias,
 } from "@/lib/gameActions";
-import { MISSIONS, MISSIONS_WEEKLY, LIFETIME_MISSIONS, todayStr } from "@/lib/gameConfig";
-import type { MissionState, LifetimeMissionDef, LifetimeTier } from "@/lib/gameConfig";
+import { LIFETIME_MISSIONS, todayStr, daysBetween } from "@/lib/gameConfig";
+import type { MissionDef, MissionState, LifetimeMissionDef, LifetimeTier } from "@/lib/gameConfig";
 import type { LifetimeMissionState } from "@/views/MissionsView";
+import CARDS, { getCardsByPack } from "@/data/cards";
 
 export default function AppShell() {
   const { player, loading, refresh } = usePlayer();
@@ -41,6 +43,7 @@ export default function AppShell() {
   const [cosmoMemberId, setCosmoMemberId] = useState<string | null>(null);
   const [profileMemberId, setProfileMemberId] = useState<string | null>(null);
   const [profileGroupId, setProfileGroupId] = useState<string | null>(null);
+  const [showStreak, setShowStreak] = useState(false);
 
   useEffect(() => {
     if (player) {
@@ -72,9 +75,11 @@ export default function AppShell() {
   const prog = player?.progression;
   const streak = prog?.streak ?? 0;
   const canClaimDaily = prog ? prog.lastClaim !== todayStr() : false;
+  const gap = prog?.lastClaim ? daysBetween(prog.lastClaim, todayStr()) : null;
+  const isBroken = gap !== null && gap > 1 && streak > 0;
 
-  const [dailyTemplates, setDailyTemplates] = useState<typeof MISSIONS>([]);
-  const [weeklyTemplates, setWeeklyTemplates] = useState<typeof MISSIONS_WEEKLY>([]);
+  const [dailyTemplates, setDailyTemplates] = useState<MissionDef[]>([]);
+  const [weeklyTemplates, setWeeklyTemplates] = useState<MissionDef[]>([]);
   const [eventTemplates, setEventTemplates] = useState<any[]>([]);
   const [dailyResetAt, setDailyResetAt] = useState<number | null>(null);
   const [weeklyResetAt, setWeeklyResetAt] = useState<number | null>(null);
@@ -92,6 +97,9 @@ export default function AppShell() {
       })
       .catch(() => {});
   }, [player]);
+
+  // Banner state — shown when daily reward is claimable
+  const showBanner = canClaimDaily;
 
   // ─── Daily missions ──────────────────────────────────────────────────
   const dailyMissions: MissionState[] = prog && dailyTemplates.length > 0
@@ -117,6 +125,28 @@ export default function AppShell() {
           case "collect_cards":
             currentValue = Object.keys(player?.collection ?? {}).length;
             break;
+          case "complete_sets": {
+            const owned = Object.keys(player?.collection ?? {});
+            const ownedSet = new Set(owned);
+            const packCodes = [...new Set(CARDS.map(c => c.packCode))];
+            let completed = 0;
+            for (const code of packCodes) {
+              const packCards = getCardsByPack(code);
+              if (packCards.length > 0 && packCards.every(c => ownedSet.has(c.id))) completed++;
+            }
+            currentValue = completed;
+            break;
+          }
+          case "collect_legendary":
+            currentValue = Object.keys(player?.collection ?? {}).filter(id => id.endsWith("l1") || id.endsWith("l2") || id.endsWith("l3") || id.endsWith("l4") || id.endsWith("l5")).length;
+            break;
+          case "collect_secret":
+            currentValue = Object.keys(player?.collection ?? {}).filter(id => id.endsWith("s1") || id.endsWith("s2") || id.endsWith("s3")).length;
+            break;
+          case "follow_all_artists":
+          case "likes_given":
+            currentValue = 0;
+            break;
           case "fan_level": {
             const allXp = Object.values(prog.fanXp);
             const totalXp = allXp.reduce((a, b) => a + b, 0);
@@ -125,6 +155,19 @@ export default function AppShell() {
           }
           case "login_dedication":
             currentValue = prog.totalLogins ?? 0;
+            break;
+          case "streak_record":
+            currentValue = prog.streak ?? 0;
+            break;
+          case "packs_opened":
+            currentValue = (prog.missionProgress as any)?.["open_pack"] ?? 0;
+            break;
+          case "craft_master":
+            currentValue = (prog.missionProgress as any)?.["craft_card"] ?? 0;
+            break;
+          case "disenchant_veteran":
+          case "trades_completed":
+            currentValue = 0;
             break;
         }
         const claimedTierKeys: string[] = [];
@@ -337,9 +380,15 @@ export default function AppShell() {
             onSetBias={handleSetBias}
             tickets={tickets}
             gems={gems}
+            dust={player?.wallet.dust ?? 0}
+            owned={player?.collection ?? {}}
+            streak={streak}
+            canClaimDaily={canClaimDaily}
+            onClaimDaily={handleClaimDaily}
             collectionCount={Object.values(player?.collection ?? {}).reduce((a, b) => a + b, 0)}
             uniqueCards={Object.keys(player?.collection ?? {}).length}
             biasCooldown={biasCooldown}
+            createdAt={(player as any)?.createdAt ?? null}
           />
         );
       case "missions":
@@ -429,6 +478,25 @@ export default function AppShell() {
         <div style={{ position: "absolute", top: 12, right: 14, zIndex: 5 }}>
           <AuthStatus />
         </div>
+        {showBanner && (
+          <div onClick={() => setShowStreak(true)} style={{
+            position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
+            height: 36, overflow: "hidden", cursor: "pointer",
+            background: "var(--accent-hotpink)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <div style={{
+              display: "flex", gap: 40, whiteSpace: "nowrap",
+              animation: "tickerScroll 10s linear infinite",
+              fontFamily: "var(--font-sans, monospace)", fontSize: 12, fontWeight: 700,
+              letterSpacing: "1.5px", color: "var(--surface-white)",
+              paddingLeft: 40,
+            }}>
+              <span>🔥 Claim your daily rewards! Day {(streak % 7) + 1} 🔥 Claim your daily rewards! Day {(streak % 7) + 1}</span>
+              <span>🔥 Claim your daily rewards! Day {(streak % 7) + 1} 🔥 Claim your daily rewards! Day {(streak % 7) + 1}</span>
+            </div>
+          </div>
+        )}
         {renderView()}
         <div style={{ padding: "24px 16px 48px", textAlign: "center", fontSize: 11, color: "var(--text-disabled)" }}>
           <span style={{ opacity: 0.5 }}>© {new Date().getFullYear()} IdolBias.</span>{' '}
@@ -439,6 +507,16 @@ export default function AppShell() {
           <Link href="/legal/terms" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Terms</Link>
         </div>
       </main>
+
+      {showStreak && (
+        <StreakModal
+          streak={streak}
+          canClaim={canClaimDaily}
+          isBroken={isBroken}
+          onClaim={handleClaimDaily}
+          onClose={() => setShowStreak(false)}
+        />
+      )}
     </div>
   );
 }
