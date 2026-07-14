@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import CARDS, { getCardById, rarityFromReference } from "@/data/cards";
 import type { CardEntry } from "@/data/cards";
 import type { Rarity } from "@/components/CardEffects";
 import { DISENCHANT_VALUES, CRAFT_COSTS, RARITY_ORDER } from "@/lib/gameConfig";
 import {
-  disenchantCard, craftCard, createTradeOffer,
-  listTradeOffers, acceptTradeOffer, cancelTradeOffer, type TradeOffer,
+  disenchantCard, craftCard,
 } from "@/lib/gameActions";
 
 const RARITY_LABELS: Record<Rarity, string> = {
@@ -17,7 +16,7 @@ const RARITY_COLOR: Record<Rarity, string> = {
   common: "var(--rarity-common)", rare: "var(--rarity-rare)", epic: "var(--rarity-epic)", legendary: "var(--rarity-legendary)", secret: "var(--rarity-secret-ink)",
 };
 
-type Tab = "disenchant" | "craft" | "trade";
+type Tab = "disenchant" | "craft";
 
 export default function WorkshopView({
   owned = {},
@@ -33,14 +32,25 @@ export default function WorkshopView({
   const [tab, setTab] = useState<Tab>("disenchant");
 
   return (
-    <div className="mx-auto max-w-[600px] lg:max-w-[900px]" style={{ padding: "24px 16px" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <h1 style={{ fontFamily: "var(--font-display, cursive)", fontSize: 23, letterSpacing: "-0.3px", margin: 0, color: "var(--accent-hotpink)" }}>
-          Workshop
+    <div className="mx-auto max-w-[600px] lg:max-w-[900px]" style={{ padding: "24px 16px 0" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 24 }}>
+        <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
+          ✦ Workshop
+        </span>
+        <h1 style={{
+          fontFamily: "var(--font-display, cursive)", fontSize: 28, letterSpacing: "-0.3px",
+          margin: 0, lineHeight: 1.1,
+          background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple), var(--holo-c))",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+        }}>
+          craft & trade
         </h1>
+        <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
+          Disenchant duplicates and craft new cards
+        </span>
         <span style={{
-          fontSize: 13, fontWeight: 700, color: "var(--lilac-text-bold)", fontFamily: "var(--font-sans, monospace)",
-          display: "inline-flex", alignItems: "center", gap: 4, marginLeft: "auto",
+          fontSize: 13, fontWeight: 700, color: "var(--accent-purple)", fontFamily: "var(--font-sans, monospace)",
+          display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2,
         }}>💠 {dust} dust</span>
       </div>
 
@@ -48,7 +58,7 @@ export default function WorkshopView({
         display: "flex", gap: 2, padding: 2, borderRadius: 10, marginBottom: 20, width: "fit-content",
         background: "rgba(var(--text-primary-rgb),0.04)",
       }}>
-        {([["disenchant", "✨ Disenchant"], ["craft", "🔮 Craft"], ["trade", "🔄 Trade"]] as [Tab, string][]).map(([id, label]) => (
+        {([["disenchant", "✨ Disenchant"], ["craft", "🔮 Craft"]] as [Tab, string][]).map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{
             padding: "6px 14px", borderRadius: 8, border: "none",
             background: tab === id ? "var(--surface-white)" : "transparent",
@@ -62,7 +72,6 @@ export default function WorkshopView({
 
       {tab === "disenchant" && <DisenchantTab owned={owned} onChanged={onChanged} />}
       {tab === "craft" && <CraftTab dust={dust} onChanged={onChanged} onBumpMission={onBumpMission} />}
-      {tab === "trade" && <TradeTab owned={owned} onChanged={onChanged} />}
     </div>
   );
 }
@@ -77,6 +86,7 @@ function DisenchantTab({ owned, onChanged }: { owned: Record<string, number>; on
   const [amounts, setAmounts] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAllConfirm, setShowAllConfirm] = useState(false);
 
   const setAmount = (id: string, val: number, max: number) =>
     setAmounts((prev) => ({ ...prev, [id]: Math.max(0, Math.min(max, val)) }));
@@ -92,6 +102,39 @@ function DisenchantTab({ owned, onChanged }: { owned: Record<string, number>; on
     try {
       for (const [cardId, qty] of Object.entries(amounts).filter(([, v]) => v > 0)) {
         await disenchantCard(cardId, qty);
+      }
+      setAmounts({});
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally { setBusy(false); }
+  };
+
+  const allSummary = useMemo(() => {
+    const byRarity: Record<string, { count: number; dust: number }> = {};
+    for (const c of duplicates) {
+      const q = owned[c.id] ?? 0;
+      if (q <= 1) continue;
+      const r = rarityFromReference(c.reference);
+      const val = DISENCHANT_VALUES[r] ?? 0;
+      if (!byRarity[r]) byRarity[r] = { count: 0, dust: 0 };
+      byRarity[r].count += q - 1;
+      byRarity[r].dust += (q - 1) * val;
+    }
+    return byRarity;
+  }, [duplicates, owned]);
+
+  const totalAllDust = Object.values(allSummary).reduce((s, v) => s + v.dust, 0);
+  const allCount = Object.values(allSummary).reduce((s, v) => s + v.count, 0);
+
+  const handleDisenchantAll = async () => {
+    setShowAllConfirm(false);
+    setBusy(true); setError(null);
+    try {
+      for (const c of duplicates) {
+        const q = owned[c.id] ?? 0;
+        if (q <= 1) continue;
+        await disenchantCard(c.id, q - 1);
       }
       setAmounts({});
       onChanged();
@@ -130,6 +173,11 @@ function DisenchantTab({ owned, onChanged }: { owned: Record<string, number>; on
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, position: "sticky", bottom: 0, background: "var(--bg)", padding: "8px 0" }}>
         <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--font-sans, monospace)" }}>Total: +{totalDust} 💠</span>
+        <button disabled={allCount === 0 || busy} onClick={() => setShowAllConfirm(true)} style={{
+          ...ghostBtnStyle, opacity: allCount > 0 ? 1 : 0.4,
+        }}>
+          ⚡ Disenchant all
+        </button>
         <button disabled={!hasSelection || busy} onClick={handleDisenchant} style={{
           ...confirmBtnStyle, marginLeft: "auto", opacity: hasSelection ? 1 : 0.4, cursor: hasSelection ? "pointer" : "default",
         }}>
@@ -137,6 +185,60 @@ function DisenchantTab({ owned, onChanged }: { owned: Record<string, number>; on
         </button>
       </div>
       {error && <div style={{ fontSize: 11, color: "var(--state-danger)" }}>{error}</div>}
+
+      {/* Disenchant all confirm modal */}
+      {showAllConfirm && (
+        <div onClick={() => setShowAllConfirm(false)} style={{
+          position: "fixed", inset: 0, zIndex: 999,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(var(--text-primary-rgb),0.35)", backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)", cursor: "pointer",
+        }}>
+          <style>{`@keyframes modalIn { from { opacity: 0; transform: scale(0.88); } to { opacity: 1; transform: scale(1); } }`}</style>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            animation: "modalIn 0.35s cubic-bezier(0.23, 1, 0.32, 1)",
+            width: "min(320px, 88vw)", borderRadius: 16, overflow: "hidden",
+            border: "2px solid var(--text-primary)",
+            boxShadow: "6px 6px 0px rgba(var(--text-primary-rgb),0.9)",
+            background: "var(--surface-white)", cursor: "default",
+          }}>
+            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--font-display, cursive)", textAlign: "center", color: "var(--text-primary)" }}>
+                ⚡ Disenchant all?
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "12px", borderRadius: 10, background: "rgba(var(--text-primary-rgb),0.03)", border: "1px solid rgba(var(--text-primary-rgb),0.06)" }}>
+                {Object.entries(allSummary).map(([r, v]) => (
+                  <div key={r} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontFamily: "var(--font-sans, monospace)" }}>
+                    <span>{v.count}× {RARITY_LABELS[r as Rarity]}</span>
+                    <span style={{ fontWeight: 700, color: "var(--accent-hotpink)" }}>+{v.dust} 💠</span>
+                  </div>
+                ))}
+                <div style={{ borderTop: "1px solid rgba(var(--text-primary-rgb),0.1)", marginTop: 4, paddingTop: 6, display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 800, fontFamily: "var(--font-sans, monospace)" }}>
+                  <span>Total</span>
+                  <span style={{ color: "var(--accent-hotpink)" }}>+{totalAllDust} 💠</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setShowAllConfirm(false)} style={{
+                  flex: 1, padding: "10px 0", borderRadius: 10, border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+                  background: "transparent", color: "var(--text-muted)", cursor: "pointer",
+                  fontSize: 13, fontWeight: 700, fontFamily: "var(--font-sans, monospace)",
+                }}>
+                  Cancel
+                </button>
+                <button onClick={handleDisenchantAll} style={{
+                  flex: 1, padding: "10px 0", borderRadius: 10, border: "none",
+                  background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
+                  color: "var(--surface-white)", cursor: "pointer",
+                  fontSize: 13, fontWeight: 700, fontFamily: "var(--font-sans, monospace)",
+                }}>
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -147,17 +249,18 @@ function CraftTab({ dust, onChanged, onBumpMission }: { dust: number; onChanged:
   const [rarity, setRarity] = useState<Rarity>("common");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<CardEntry | null>(null);
+  const [craftResult, setCraftResult] = useState<CardEntry | null>(null);
 
   const cost = CRAFT_COSTS[rarity];
   const poolSize = useMemo(() => CARDS.filter((c) => rarityFromReference(c.reference) === rarity).length, [rarity]);
   const canAfford = dust >= cost;
+  const isLegendary = rarity === "legendary" || rarity === "secret";
 
   const handleCraft = async () => {
-    setBusy(true); setError(null); setResult(null);
+    setBusy(true); setError(null); setCraftResult(null);
     try {
       const res = await craftCard(rarity);
-      setResult(res.card as CardEntry);
+      setCraftResult(res.card as CardEntry);
       onChanged();
       onBumpMission?.("craft_card");
     } catch (e) {
@@ -190,12 +293,60 @@ function CraftTab({ dust, onChanged, onBumpMission }: { dust: number; onChanged:
       </button>
       {error && <div style={{ fontSize: 11, color: "var(--state-danger)" }}>{error}</div>}
 
-      {result && (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 10, background: "rgba(var(--surface-white-rgb),0.6)", border: "1px solid rgba(255,158,196,0.1)" }}>
-          <img src={result.imageSrc} alt={result.idol} style={{ width: 60, height: 78, objectFit: "cover", borderRadius: 6, border: `2px solid ${RARITY_COLOR[rarityFromReference(result.reference)]}` }} />
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--font-sans, monospace)" }}>{result.idol}</div>
-            <div style={{ fontSize: 11, color: "var(--text-disabled)" }}>{result.reference} · {result.group}</div>
+      {/* Craft reveal modal */}
+      {craftResult && (
+        <div onClick={() => setCraftResult(null)} style={{
+          position: "fixed", inset: 0, zIndex: 999,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(var(--text-primary-rgb),0.35)", backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)", cursor: "pointer",
+        }}>
+          <style>{`
+            @keyframes revealIn { 0% { opacity: 0; transform: scale(0.7) rotateY(90deg); } 100% { opacity: 1; transform: scale(1) rotateY(0); } }
+            @keyframes confettiFall { 0% { transform: translateY(-10px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+          `}</style>
+
+          {/* Confettis for legendary+ */}
+          {isLegendary && Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} style={{
+              position: "fixed", top: -10, left: `${5 + Math.random() * 90}%`, zIndex: 1000,
+              width: 5 + Math.random() * 5, height: 5 + Math.random() * 5,
+              borderRadius: Math.random() > 0.5 ? "50%" : 2,
+              background: ["var(--accent-hotpink)", "var(--accent-purple)", "#DAA520", "var(--holo-c)"][i % 4],
+              animation: `confettiFall ${1.5 + Math.random() * 2}s ease-out ${i * 0.1}s forwards`,
+              pointerEvents: "none",
+            }} />
+          ))}
+
+          <div onClick={(e) => e.stopPropagation()} style={{
+            animation: "revealIn 0.5s cubic-bezier(0.23, 1, 0.32, 1)",
+            width: "min(240px, 75vw)",
+            borderRadius: 14, overflow: "hidden",
+            border: `3px solid ${RARITY_COLOR[rarityFromReference(craftResult.reference)]}`,
+            boxShadow: `0 0 30px ${isLegendary ? "rgba(218,165,32,0.4)" : "rgba(var(--text-primary-rgb),0.2)"}`,
+            background: "var(--surface-white)",
+            cursor: "default",
+          }}>
+            <div style={{ padding: 0 }}>
+              <img src={craftResult.imageSrc} alt={craftResult.idol} style={{ width: "100%", display: "block" }} />
+              <div style={{ padding: "14px 14px 16px", textAlign: "center", display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, fontFamily: "var(--font-display, cursive)", color: "var(--text-primary)" }}>
+                  {craftResult.idol}
+                </div>
+                <div style={{ fontSize: 10, color: "var(--text-disabled)", fontFamily: "var(--font-sans, monospace)" }}>
+                  {craftResult.reference} · {RARITY_LABELS[rarityFromReference(craftResult.reference)]}
+                </div>
+                <div style={{
+                  padding: "8px 0", borderRadius: 8, marginTop: 4,
+                  background: "linear-gradient(135deg, rgba(255,20,147,0.08), rgba(201,177,255,0.06))",
+                  border: "1px solid var(--accent-hotpink)",
+                  fontSize: 13, fontWeight: 800, fontFamily: "var(--font-sans, monospace)",
+                  color: "var(--accent-hotpink)", letterSpacing: "1px", cursor: "pointer",
+                }} onClick={() => setCraftResult(null)}>
+                  {isLegendary ? "✨ AMAZING!" : "NICE!"}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -203,148 +354,7 @@ function CraftTab({ dust, onChanged, onBumpMission }: { dust: number; onChanged:
   );
 }
 
-// ─── Trade ──────────────────────────────────────────────────────────────────
-
-function TradeTab({ owned, onChanged }: { owned: Record<string, number>; onChanged: () => void }) {
-  const [offers, setOffers] = useState<TradeOffer[]>([]);
-  const [myOffers, setMyOffers] = useState<TradeOffer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [offeredId, setOfferedId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-
-  const duplicates = useMemo(() => CARDS.filter((c) => (owned[c.id] ?? 0) > 1), [owned]);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await listTradeOffers();
-      setOffers(res.offers);
-      setMyOffers(res.myOffers);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []);
-
-  const handleAccept = async (id: number) => {
-    setBusyId(id); setError(null);
-    try { await acceptTradeOffer(id); onChanged(); await load(); }
-    catch (e) { setError((e as Error).message); } finally { setBusyId(null); }
-  };
-  const handleCancel = async (id: number) => {
-    setBusyId(id); setError(null);
-    try { await cancelTradeOffer(id); onChanged(); await load(); }
-    catch (e) { setError((e as Error).message); } finally { setBusyId(null); }
-  };
-  const handleCreate = async (requestedCardId: string) => {
-    if (!offeredId) return;
-    setError(null);
-    try {
-      await createTradeOffer(offeredId, requestedCardId);
-      setOfferedId(null); setSearch("");
-      onChanged(); await load();
-    } catch (e) { setError((e as Error).message); }
-  };
-
-  const candidates = CARDS
-    .filter((c) => c.id !== offeredId)
-    .filter((c) => !search.trim() || c.idol.toLowerCase().includes(search.toLowerCase()) || c.reference.toLowerCase().includes(search.toLowerCase()))
-    .slice(0, 20);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div>
-        <div style={sectionTitleStyle}>Create an offer</div>
-        {duplicates.length === 0 ? (
-          <EmptyState text="No duplicates to offer yet." />
-        ) : !offeredId ? (
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {duplicates.map((c) => (
-              <button key={c.id} onClick={() => setOfferedId(c.id)} style={pickBtnStyle}>
-                <img src={c.imageSrc} alt={c.idol} style={{ width: 34, height: 44, objectFit: "cover", borderRadius: 4 }} />
-                <span style={{ fontSize: 10 }}>{c.reference}</span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ fontSize: 12, fontFamily: "var(--font-sans, monospace)" }}>
-              Offering <b>{getCardById(offeredId)?.reference}</b> for…
-            </div>
-            <input placeholder="Search a card…" value={search} onChange={(e) => setSearch(e.target.value)} style={inputStyle} />
-            <div style={{ maxHeight: 160, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-              {candidates.map((c) => (
-                <button key={c.id} onClick={() => handleCreate(c.id)} style={candidateRowStyle}>
-                  <span>{c.idol} · {c.reference}</span>
-                </button>
-              ))}
-            </div>
-            <button onClick={() => { setOfferedId(null); setSearch(""); }} style={backBtnStyle}>← Cancel</button>
-          </div>
-        )}
-      </div>
-
-      {myOffers.length > 0 && (
-        <div>
-          <div style={sectionTitleStyle}>Your open offers</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {myOffers.map((o) => (
-              <div key={o.id} style={offerRowStyle}>
-                <CardChip cardId={o.offeredCardId} />
-                <span style={arrowStyle}>→</span>
-                <CardChip cardId={o.requestedCardId} />
-                <button disabled={busyId === o.id} onClick={() => handleCancel(o.id)} style={cancelBtnStyle}>
-                  {busyId === o.id ? "…" : "Cancel"}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div>
-        <div style={sectionTitleStyle}>Open offers from other players</div>
-        {loading && <div style={{ fontSize: 12, color: "var(--text-disabled)" }}>Loading…</div>}
-        {!loading && offers.length === 0 && <EmptyState text="No open offers right now." />}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {offers.map((o) => {
-            const canAccept = (owned[o.requestedCardId] ?? 0) > 0;
-            return (
-              <div key={o.id} style={offerRowStyle}>
-                <CardChip cardId={o.offeredCardId} />
-                <span style={arrowStyle}>→</span>
-                <CardChip cardId={o.requestedCardId} />
-                <button disabled={!canAccept || busyId === o.id} onClick={() => handleAccept(o.id)} style={{
-                  ...acceptBtnStyle, opacity: canAccept ? 1 : 0.4, cursor: canAccept ? "pointer" : "default",
-                }} title={canAccept ? "" : "You don't own the requested card"}>
-                  {busyId === o.id ? "…" : "Accept"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {error && <div style={{ fontSize: 11, color: "var(--state-danger)" }}>{error}</div>}
-    </div>
-  );
-}
-
-function CardChip({ cardId }: { cardId: string }) {
-  const card = getCardById(cardId);
-  if (!card) return <span style={{ fontSize: 11 }}>???</span>;
-  const rarity = rarityFromReference(card.reference);
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <img src={card.imageSrc} alt={card.idol} style={{ width: 34, height: 44, objectFit: "cover", borderRadius: 4, border: `2px solid ${RARITY_COLOR[rarity]}` }} />
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, fontFamily: "var(--font-sans, monospace)" }}>{card.idol}</span>
-        <span style={{ fontSize: 9, color: "var(--text-disabled)", fontFamily: "var(--font-mono, monospace)" }}>{card.reference}</span>
-      </div>
-    </div>
-  );
-}
+// ─── Shared ─────────────────────────────────────────────────────────────────
 
 function EmptyState({ text }: { text: string }) {
   return <div style={{ fontSize: 12, color: "var(--text-disabled)", fontStyle: "italic", padding: "12px 0" }}>{text}</div>;
@@ -353,12 +363,4 @@ function EmptyState({ text }: { text: string }) {
 const rowStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 8, background: "rgba(var(--surface-white-rgb),0.6)", border: "1px solid rgba(var(--text-primary-rgb),0.05)" };
 const stepperBtnStyle: React.CSSProperties = { width: 24, height: 24, borderRadius: 6, border: "2px solid var(--text-primary)", background: "var(--surface-white)", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans, monospace)", fontSize: 12 };
 const confirmBtnStyle: React.CSSProperties = { padding: "8px 16px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))", color: "var(--surface-white)", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans, monospace)" };
-const backBtnStyle: React.CSSProperties = { padding: "4px 0", background: "transparent", border: "none", color: "var(--text-muted)", fontSize: 11, cursor: "pointer", textAlign: "left", fontFamily: "var(--font-sans, monospace)" };
-const sectionTitleStyle: React.CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: "1px", color: "var(--text-muted)", fontFamily: "var(--font-sans, monospace)", marginBottom: 8, textTransform: "uppercase" };
-const offerRowStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 8, border: "1px solid rgba(var(--text-primary-rgb),0.06)", background: "rgba(var(--surface-white-rgb),0.6)" };
-const arrowStyle: React.CSSProperties = { fontSize: 14, color: "var(--text-disabled)" };
-const acceptBtnStyle: React.CSSProperties = { marginLeft: "auto", padding: "5px 10px", borderRadius: 6, border: "none", background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))", color: "var(--surface-white)", fontSize: 11, fontWeight: 700, fontFamily: "var(--font-sans, monospace)" };
-const cancelBtnStyle: React.CSSProperties = { marginLeft: "auto", padding: "5px 10px", borderRadius: 6, border: "1px solid rgba(var(--text-primary-rgb),0.2)", background: "transparent", color: "var(--text-muted)", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans, monospace)" };
-const pickBtnStyle: React.CSSProperties = { display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: 6, borderRadius: 8, border: "1px solid rgba(var(--text-primary-rgb),0.08)", background: "var(--surface-white)", cursor: "pointer" };
-const inputStyle: React.CSSProperties = { padding: "5px 10px", borderRadius: 6, border: "1px solid rgba(255,158,196,0.2)", fontSize: 12, fontFamily: "var(--font-sans, monospace)", outline: "none" };
-const candidateRowStyle: React.CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 8px", borderRadius: 6, border: "1px solid rgba(var(--text-primary-rgb),0.06)", background: "var(--surface-white)", cursor: "pointer", fontSize: 11, fontFamily: "var(--font-sans, monospace)", textAlign: "left" };
+const ghostBtnStyle: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "1.5px solid rgba(var(--text-primary-rgb),0.15)", background: "transparent", color: "var(--text-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans, monospace)" };

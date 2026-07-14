@@ -126,12 +126,29 @@ export default function CardsView({ owned, onView, onGoToShop, onClaimed }: {
         />
       ) : (
         <>
+          {/* Header */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "0 16px", marginBottom: 12 }}
+            className="mx-auto max-w-[600px] lg:max-w-[1100px]"
+          >
+            <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
+              ✦ Cards
+            </span>
+            <h1 style={{
+              fontFamily: "var(--font-display, cursive)", fontSize: 28, letterSpacing: "-0.3px",
+              margin: 0, lineHeight: 1.1,
+              background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple), var(--holo-c))",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+            }}>
+              your collection
+            </h1>
+            <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
+              Browse, organize, and complete your photocard sets
+            </span>
+          </div>
+
           {/* Mode toggle */}
           <div style={{
             position: "sticky", top: 0, zIndex: 10,
-            background: "rgba(250,245,249,0.85)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
             padding: "12px 16px 8px",
             display: "flex", gap: 2,
           }}

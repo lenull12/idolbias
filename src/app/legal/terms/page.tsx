@@ -19,7 +19,7 @@ export default function TermsPage() {
       <p style={s.muted}>Last updated: July 19, 2026</p>
 
       <h2 style={s.h2}>1. Service Description</h2>
-      <p style={s.p}>IdolBias is a digital collectible platform where users can collect virtual photocards of fictional K-pop idols through a gacha system. The Service is provided by <strong>PropulseDev</strong> — SIRET 10602520800013 — <strong>raphael.propulsedev@gmail.com</strong>.</p>
+      <p style={s.p}>IdolBias is a digital collectible platform where users can collect virtual photocards of fictional K-pop idols through a gacha system. The Service is provided by <strong>PropulseDev</strong> — SIRET 10602520800013 — <strong>help@idolbias.com</strong>.</p>
 
       <h2 style={s.h2}>2. Account</h2>
       <p style={s.p}>Access to the Service is granted through a device identifier stored in a browser cookie. You may optionally link your account via Google OAuth to persist your collection across devices. You are responsible for maintaining the confidentiality of your device and Google account.</p>
@@ -52,7 +52,7 @@ export default function TermsPage() {
       <p style={s.p}>These Terms are governed by French law. Any disputes shall be submitted to the competent courts of Paris.</p>
 
       <h2 style={s.h2}>10. Contact</h2>
-      <p style={s.p}>For any questions regarding these Terms, contact us at <strong>raphael.propulsedev@gmail.com</strong>.</p>
+      <p style={s.p}>For any questions regarding these Terms, contact us at <strong>help@idolbias.com</strong>.</p>
     </div>
   );
 }

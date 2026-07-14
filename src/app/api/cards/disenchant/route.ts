@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { wallets, ownedCards } from "@/db/schema";
+import { wallets, ownedCards, progression } from "@/db/schema";
 import { getCardById, rarityFromReference } from "@/data/cards";
 import { DISENCHANT_VALUES } from "@/lib/gameConfig";
 
@@ -46,8 +46,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not enough duplicates to disenchant" }, { status: 400 });
   }
 
-  await db.update(wallets).set({ dust: sql`dust + ${dustGained}`, updatedAt: now })
-    .where(eq(wallets.playerId, playerId));
+  await db.batch([
+    db.update(wallets).set({ dust: sql`dust + ${dustGained}`, updatedAt: now })
+      .where(eq(wallets.playerId, playerId)),
+    db.update(progression).set({
+      missionProgress: sql`json_set(mission_progress, '$.disenchant_card', COALESCE(json_extract(mission_progress, '$.disenchant_card'), 0) + ${quantity})`,
+      updatedAt: now,
+    }).where(eq(progression.playerId, playerId)),
+  ]);
 
   const [wallet] = await db.select().from(wallets).where(eq(wallets.playerId, playerId)).limit(1);
 

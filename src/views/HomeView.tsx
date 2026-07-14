@@ -9,11 +9,9 @@ import { RARITY_LETTER } from "@/lib/rarityTheme";
 const FEATURED_PACKS = getAllPacks()
   .filter(([, p]) => p.tag === "featured");
 
-export default function HomeView({ onGoToShop, streak, tickets, gems, owned, bias }: {
+export default function HomeView({ onGoToShop, streak, owned, bias }: {
   onGoToShop?: () => void;
   streak: number;
-  tickets: number;
-  gems: number;
   owned?: Record<string, number>;
   bias?: string | null;
 }) {
@@ -58,60 +56,24 @@ export default function HomeView({ onGoToShop, streak, tickets, gems, owned, bia
   return (
     <div
       className="mx-auto max-w-[600px] lg:max-w-[1100px]"
-      style={{ padding: "20px 16px 32px", display: "flex", flexDirection: "column", gap: 24, paddingBottom: 48 }}
+      style={{ padding: "24px 16px 0", display: "flex", flexDirection: "column", gap: 24 }}
     >
       {/* ─── Header ─── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
-            ✦ IdolBias
-          </span>
-          <h1 style={{
-            fontFamily: "var(--font-display, cursive)", fontSize: 32, letterSpacing: "-0.5px",
-            background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple), var(--surface-white))",
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-            margin: 0, lineHeight: 1.1,
-          }}>
-            your next bias
-          </h1>
-          <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 4 }}>
-            Collect your favorite virtual K-pop idol photocards. Every pull is a surprise ✨
-          </span>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "6px 12px", borderRadius: "10px 10px 6px 6px",
-            background: "var(--surface-white, #fff)", border: "2px solid var(--text-primary)",
-            boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
-          }}>
-            <span style={{ fontSize: 14 }}>🎟️</span>
-            <span style={{ fontFamily: "var(--font-display, cursive)", fontSize: 13, fontWeight: 700, color: "var(--accent-hotpink)" }}>
-              {tickets}
-            </span>
-          </div>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "6px 12px", borderRadius: "10px 10px 6px 6px",
-            background: "var(--surface-white, #fff)", border: "2px solid var(--text-primary)",
-            boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
-            position: "relative",
-          }}>
-            <span style={{ fontSize: 14 }}>💎</span>
-            <span style={{ fontFamily: "var(--font-display, cursive)", fontSize: 13, fontWeight: 700, color: "var(--currency-gems)" }}>
-              {gems}
-            </span>
-            <button onClick={(e) => { e.stopPropagation(); onGoToShop?.(); }} style={{
-              position: "absolute", top: -6, right: -6,
-              width: 18, height: 18, borderRadius: "50%", border: "1.5px solid var(--accent-hotpink)",
-              background: "var(--accent-hotpink)", color: "#fff", fontSize: 10, fontWeight: 900,
-              cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-            }}>
-              +
-            </button>
-          </div>
-        </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
+          ✦ IdolBias
+        </span>
+        <h1 style={{
+          fontFamily: "var(--font-display, cursive)", fontSize: 28, letterSpacing: "-0.3px",
+          background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple), var(--surface-white))",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+          margin: 0, lineHeight: 1.1,
+        }}>
+          your next bias
+        </h1>
+        <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
+          Collect your favorite virtual K-pop idol photocards. Every pull is a surprise ✨
+        </span>
       </div>
 
       {/* ─── Featured pack carousel (même layout que ShopView) ─── */}

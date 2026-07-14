@@ -18,7 +18,7 @@ export default function PrivacyPage() {
       <p style={s.muted}>Last updated: July 19, 2026</p>
 
       <h2 style={s.h2}>1. Data Controller</h2>
-      <p style={s.p}><strong>PropulseDev</strong> — SIRET 10602520800013 — <strong>raphael.propulsedev@gmail.com</strong>.</p>
+      <p style={s.p}><strong>PropulseDev</strong> — SIRET 10602520800013 — <strong>help@idolbias.com</strong>.</p>
 
       <h2 style={s.h2}>2. What Data We Collect</h2>
 
@@ -54,7 +54,7 @@ export default function PrivacyPage() {
         <li>Data portability</li>
         <li>Withdraw consent at any time (where processing is based on consent)</li>
       </ul>
-      <p style={s.p}>To exercise these rights, contact us at <strong>raphael.propulsedev@gmail.com</strong>. We will respond within 30 days.</p>
+      <p style={s.p}>To exercise these rights, contact us at <strong>help@idolbias.com</strong>. We will respond within 30 days.</p>
 
       <h2 style={s.h2}>6. Data Sharing</h2>
       <p style={s.p}>We do not sell your personal data to third parties. We share data only with:</p>
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
       <p style={s.p}>We may update this policy. Material changes will be notified via the Service. Continued use after changes constitutes acceptance.</p>
 
       <h2 style={s.h2}>11. Contact & DPO</h2>
-      <p style={s.p}>For privacy inquiries: <strong>raphael.propulsedev@gmail.com</strong>.<br />
+      <p style={s.p}>For privacy inquiries: <strong>help@idolbias.com</strong>.<br />
       You also have the right to lodge a complaint with the CNIL: <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" style={s.link}>www.cnil.fr</a>.</p>
     </div>
   );

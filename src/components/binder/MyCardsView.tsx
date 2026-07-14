@@ -36,7 +36,7 @@ export default function MyCardsView({ owned }: {
   owned: Record<string, number>;
 }) {
   const [favorites, toggleFav] = useFavorites();
-  const [sortBy, setSortBy] = useState<string>("member");
+  const [sortBy, setSortBy] = useState<string>("newest");
   const [favFilter, setFavFilter] = useState(false);
   const [filterMember, setFilterMember] = useState("all");
   const [filterPack, setFilterPack] = useState("all");
@@ -61,6 +61,12 @@ export default function MyCardsView({ owned }: {
   const packs = useMemo(() => [...new Set(CARDS.map((c) => c.pack))].sort(), []);
   const members = useMemo(() => [...new Set(CARDS.map((c) => c.idol))].sort(), []);
 
+  const cardIndex = useMemo(() => {
+    const idx: Record<string, number> = {};
+    CARDS.forEach((c, i) => { idx[c.id] = i; });
+    return idx;
+  }, []);
+
   const ownedCards = useMemo(() => {
     let list = CARDS.filter((c) => (owned[c.id] ?? 0) > 0);
 
@@ -71,6 +77,8 @@ export default function MyCardsView({ owned }: {
 
     list.sort((a, b) => {
       switch (sortBy) {
+        case "newest": return (cardIndex[b.id] ?? 0) - (cardIndex[a.id] ?? 0);
+        case "oldest": return (cardIndex[a.id] ?? 0) - (cardIndex[b.id] ?? 0);
         case "member": return a.idol.localeCompare(b.idol) || a.reference.localeCompare(b.reference);
         case "rarity": {
           const ra = RARITY_ORDER.indexOf(rarityFromReference(a.reference));
@@ -83,7 +91,7 @@ export default function MyCardsView({ owned }: {
     });
 
     return list;
-  }, [owned, sortBy, favFilter, favorites, filterMember, filterPack, filterRarity]);
+  }, [owned, sortBy, favFilter, favorites, filterMember, filterPack, filterRarity, cardIndex]);
 
   const totalUnique = ownedCards.length;
   const totalQty = useMemo(() =>
@@ -121,6 +129,8 @@ export default function MyCardsView({ owned }: {
           Sort
         </span>
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={selectStyle}>
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
           <option value="member">Member</option>
           <option value="rarity">Rarity</option>
           <option value="set">Set</option>

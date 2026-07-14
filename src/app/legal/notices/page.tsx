@@ -25,7 +25,7 @@ export default function NoticesPage() {
       <p style={s.p}><strong>PropulseDev</strong><br />
       Legal form: <strong>Entreprise Individuelle (EI)</strong><br />
       SIRET: <strong>10602520800013</strong><br />
-      Email: <strong>raphael.propulsedev@gmail.com</strong></p>
+      Email: <strong>help@idolbias.com</strong></p>
 
       <h2 style={s.h2}>Director of Publication</h2>
       <p style={s.p}><strong>Raphaël T.</strong>, as legal representative.</p>

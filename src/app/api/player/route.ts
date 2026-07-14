@@ -28,7 +28,7 @@ export async function GET() {
     if (isNew) {
       const now = new Date();
       await db.insert(players).values({
-        id: playerId, createdAt: now, welcomePackClaimedAt: now,
+        id: playerId, createdAt: now,
       });
       await db.insert(wallets).values({
         playerId, tickets: WELCOME_TICKETS, gems: WELCOME_GEMS, updatedAt: now,
@@ -65,8 +65,9 @@ export async function GET() {
 
     const [playerRow] = await db.select().from(players).where(eq(players.id, playerId)).limit(1);
     const createdAt = playerRow?.createdAt ?? new Date();
+    const welcomePackClaimedAt = playerRow?.welcomePackClaimedAt ?? null;
 
-    const res = NextResponse.json({ playerId, isNew, wallet, progression: prog, collection, createdAt });
+    const res = NextResponse.json({ playerId, isNew, wallet, progression: prog, collection, createdAt, welcomePackClaimedAt });
     res.cookies.set(COOKIE_NAME, playerId, {
       httpOnly: true, sameSite: "lax", maxAge: COOKIE_MAX_AGE, path: "/",
     });

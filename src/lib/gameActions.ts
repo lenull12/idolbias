@@ -44,6 +44,7 @@ async function post<T>(url: string, body?: unknown): Promise<T> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
+    credentials: "include",
   });
   const json: unknown = await res.json();
   if (!res.ok) {

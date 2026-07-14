@@ -1,11 +1,14 @@
 "use client";
 
-import CARDS, { IDOL_NAMES, getCardsByPack, getPackInfo } from "@/data/cards";
+import CARDS, { getCardsByPack, getPackInfo } from "@/data/cards";
+import { GROUPS } from "@/data/artists";
 import { BIAS_COOLDOWN_DAYS, getFanLevel, STREAK_TICKETS, STREAK_BONUS_GEMS } from "@/lib/gameConfig";
 import { useEffect, useState, useMemo } from "react";
 import { authClient } from "@/lib/auth/client";
 import Link from "next/link";
 import SystemWindow from "@/components/SystemWindow";
+import ContactModal from "@/components/ContactModal";
+import DeleteConfirmModal from "@/components/DeleteConfirmModal";
 
 type Purchase = {
   id: string;
@@ -77,7 +80,7 @@ export default function ProfileView({
   const initial = displayName[0]?.toUpperCase() || "F";
   const daysSince = createdAt ? Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000) : 0;
 
-  const todayIdx = canClaimDaily ? streak % 7 : 0;
+  const todayIdx = streak % 7;
   const todayTickets = STREAK_TICKETS[todayIdx];
   const todayGems = STREAK_BONUS_GEMS[todayIdx];
   const fan = useMemo(() => {
@@ -89,15 +92,9 @@ export default function ProfileView({
     return getFanLevel(totalXp);
   }, [owned]);
 
-  const [giftClaimed, setGiftClaimed] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return localStorage.getItem("idolbias_gift_claimed") === "true";
-  });
-
-  const handleClaimGift = async () => {
-    localStorage.setItem("idolbias_gift_claimed", "true");
-    setGiftClaimed(true);
-  };
+  const [selectedGroup, setSelectedGroup] = useState<string>(GROUPS[0]?.id ?? "");
+  const [showContact, setShowContact] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [claimingStreak, setClaimingStreak] = useState(false);
   const handleClickDaily = async () => {
@@ -203,7 +200,7 @@ export default function ProfileView({
               <span style={{
                 padding: "2px 8px", borderRadius: 20,
                 background: "linear-gradient(135deg, #2E1F4D, #1A0F2E)",
-                color: "var(--holo-d, #9EE6FF)", fontSize: 10, fontWeight: 700,
+                color: "var(--accent-hotpink)", fontSize: 10, fontWeight: 700,
                 fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
               }}>
                 FOUNDER
@@ -268,100 +265,161 @@ export default function ProfileView({
         </div>
       </SystemWindow>
 
-      {/* ─── Daily streak strip ─── */}
+      {/* ─── Daily login card ─── */}
       <div style={{
-        background: "linear-gradient(100deg, rgba(255,20,147,0.08), rgba(201,177,255,0.10))",
-        border: "1.5px dashed rgba(var(--text-primary-rgb),0.25)",
-        borderRadius: 12, padding: "12px 16px",
-        display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap",
+        background: "var(--surface-white)",
+        border: "2px solid var(--text-primary)",
+        boxShadow: "6px 6px 0px rgba(var(--text-primary-rgb),0.9)",
+        borderRadius: 14, padding: "20px 16px",
+        display: "flex", flexDirection: "column", gap: 16,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 14 }}>🔥</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap" }}>
-            {streak}-day streak
-          </span>
-          <div style={{ display: "flex", gap: 5 }}>
-            {Array.from({ length: 7 }).map((_, i) => {
-              const isPast = i < todayIdx;
-              const isToday = i === todayIdx;
-              const isFuture = i > todayIdx;
-              return (
-                <div key={i} style={{
-                  width: 28, height: 28, borderRadius: 8,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: 700, fontFamily: "var(--font-sans, monospace)",
-                  background: isPast ? "var(--accent-hotpink)" : isToday ? "var(--holo-d, #9EE6FF)" : "transparent",
-                  color: isPast ? "var(--surface-white)" : isToday ? "var(--text-primary)" : "var(--text-disabled)",
-                  border: isFuture ? "1.5px dashed rgba(var(--text-primary-rgb),0.15)" : "1.5px solid transparent",
-                  boxShadow: isToday ? "0 0 0 3px rgba(255,20,147,0.25)" : "none",
-                }}>
-                  {isPast ? "✓" : i + 1}
-                </div>
-              );
-            })}
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 20 }}>🔥</span>
+            <span style={{ fontFamily: "var(--font-display, cursive)", fontSize: 18, fontWeight: 700 }}>
+              {canClaimDaily ? streak : Math.max(streak - 1, 0) || streak}-day streak
+            </span>
           </div>
+          <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase" }}>
+            Weekly reset
+          </span>
         </div>
+
+        {/* 7 day cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
+          {Array.from({ length: 7 }).map((_, i) => {
+            const dayTickets = STREAK_TICKETS[i];
+            const dayGems = STREAK_BONUS_GEMS[i];
+            const isPast = i < todayIdx;
+            const isToday = i === todayIdx && todayIdx >= 0;
+            const isFuture = i > todayIdx;
+            const isJackpot = i === 6;
+
+            const rewardStr = dayTickets > 0 && dayGems > 0
+              ? `${dayTickets}🎟️ ${dayGems}💎`
+              : dayTickets > 0 ? `${dayTickets}🎟️`
+              : dayGems > 0 ? `${dayGems}💎`
+              : "—";
+
+            let bg = "rgba(var(--text-primary-rgb),0.04)";
+            let border = "1.5px solid rgba(var(--text-primary-rgb),0.12)";
+            let shadow = "none";
+            let statusText = "";
+            let statusColor = "var(--text-disabled)";
+            let rewardSize = 14;
+            let opacity = 0.85;
+
+            if (isPast) {
+              bg = "rgba(var(--accent-hotpink),0.07)";
+              border = "1.5px solid rgba(var(--accent-hotpink),0.25)";
+              statusText = "✓";
+              statusColor = "var(--accent-hotpink)";
+              opacity = 0.9;
+            }
+            if (isToday) {
+              bg = "linear-gradient(180deg, rgba(255,20,147,0.12), rgba(201,177,255,0.12))";
+              border = "2px solid var(--accent-hotpink)";
+              shadow = "0 0 0 3px rgba(255,20,147,0.15)";
+              statusText = "TODAY";
+              statusColor = "var(--accent-hotpink)";
+              opacity = 1;
+              rewardSize = 16;
+            }
+            if (isFuture) {
+              opacity = 0.7;
+              statusText = "🔒";
+            }
+
+            return (
+              <div key={i} style={{
+                display: "flex", flexDirection: "column", alignItems: "center",
+                gap: 4, padding: "8px 2px", borderRadius: 10,
+                background: bg, border, boxShadow: shadow, opacity, position: "relative",
+              }}>
+                {isJackpot && isToday && (
+                  <span style={{
+                    position: "absolute", top: -6, right: -4, fontSize: 8, fontWeight: 800,
+                    background: "linear-gradient(135deg, #DAA520, #FFD700)", color: "var(--text-primary)",
+                    padding: "1px 6px", borderRadius: 4, fontFamily: "var(--font-sans, monospace)",
+                    letterSpacing: "0.5px",
+                  }}>
+                    ⭐ JACKPOT
+                  </span>
+                )}
+
+                <span style={{
+                  fontSize: 10, fontWeight: 700, fontFamily: "var(--font-sans, monospace)",
+                  color: isToday ? "var(--accent-hotpink)" : "var(--text-muted)",
+                  lineHeight: 1,
+                }}>
+                  Day {i + 1}
+                </span>
+
+                <span style={{
+                  fontSize: rewardSize, fontWeight: 800, fontFamily: "var(--font-display, cursive)",
+                  color: isToday ? "var(--text-primary)" : "var(--text-muted)",
+                  lineHeight: 1.1, letterSpacing: "-0.3px",
+                  display: "flex", alignItems: "center", gap: 2, flexWrap: "nowrap",
+                }}>
+                  {rewardStr}
+                </span>
+
+                <span style={{
+                  fontSize: 9, fontWeight: 700, color: statusColor,
+                  fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
+                  marginTop: isPast ? 0 : 1,
+                }}>
+                  {statusText}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Claim button */}
         <button
           onClick={handleClickDaily}
           disabled={!canClaimDaily || claimingStreak}
           style={{
-            padding: "9px 16px", borderRadius: 8, border: "none", cursor: canClaimDaily ? "pointer" : "default",
-            background: canClaimDaily ? "var(--text-primary)" : "rgba(var(--text-primary-rgb),0.06)",
-            color: canClaimDaily ? "var(--surface-white)" : "var(--text-disabled)",
-            fontFamily: "var(--font-sans, monospace)", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap",
-            transition: "all 0.15s",
+            padding: "14px 0", borderRadius: 12, border: "none", cursor: canClaimDaily ? "pointer" : "default",
+            background: canClaimDaily && !claimingStreak
+              ? "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))"
+              : "rgba(var(--text-primary-rgb),0.06)",
+            color: canClaimDaily && !claimingStreak
+              ? "var(--surface-white)"
+              : "var(--text-disabled)",
+            fontSize: 15, fontWeight: 800, fontFamily: "var(--font-sans, monospace)",
+            letterSpacing: "1.5px", transition: "all 0.2s",
           }}
         >
-          {claimingStreak ? "..." : canClaimDaily
-            ? `Claim Day ${todayIdx + 1} · ${todayTickets > 0 ? `+${todayTickets} 🎟️` : todayGems > 0 ? `+${todayGems} 💎` : "Claim"}`
-            : "Come back tomorrow"}
+          {claimingStreak
+            ? "CLAIMING..."
+            : canClaimDaily
+                ? todayGems > 0 && todayTickets > 0
+                  ? `CLAIM DAY ${todayIdx + 1} · +${todayTickets}🎟️ +${todayGems}💎`
+                  : todayTickets > 0
+                    ? `CLAIM DAY ${todayIdx + 1} · +${todayTickets}🎟️`
+                    : todayGems > 0
+                      ? `CLAIM DAY ${todayIdx + 1} · +${todayGems}💎`
+                      : `CLAIM DAY ${todayIdx + 1}`
+                : "COME BACK TOMORROW"}
         </button>
       </div>
 
-      {/* ─── Gift banner ─── */}
-      {!giftClaimed && (
-        <div style={{
-          background: "var(--surface-white)",
-          border: "2px solid var(--text-primary)",
-          boxShadow: "4px 4px 0px rgba(var(--text-primary-rgb),0.9)",
-          borderRadius: 12,
-          display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", flexWrap: "wrap",
-        }}>
-          <span style={{ fontSize: 26 }}>🎁</span>
-          <div style={{ flex: 1, minWidth: 140 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>A gift from IdolBias</div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
-              A little welcome gift to help you start your collection.
-            </div>
-          </div>
-          <button
-            onClick={handleClaimGift}
-            style={{
-              padding: "8px 14px", borderRadius: 8, border: "1.5px solid var(--text-primary)",
-              background: "var(--holo-d, #9EE6FF)", cursor: "pointer",
-              fontFamily: "var(--font-sans, monospace)", fontSize: 12, fontWeight: 700,
-              color: "var(--text-primary)", whiteSpace: "nowrap",
-            }}
-          >
-            Claim +300 💎
-          </button>
-        </div>
-      )}
+      {/* Gift banner removed */}
 
-      {/* ─── Grid Badges + Collection ─── */}
+      {/* ─── Grid Badges + Collection + Bias + Account ─── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
-        {/* Badges */}
+        {/* Left: Badges */}
         <SystemWindow title="Badges" width="100%">
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Founder */}
             <div>
               <SectionTitle>Founder</SectionTitle>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
                 {badge("✦", "Day One", true, "Joined during launch week")}
               </div>
             </div>
-
-            {/* Fan devotion */}
             <div>
               <SectionTitle>Fan devotion</SectionTitle>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
@@ -371,8 +429,6 @@ export default function ProfileView({
                 {badge("🐺", "VICIOUS Legend", fanLevel >= 30, "Reach Fan Lv.30")}
               </div>
             </div>
-
-            {/* Collector */}
             <div>
               <SectionTitle>Collector</SectionTitle>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
@@ -382,8 +438,6 @@ export default function ProfileView({
                 {badge("💠", "Diamond Coll.", completeSets >= 4, "Complete every set")}
               </div>
             </div>
-
-            {/* Streak */}
             <div>
               <SectionTitle>Streak</SectionTitle>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
@@ -391,8 +445,6 @@ export default function ProfileView({
                 {badge("🌙", "30-Day Devotion", streak >= 30, "Maintain a 30-day streak")}
               </div>
             </div>
-
-            {/* Secret hunt & trading */}
             <div>
               <SectionTitle>Secret hunt & trading</SectionTitle>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
@@ -403,7 +455,7 @@ export default function ProfileView({
           </div>
         </SystemWindow>
 
-        {/* Right column: Collection + Purchase history */}
+        {/* Right: Collection + Purchase history + Bias + Account */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <SystemWindow title="Collection" width="100%">
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -414,35 +466,18 @@ export default function ProfileView({
                     {(() => {
                       const pi = getPackInfo(pack.code);
                       return (
-                        <div style={{
-                          width: 40, height: 52, borderRadius: 6, flexShrink: 0,
-                          background: pi?.coverImage ? "none" : "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))",
-                          border: "1.5px solid var(--text-primary)", overflow: "hidden",
-                        }}>
-                          {pi?.coverImage && (
-                            <img src={pi.coverImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                          )}
+                        <div style={{ width: 40, height: 52, borderRadius: 6, flexShrink: 0, background: pi?.coverImage ? "none" : "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))", border: "1.5px solid var(--text-primary)", overflow: "hidden" }}>
+                          {pi?.coverImage && <img src={pi.coverImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
                         </div>
                       );
                     })()}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{pack.name}</span>
-                        <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-sans, monospace)" }}>
-                          {pack.ownedCount}/{pack.total}
-                        </span>
+                        <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-sans, monospace)" }}>{pack.ownedCount}/{pack.total}</span>
                       </div>
-                      <div style={{
-                        width: "100%", height: 6, borderRadius: 3, marginTop: 5,
-                        background: "rgba(var(--text-primary-rgb),0.06)",
-                        overflow: "hidden",
-                      }}>
-                        <div style={{
-                          height: "100%", borderRadius: 3,
-                          width: `${pct}%`,
-                          background: "linear-gradient(90deg, var(--accent-hotpink), var(--accent-purple))",
-                          transition: "width 0.4s",
-                        }} />
+                      <div style={{ width: "100%", height: 6, borderRadius: 3, marginTop: 5, background: "rgba(var(--text-primary-rgb),0.06)", overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 3, width: `${pct}%`, background: "linear-gradient(90deg, var(--accent-hotpink), var(--accent-purple))", transition: "width 0.4s" }} />
                       </div>
                     </div>
                   </div>
@@ -454,108 +489,132 @@ export default function ProfileView({
           <SystemWindow title="Purchase history" width="100%">
             <PurchaseHistory />
           </SystemWindow>
-        </div>
-      </div>
 
-      {/* ─── Bias Picker ─── */}
-      <div style={{
-        width: "100%", display: "flex", flexDirection: "column", gap: 12,
-        padding: 20, borderRadius: 16,
-        background: "rgba(var(--surface-white-rgb),0.5)",
-        backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-        border: "1px solid rgba(255,158,196,0.08)",
-      }}>
-        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "2px", color: "var(--text-muted)", textTransform: "uppercase" }}>
-          ✦ Choose your bias
-        </span>
-        <span style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-          Your bias gets better odds every time you pull. You can change once every {BIAS_COOLDOWN_DAYS} days.
-        </span>
-        {biasCooldown !== null && biasCooldown !== undefined && biasCooldown > 0 && (
-          <span style={{ fontSize: 11, color: "var(--accent-pink)", fontWeight: 600 }}>
-            ⏳ Can change again in {biasCooldown} day(s)
-          </span>
-        )}
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {IDOL_NAMES.map((idol) => {
-            const active = bias === idol;
-            return (
-              <button
-                key={idol}
-                onClick={() => onSetBias(idol)}
-                style={{
-                  padding: "8px 16px", borderRadius: 10, cursor: "pointer", border: "none",
-                  outline: active ? "2px solid var(--text-primary)" : "1.5px solid rgba(var(--text-primary-rgb),0.12)",
-                  outlineOffset: -2,
-                  background: active ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "rgba(var(--surface-white-rgb),0.6)",
-                  color: active ? "var(--text-primary)" : "var(--text-secondary)",
-                  fontFamily: "var(--font-display, cursive)", fontSize: 14, fontWeight: 700,
-                  boxShadow: active ? "3px 3px 0px rgba(var(--text-primary-rgb),0.9)" : "none",
-                }}
-              >
-                {active ? "💖 " : ""}{idol}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ─── Account ─── */}
-      <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(var(--surface-white-rgb),0.3)", border: "1px solid rgba(255,158,196,0.06)" }}>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "2px", color: "var(--text-disabled)", textTransform: "uppercase", marginBottom: 8 }}>✦ Account</div>
-        {user ? (
-          <>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              {user.image && (
-                <img src={user.image} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} />
-              )}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>{user.name}</div>
-                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{user.email}</div>
-              </div>
+          <SystemWindow title="Choose Your Bias" width="100%">
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 12 }}>
+              Your bias gets better odds every time you pull. You can change once every {BIAS_COOLDOWN_DAYS} days.
             </div>
-            <button
-              onClick={async () => {
-                if (!confirm("Delete your account and all data? This cannot be undone.")) return;
-                try {
-                  const res = await fetch("/api/account", { method: "DELETE" });
-                  if (res.ok) {
-                    alert("Account deleted.");
-                    window.location.reload();
-                  } else {
-                    alert("Delete failed.");
-                  }
-                } catch {
-                  alert("Delete failed.");
-                }
-              }}
-              style={{
-                marginTop: 10, padding: "6px 14px", borderRadius: 8,
-                border: "1px solid rgba(255,80,80,0.3)",
-                background: "transparent", color: "#ff5050",
-                fontSize: 12, fontWeight: 600, cursor: "pointer",
-              }}
-            >
-              Delete account
-            </button>
-          </>
-        ) : null}
-      </div>
+            {biasCooldown !== null && biasCooldown !== undefined && biasCooldown > 0 && (
+              <div style={{ fontSize: 11, color: "var(--accent-pink)", fontWeight: 600, marginBottom: 8 }}>
+                ⏳ Can change again in {biasCooldown} day(s)
+              </div>
+            )}
+            {GROUPS.length > 1 && (
+              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                {GROUPS.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => setSelectedGroup(g.id)}
+                    style={{
+                      padding: "6px 14px", borderRadius: 8, cursor: "pointer", border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+                      background: selectedGroup === g.id ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "transparent",
+                      color: selectedGroup === g.id ? "var(--text-primary)" : "var(--text-secondary)",
+                      fontFamily: "var(--font-display, cursive)", fontSize: 12, fontWeight: 700,
+                    }}
+                  >
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {(GROUPS.length > 1 && selectedGroup
+                ? GROUPS.find(g => g.id === selectedGroup)?.members ?? []
+                : GROUPS.flatMap(g => g.members)
+              ).map((member) => {
+                const isActive = bias === member.stageName;
+                return (
+                  <button
+                    key={member.id}
+                    onClick={() => onSetBias(member.stageName)}
+                    style={{
+                      padding: "8px 14px", borderRadius: 10, cursor: "pointer", border: "none",
+                      outline: isActive ? "2px solid var(--text-primary)" : "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+                      outlineOffset: -2,
+                      background: isActive ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "rgba(var(--surface-white-rgb),0.6)",
+                      color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                      fontFamily: "var(--font-display, cursive)", fontSize: 13, fontWeight: 700,
+                      boxShadow: isActive ? "3px 3px 0px rgba(var(--text-primary-rgb),0.9)" : "none",
+                      display: "flex", alignItems: "center", gap: 6,
+                    }}
+                  >
+                    {isActive ? "💖 " : ""}{member.stageName}
+                    {member.color && !isActive && (
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: member.color, display: "inline-block" }} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </SystemWindow>
 
-      {!user && (
-        <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(var(--surface-white-rgb),0.3)", border: "1px solid rgba(255,158,196,0.06)" }}>
-          <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 10px" }}>
-            Sign in to save your progress across devices.
-          </p>
-          <Link href="/login" style={{
-            display: "inline-block", padding: "8px 16px", borderRadius: 8,
-            background: "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))",
-            color: "var(--surface-white)", fontWeight: 700, fontSize: 13, textDecoration: "none",
-          }}>
-            Sign in
-          </Link>
+          <SystemWindow title="Account" width="100%">
+            {user ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {user.image && <img src={user.image} alt="" style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} />}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>{user.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{user.email}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <button
+                    onClick={() => setShowContact(true)}
+                    style={{
+                      padding: "6px 14px", borderRadius: 8,
+                      border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+                      background: "transparent", color: "var(--text-muted)",
+                      fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      fontFamily: "var(--font-sans, monospace)",
+                    }}
+                  >
+                    🆘 Help / Contact
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    style={{
+                      padding: "6px 14px", borderRadius: 8,
+                      border: "1.5px solid rgba(var(--text-primary-rgb),0.08)",
+                      background: "transparent", color: "rgba(var(--text-primary-rgb),0.35)",
+                      fontSize: 12, fontWeight: 500, cursor: "pointer",
+                      fontFamily: "var(--font-sans, monospace)",
+                    }}
+                  >
+                    Delete account
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{
+                padding: 16, borderRadius: 10,
+                background: "linear-gradient(135deg, rgba(255,20,147,0.04), rgba(201,177,255,0.06))",
+                border: "1.5px solid var(--accent-hotpink)",
+                textAlign: "center",
+              }}>
+                <div style={{ fontSize: 24, marginBottom: 6 }}>🔐</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+                  Sign in to IdolBias
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 14, lineHeight: 1.4 }}>
+                  Save your progress, sync your collection across devices, and unlock all features.
+                </div>
+                <Link href="/login" style={{
+                  display: "inline-block", padding: "10px 24px", borderRadius: 10,
+                  background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
+                  color: "var(--surface-white)", fontWeight: 800, fontSize: 14, textDecoration: "none",
+                  letterSpacing: "1px", fontFamily: "var(--font-sans, monospace)",
+                  boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
+                }}>
+                  SIGN IN
+                </Link>
+              </div>
+            )}
+          </SystemWindow>
         </div>
-      )}
+      </div>
+      {showContact && <ContactModal onClose={() => setShowContact(false)} initialName={user?.name} initialEmail={user?.email} />}
+      {showDeleteConfirm && <DeleteConfirmModal onClose={() => setShowDeleteConfirm(false)} />}
     </div>
   );
 }

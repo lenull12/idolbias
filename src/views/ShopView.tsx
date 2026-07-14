@@ -321,49 +321,7 @@ function PackAbout({ pack, cards }: { pack: PackInfo; cards: CardEntry[] }) {
   );
 }
 
-// ─── Wallet (tickets + gems) ────────────────────────────────────────────────
-  // Balance received via props from AppShell, shared with PullOverlay.
-
-function WalletPill({ icon, value, tone, onIncrement }: { icon: string; value: number; tone: "pink" | "cyan"; onIncrement?: () => void }) {
-  return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: 6,
-      padding: "6px 12px", borderRadius: "10px 10px 6px 6px",
-      background: "var(--surface-white, #fff)",
-      border: "2px solid var(--text-primary)",
-      boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
-      position: "relative",
-    }}>
-      <span style={{ fontSize: 14 }}>{icon}</span>
-      <span style={{
-        fontFamily: "var(--font-display, cursive)", fontSize: 13, fontWeight: 700,
-        color: tone === "pink" ? "var(--accent-hotpink)" : "var(--currency-gems)",
-      }}>
-        {value}
-      </span>
-      {tone === "cyan" && onIncrement && (
-        <button onClick={(e) => { e.stopPropagation(); onIncrement(); }} style={{
-          position: "absolute", top: -6, right: -6,
-          width: 18, height: 18, borderRadius: "50%", border: "1.5px solid var(--accent-hotpink)",
-          background: "var(--accent-hotpink)", color: "#fff", fontSize: 10, fontWeight: 800,
-          cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-        }}>
-          +
-        </button>
-      )}
-    </div>
-  );
-}
-
-function WalletBar({ tickets, gems, onAddGems }: { tickets: number; gems: number; onAddGems?: () => void }) {
-  return (
-    <div style={{ display: "flex", gap: 8 }}>
-      <WalletPill icon="🎟️" value={tickets} tone="pink" />
-      <WalletPill icon="💎" value={gems} tone="cyan" onIncrement={onAddGems} />
-    </div>
-  );
-}
+// WalletPill moved to components/WalletPill.tsx (shared)
 
   // ─── Pack detail modal ─────────────────────────────────────────────────────
 
@@ -927,12 +885,14 @@ function PackListRow({ code, pack, bias, onPreview }: {
 
 // ─── Shop ───────────────────────────────────────────────────────────────────
 
-export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseComplete }: {
+export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseComplete, initialGemsTab, onGemsTabConsumed }: {
   tickets: number;
   gems: number;
   bias: string | null;
   onOpenPull?: (packCode: string, method: "tickets" | "gems") => void;
   onPurchaseComplete?: () => void;
+  initialGemsTab?: boolean;
+  onGemsTabConsumed?: () => void;
 }) {
   const [previewCode, setPreviewCode] = useState<string | null>(null);
   const [shopTab, setShopTab] = useState<"packs" | "gems">("packs");
@@ -949,6 +909,11 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (initialGemsTab) { setShopTab("gems"); onGemsTabConsumed?.(); }
+  }, [initialGemsTab]);
+
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const packs = getAllPacks();
@@ -965,7 +930,7 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
   return (
     <div
       className="mx-auto max-w-[600px] lg:max-w-[1100px]"
-      style={{ padding: "24px 16px 40px", display: "flex", flexDirection: "column", gap: 28 }}
+      style={{ padding: "24px 16px 0", display: "flex", flexDirection: "column", gap: 24 }}
     >
       <style>{`
         .shop-carousel::-webkit-scrollbar { display: none; }
@@ -973,29 +938,24 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
       `}</style>
 
       {/* ─── Header ─── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
-            ✦ Shop
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
+          ✦ Shop
+        </span>
+        <h1 style={{ fontFamily: "var(--font-display, cursive)", fontSize: 28, letterSpacing: "-0.3px", margin: 0, background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple), var(--holo-c))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+          {shopTab === "packs" ? "available packs" : "gem shop"}
+        </h1>
+        <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
+          {shopTab === "packs" ? "Pick a pack and try your luck ✨" : "Buy gems to unlock premium content 💎"}
+        </span>
+        {bias && (
+          <span style={{
+            fontSize: 11, fontWeight: 700, color: "var(--accent-hotpink)",
+            fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px", marginTop: 2,
+          }}>
+            🎯 Bias boost active: {bias}
           </span>
-          <h1 style={{ fontFamily: "var(--font-display, cursive)", fontSize: 28, letterSpacing: "-0.3px", color: "var(--accent-hotpink)", margin: 0 }}>
-            {shopTab === "packs" ? "available packs" : "gem shop"}
-          </h1>
-          <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
-            {shopTab === "packs" ? "Pick a pack and try your luck ✨" : "Buy gems to unlock premium content 💎"}
-          </span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-          <WalletBar tickets={tickets} gems={gems} onAddGems={() => setShopTab("gems")} />
-          {bias && (
-            <span style={{
-              fontSize: 11, fontWeight: 700, color: "var(--accent-hotpink)",
-              fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
-            }}>
-              🎯 Bias boost active: {bias}
-            </span>
-          )}
-        </div>
+        )}
       </div>
 
 

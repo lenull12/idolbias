@@ -91,7 +91,7 @@ export async function POST(
       currentValue = (prog.missionProgress as any)?.["craft_card"] ?? 0;
       break;
     case "disenchant_veteran":
-      currentValue = 0;
+      currentValue = (prog.missionProgress as any)?.["disenchant_card"] ?? 0;
       break;
     case "trades_completed": {
       const rows = await db.select().from(tradeOffers)

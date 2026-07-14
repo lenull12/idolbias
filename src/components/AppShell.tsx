@@ -12,11 +12,15 @@ import ArtistsView from "@/views/ArtistsView";
 import ProfileView from "@/views/ProfileView";
 import WorkshopView from "@/views/WorkshopView";
 import MissionsView from "@/views/MissionsView";
+import FAQPage from "@/app/faq/page";
 import FeedView from "@/components/feed/FeedView";
 import CosmoRoomView from "@/components/cosmo/CosmoRoomView";
 import IdolProfileView from "@/components/feed/IdolProfileView";
 import StreakModal from "@/components/StreakModal";
+import RewardToast from "@/components/RewardToast";
+import type { Reward } from "@/components/RewardToast";
 import AuthStatus from "@/components/AuthStatus";
+import WalletPill from "@/components/WalletPill";
 import { authClient } from "@/lib/auth/client";
 import { usePlayer } from "@/lib/usePlayer";
 import {
@@ -44,6 +48,13 @@ export default function AppShell() {
   const [profileMemberId, setProfileMemberId] = useState<string | null>(null);
   const [profileGroupId, setProfileGroupId] = useState<string | null>(null);
   const [showStreak, setShowStreak] = useState(false);
+  const [gemsTabPending, setGemsTabPending] = useState(false);
+  const [toastReward, setToastReward] = useState<Reward | null>(null);
+
+  const handleGemShopNav = () => {
+    setGemsTabPending(true);
+    setView("shop");
+  };
 
   useEffect(() => {
     if (player) {
@@ -98,8 +109,7 @@ export default function AppShell() {
       .catch(() => {});
   }, [player]);
 
-  // Banner state — shown when daily reward is claimable
-  const showBanner = canClaimDaily;
+  const profileBadge = canClaimDaily ? 1 : undefined;
 
   // ─── Daily missions ──────────────────────────────────────────────────
   const dailyMissions: MissionState[] = prog && dailyTemplates.length > 0
@@ -166,6 +176,8 @@ export default function AppShell() {
             currentValue = (prog.missionProgress as any)?.["craft_card"] ?? 0;
             break;
           case "disenchant_veteran":
+            currentValue = (prog.missionProgress as any)?.["disenchant_card"] ?? 0;
+            break;
           case "trades_completed":
             currentValue = 0;
             break;
@@ -198,6 +210,7 @@ export default function AppShell() {
       const result = await claimDailyReward();
       setTickets(result.wallet.tickets);
       setGems(result.wallet.gems);
+      setToastReward({ tickets: result.tickets, gems: result.gems });
       refresh();
       return { tickets: result.tickets, gems: result.gems, streak: result.streak };
     } catch (e) {
@@ -212,6 +225,8 @@ export default function AppShell() {
       setTickets(result.wallet.tickets);
       setGems(result.wallet.gems);
       refresh();
+      const r = (result as any).reward || result;
+      setToastReward({ tickets: r.tickets, gems: r.gems, dust: r.dust });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to claim mission reward");
     }
@@ -223,6 +238,8 @@ export default function AppShell() {
       setTickets(result.wallet.tickets);
       setGems(result.wallet.gems);
       refresh();
+      const r = (result as any).reward || result;
+      setToastReward({ tickets: r.tickets, gems: r.gems, dust: r.dust });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to claim weekly mission");
     }
@@ -234,6 +251,8 @@ export default function AppShell() {
       setTickets(result.wallet.tickets);
       setGems(result.wallet.gems);
       refresh();
+      const r = (result as any).reward || result;
+      setToastReward({ tickets: r.tickets, gems: r.gems, dust: r.dust });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to claim achievement");
     }
@@ -328,8 +347,6 @@ export default function AppShell() {
           <HomeView
             onGoToShop={() => setView("shop")}
             streak={streak}
-            tickets={tickets}
-            gems={gems}
             owned={player?.collection}
             bias={bias}
           />
@@ -342,6 +359,8 @@ export default function AppShell() {
             bias={bias}
             onOpenPull={openPull}
             onPurchaseComplete={refresh}
+            initialGemsTab={gemsTabPending}
+            onGemsTabConsumed={() => setGemsTabPending(false)}
           />
         );
       case "cards":
@@ -405,6 +424,8 @@ export default function AppShell() {
             weeklyResetAt={weeklyResetAt}
           />
         );
+      case "faq":
+        return <FAQPage />;
     }
   };
 
@@ -454,10 +475,10 @@ export default function AppShell() {
       }}
     >
       <div className="lg:hidden">
-        <TabBar active={view} onChange={setView} missionsBadge={missionsClaimableCount} />
+        <TabBar active={view} onChange={setView} missionsBadge={missionsClaimableCount} profileBadge={profileBadge} />
       </div>
 
-      <SideNav active={view} onChange={setView} missionsBadge={missionsClaimableCount} />
+      <SideNav active={view} onChange={setView} missionsBadge={missionsClaimableCount} profileBadge={profileBadge} />
 
       {error && (
         <div style={{
@@ -474,29 +495,16 @@ export default function AppShell() {
         </div>
       )}
 
+      {toastReward && <RewardToast reward={toastReward} onDone={() => setToastReward(null)} />}
+
       <main className="lg:pl-[208px]" style={{ flex: 1, overflow: "auto", position: "relative" }}>
-        <div style={{ position: "absolute", top: 12, right: 14, zIndex: 5 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, padding: "12px 16px 0" }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <WalletPill icon="🎟️" value={tickets} tone="pink" />
+            <WalletPill icon="💎" value={gems} tone="cyan" onIncrement={handleGemShopNav} />
+          </div>
           <AuthStatus />
         </div>
-        {showBanner && (
-          <div onClick={() => setShowStreak(true)} style={{
-            position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
-            height: 36, overflow: "hidden", cursor: "pointer",
-            background: "var(--accent-hotpink)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <div style={{
-              display: "flex", gap: 40, whiteSpace: "nowrap",
-              animation: "tickerScroll 10s linear infinite",
-              fontFamily: "var(--font-sans, monospace)", fontSize: 12, fontWeight: 700,
-              letterSpacing: "1.5px", color: "var(--surface-white)",
-              paddingLeft: 40,
-            }}>
-              <span>🔥 Claim your daily rewards! Day {(streak % 7) + 1} 🔥 Claim your daily rewards! Day {(streak % 7) + 1}</span>
-              <span>🔥 Claim your daily rewards! Day {(streak % 7) + 1} 🔥 Claim your daily rewards! Day {(streak % 7) + 1}</span>
-            </div>
-          </div>
-        )}
         {renderView()}
         <div style={{ padding: "24px 16px 48px", textAlign: "center", fontSize: 11, color: "var(--text-disabled)" }}>
           <span style={{ opacity: 0.5 }}>© {new Date().getFullYear()} IdolBias.</span>{' '}
@@ -505,6 +513,10 @@ export default function AppShell() {
           <Link href="/legal/privacy" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Privacy</Link>
           <span style={{ opacity: 0.3, margin: "0 6px" }}>·</span>
           <Link href="/legal/terms" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Terms</Link>
+          <span style={{ opacity: 0.3, margin: "0 6px" }}>·</span>
+          <button onClick={() => setView("faq")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 11, color: "var(--text-muted)", textDecoration: "none", fontFamily: "inherit" }}>
+            FAQ
+          </button>
         </div>
       </main>
 

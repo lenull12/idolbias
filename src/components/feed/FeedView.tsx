@@ -184,26 +184,36 @@ export default function FeedView({
   };
 
   return (
-    <div style={{ maxWidth: 500, margin: "0 auto", padding: "12px 0" }}>
+    <div style={{ maxWidth: 500, margin: "0 auto", padding: "24px 16px 0" }}>
       {/* Header */}
-      <div style={{ padding: "0 14px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
+            ✦ Feed
+          </span>
+          <button
+            onClick={() => setSearchOpen(!searchOpen)}
+            style={{
+              background: "none", border: "none", cursor: "pointer", padding: 4,
+              color: searchOpen ? "var(--accent-hotpink)" : "var(--text-muted)",
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+            </svg>
+          </button>
+        </div>
         <h1 style={{
-          fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 900,
-          backgroundImage: "linear-gradient(100deg, var(--accent-hotpink), var(--accent-purple), var(--holo-c))",
-          backgroundSize: "300% 100%", WebkitBackgroundClip: "text", backgroundClip: "text",
-          color: "transparent", letterSpacing: "-0.5px",
-        }}>Feed</h1>
-        <button
-          onClick={() => setSearchOpen(!searchOpen)}
-          style={{
-            background: "none", border: "none", cursor: "pointer", padding: 4,
-            color: searchOpen ? "var(--accent-hotpink)" : "var(--text-muted)",
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-          </svg>
-        </button>
+          fontFamily: "var(--font-display, cursive)", fontSize: 28, letterSpacing: "-0.3px",
+          background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple), var(--holo-c))",
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+          margin: 0, lineHeight: 1.1,
+        }}>
+          what's new
+        </h1>
+        <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
+          Follow your favorite idols and connect with the community
+        </span>
       </div>
 
       {/* Search dropdown (pushes content down) */}

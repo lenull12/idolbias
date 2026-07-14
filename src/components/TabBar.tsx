@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 
-type TabId = "home" | "feed" | "shop" | "cards" | "workshop" | "groups" | "profile" | "missions";
+type TabId = "home" | "feed" | "shop" | "cards" | "workshop" | "groups" | "profile" | "missions" | "faq";
 
 export const ICONS: Record<TabId, React.ReactNode> = {
   home: (
@@ -32,6 +32,9 @@ export const ICONS: Record<TabId, React.ReactNode> = {
   missions: (
     <path d="M9 5.5H7a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5V7A1.5 1.5 0 0 0 17 5.5h-2M9 5.5a1.5 1.5 0 0 0 1.5 1.5h3A1.5 1.5 0 0 0 15 5.5M9 5.5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1.5M9 10.5l2 2 4-4" />
   ),
+  faq: (
+    <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM12 16v0M12 12a3 3 0 0 0 2.1-5.1A3 3 0 0 0 9 9" />
+  ),
 };
 
 export const TABS: { id: TabId; label: string }[] = [
@@ -43,16 +46,19 @@ export const TABS: { id: TabId; label: string }[] = [
   { id: "groups", label: "Artists" },
   { id: "profile", label: "Profile" },
   { id: "missions", label: "Missions" },
+  { id: "faq", label: "FAQ" },
 ];
 
 export default function TabBar({
   active,
   onChange,
   missionsBadge,
+  profileBadge,
 }: {
   active: TabId;
   onChange: (id: TabId) => void;
   missionsBadge?: number;
+  profileBadge?: number;
 }) {
   return (
     <nav
@@ -190,6 +196,16 @@ export default function TabBar({
                   lineHeight: 1.3, pointerEvents: "none",
                 }}>
                   {missionsBadge > 99 ? "99+" : missionsBadge}
+                </span>
+              )}
+              {tab.id === "profile" && typeof profileBadge === 'number' && profileBadge > 0 && (
+                <span style={{
+                  position: "absolute", top: -4, right: -6,
+                  padding: "1px 5px", borderRadius: 8, fontSize: 9, fontWeight: 700,
+                  background: "var(--accent-hotpink)", color: "var(--surface-white)",
+                  lineHeight: 1.3, pointerEvents: "none",
+                }}>
+                  {profileBadge > 99 ? "99+" : profileBadge}
                 </span>
               )}
             </div>
