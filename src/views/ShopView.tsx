@@ -289,20 +289,20 @@ function PackAbout({ pack, cards }: { pack: PackInfo; cards: CardEntry[] }) {
         </div>
       )}
       {idols.length > 0 && (
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 8 }}>
           {idols.map((name) => {
             const pfp = findMemberProfile(name);
             const color = findMemberColor(name);
             return (
               <div key={name} title={name} style={{
-                width: 24, height: 24, borderRadius: "50%", overflow: "hidden",
+                width: 36, height: 36, borderRadius: "50%", overflow: "hidden",
                 background: pfp ? "none" : color,
                 border: "1.5px solid var(--text-primary)", display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 {pfp ? (
                   <img src={pfp} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 ) : (
-                  <span style={{ fontSize: 9, fontWeight: 800, color: "var(--surface-white)", fontFamily: "var(--font-sans, monospace)" }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "var(--surface-white)", fontFamily: "var(--font-sans, monospace)" }}>
                     {name[0]}
                   </span>
                 )}
@@ -316,7 +316,6 @@ function PackAbout({ pack, cards }: { pack: PackInfo; cards: CardEntry[] }) {
           {pack.description}
         </p>
       )}
-
     </div>
   );
 }
@@ -373,18 +372,7 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose }: {
             </div>
           )}
 
-          <div style={{ position: "absolute", top: 12, right: 12, zIndex: 2 }}>
-            <button
-              onClick={onClose}
-              style={{
-                width: 28, height: 28, borderRadius: 8,
-                border: "2px solid var(--text-primary)", background: "var(--surface-white)", cursor: "pointer",
-                fontSize: 13, fontWeight: 700, lineHeight: "22px", padding: 0,
-              }}
-            >
-              ✕
-            </button>
-          </div>
+
           <div style={{ position: "absolute", top: 12, left: 12, display: "flex", gap: 6, zIndex: 2 }}>
             {pack.tag && <PackBadge pack={pack} />}
             {hasBias && (
@@ -397,6 +385,13 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose }: {
                 💖 YOUR BIAS
               </span>
             )}
+          </div>
+          <div style={{ position: "absolute", top: 12, right: 12, zIndex: 2 }}>
+            <button onClick={onClose} style={{
+              width: 28, height: 28, borderRadius: 8,
+              border: "2px solid var(--text-primary)", background: "var(--surface-white)", cursor: "pointer",
+              fontSize: 13, fontWeight: 700, lineHeight: "22px", padding: 0,
+            }}>✕</button>
           </div>
           <div style={{ position: "absolute", bottom: 14, left: pack.coverImage && !pack.locked ? 156 : 18, right: 18, zIndex: 2 }}>
             <span style={{
@@ -415,15 +410,10 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose }: {
             </span>
           ) : (
             <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <PackAbout pack={pack} cards={cards} />
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
-                  <PackPriceAction pack={pack} tickets={tickets} gems={gems} size="md" onPull={onPull} />
-                </div>
-              </div>
+              {/* ─── Pack description ─── */}
+              <PackAbout pack={pack} cards={cards} />
 
+              {/* ─── Discount / limited banners ─── */}
               {pack.tag === "discount" && pack.originalCostGems !== undefined && pack.costGems !== undefined && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: "rgba(255,20,147,0.06)", border: "1.5px dashed var(--accent-hotpink)" }}>
                   <span style={{ fontSize: 16 }}>💸</span>
@@ -441,6 +431,35 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose }: {
                 </div>
               )}
 
+              {/* ─── CTA ─── */}
+              <div style={{ display: "flex", gap: 10 }}>
+                {pack.costTickets !== undefined && (
+                  <button onClick={() => onPull("tickets")} disabled={tickets < pack.costTickets} style={{
+                    flex: 1, padding: 14, borderRadius: 12, border: "2px solid var(--text-primary)",
+                    fontWeight: 700, fontSize: 13, fontFamily: "var(--font-sans, monospace)",
+                    cursor: tickets >= pack.costTickets ? "pointer" : "default",
+                    boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
+                    background: "#fff", color: tickets >= pack.costTickets ? "var(--text-primary)" : "var(--text-disabled)",
+                    opacity: tickets >= pack.costTickets ? 1 : 0.4,
+                  }}>
+                    🎟️ {pack.costTickets} Ticket{pack.costTickets > 1 ? "s" : ""}
+                  </button>
+                )}
+                {pack.costGems !== undefined && (
+                  <button onClick={() => onPull("gems")} disabled={gems < pack.costGems} style={{
+                    flex: 1, padding: 14, borderRadius: 12, border: "2px solid var(--text-primary)",
+                    fontWeight: 700, fontSize: 13, fontFamily: "var(--font-sans, monospace)",
+                    cursor: gems >= pack.costGems ? "pointer" : "default",
+                    boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
+                    background: "var(--accent-hotpink)", color: gems >= pack.costGems ? "#fff" : "rgba(255,255,255,0.4)",
+                    opacity: gems >= pack.costGems ? 1 : 0.4,
+                  }}>
+                    💎 {pack.costGems} Gems
+                  </button>
+                )}
+              </div>
+
+              {/* ─── Chase cards ─── */}
               {chase.length > 0 && (
                 <>
                   <div style={{ height: 1, background: "rgba(var(--text-primary-rgb),0.06)", margin: "4px 0" }} />
@@ -448,83 +467,100 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose }: {
                 </>
               )}
 
-              <div style={{ height: 1, background: "rgba(var(--text-primary-rgb),0.06)", margin: "4px 0" }} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", color: "var(--text-muted)", textTransform: "uppercase" }}>
-                  Drop rates
+              {/* ─── What's in this pack ─── */}
+              <div>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: 10 }}>
+                  ★ What's in this pack
                 </span>
-                <RarityOdds dropRates={pack.dropRates} variant="banner" />
-              </div>
-
-              <div style={{ height: 1, background: "rgba(var(--text-primary-rgb),0.06)", margin: "4px 0" }} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", color: "var(--text-muted)", textTransform: "uppercase" }}>
-                  Card list
-                </span>
-                <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
-                  {cards.length} cards in total
-                </span>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  {[...RARITY_ORDER].reverse().map((r) => {
-                    const count = cards.filter(c => rarityFromReference(c.reference) === r).length;
-                    if (count === 0) return null;
-                    const pct = cards.length > 0 ? (count / cards.length) * 100 : 0;
-                    const isSecret = r === "secret";
-                    const dotColors: Record<string, string> = {
-                      secret: "transparent",
-                      legendary: "var(--rarity-legendary-badge)",
-                      epic: "var(--accent-purple)",
-                      rare: "var(--accent-pink)",
-                      common: "var(--rarity-common-graphic)",
-                    };
-                    const barColor = isSecret ? "linear-gradient(90deg, var(--accent-pink), var(--accent-purple))" : dotColors[r];
-                    return (
-                      <div key={r} style={{
-                        display: "flex", justifyContent: "space-between", alignItems: "center",
-                        padding: "8px 12px", borderRadius: 8,
-                        background: "var(--surface-white)",
-                        border: "1.5px solid rgba(var(--text-primary-rgb),0.08)",
-                        fontSize: 12, fontWeight: 700,
-                        fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
-                      }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 14 }}>
+                  <span style={{ fontFamily: "var(--font-display, cursive)", fontSize: 36, lineHeight: 1, color: "var(--text-primary)" }}>
+                    {cards.length}
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>
+                    unique cards to collect
+                  </span>
+                </div>
+                {RARITY_ORDER.map((r) => {
+                  const count = cards.filter(c => rarityFromReference(c.reference) === r).length;
+                  if (count === 0) return null;
+                  const pct = pack.dropRates[r] ?? 0;
+                  const chips: Record<string, { symbol: string; bg: string; nameColor: string }> = {
+                    common: { symbol: "●", bg: "rgba(var(--text-primary-rgb),0.08)", nameColor: "var(--text-muted)" },
+                    rare: { symbol: "◆", bg: "var(--accent-pink)", nameColor: "var(--accent-hotpink)" },
+                    epic: { symbol: "✦", bg: "var(--accent-purple)", nameColor: "var(--accent-purple)" },
+                    legendary: { symbol: "★", bg: "var(--rarity-legendary-badge)", nameColor: "#8a6a1f" },
+                    secret: { symbol: "✧", bg: "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))", nameColor: "transparent" },
+                  };
+                  const ch = chips[r];
+                  const bgColors: Record<string, string> = {
+                    common: "rgba(var(--text-primary-rgb),0.03)",
+                    rare: "rgba(255,20,147,0.05)",
+                    epic: "rgba(201,177,255,0.10)",
+                    legendary: "linear-gradient(90deg, rgba(232,182,90,0.14), rgba(232,182,90,0.05))",
+                    secret: "linear-gradient(90deg, rgba(255,20,147,0.08), rgba(201,177,255,0.10), rgba(158,230,255,0.08))",
+                  };
+                  const borders: Record<string, string> = {
+                    epic: "1px solid rgba(201,177,255,0.3)",
+                    legendary: "1.5px solid rgba(232,182,90,0.45)",
+                    secret: "1.5px solid var(--text-primary)",
+                  };
+                  const boxShadows: Record<string, string> = {
+                    secret: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
+                  };
+                  return (
+                    <div key={r} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "10px 12px", borderRadius: 10, marginBottom: 6,
+                      background: bgColors[r] || "transparent",
+                      border: borders[r] || "none",
+                      boxShadow: boxShadows[r] || "none",
+                      position: "relative", overflow: "hidden",
+                    }}>
+                      {(r === "legendary" || r === "secret") && (
+                        <div style={{
+                          position: "absolute", top: 0, bottom: 0, width: "40%",
+                          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
+                          animation: "shineSweep 3.5s ease-in-out infinite",
+                          transform: "translateX(-120%) skewX(-15deg)",
+                        }} />
+                      )}
+                      <style>{`
+                        @keyframes shineSweep { 0% { transform: translateX(-120%) skewX(-15deg); } 100% { transform: translateX(220%) skewX(-15deg); } }
+                      `}</style>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{
+                          width: 28, height: 28, borderRadius: 8,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 13, flexShrink: 0,
+                          background: ch.bg, color: "#fff",
+                        }}>
+                          {ch.symbol}
+                        </div>
                         <span style={{
-                          display: "flex", alignItems: "center", gap: 8,
-                          color: isSecret ? "var(--text-primary)" : "var(--text-secondary)",
-                          textTransform: "uppercase",
-                          ...(isSecret ? {
+                          fontSize: 12.5, fontWeight: 800, letterSpacing: "0.5px",
+                          textTransform: "uppercase", fontFamily: "var(--font-sans, monospace)",
+                          color: ch.nameColor,
+                          ...(r === "secret" ? {
                             backgroundImage: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple), var(--holo-c))",
                             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
                           } : {}),
                         }}>
-                          <span style={{
-                            width: 6, height: 6, borderRadius: "50%",
-                            background: isSecret ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : dotColors[r],
-                            display: "inline-block",
-                          }} />
                           {r}
                         </span>
-                        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <span style={{
-                            width: 48, height: 4, borderRadius: 2, overflow: "hidden",
-                            background: "rgba(var(--text-primary-rgb),0.08)",
-                          }}>
-                            <span style={{ display: "block", height: "100%", width: `${pct}%`, background: barColor, borderRadius: 2 }} />
-                          </span>
-                          <span style={{
-                            color: isSecret ? "var(--text-primary)" : "var(--text-muted)",
-                            ...(isSecret ? {
-                              backgroundImage: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple), var(--holo-c))",
-                              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-                            } : {}),
-                          }}>
-                            {count} card{count > 1 ? "s" : ""}
-                          </span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: "var(--font-sans, monospace)" }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>
+                          {count} card{count > 1 ? "s" : ""}
+                        </span>
+                        <span style={{ fontSize: 10.5, color: "var(--text-muted)" }}>
+                          {pct}%
                         </span>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
+
             </>
           )}
         </div>
