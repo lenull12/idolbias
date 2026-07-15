@@ -281,12 +281,29 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
         </span>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {(() => {
-            const d = getPackDropRates("NR");
-            return [
-              { title: "NEW RULES is live!", desc: "VICIOUS rewrites the rules. 40 bold new cards.", tag: "new" },
-              { title: "LUCID SHIFT is live!", desc: "40 cards across 4 idols. Collect them all!", tag: "new" },
-              { title: `Odds: ${d.common}/${d.rare}/${d.epic}/${d.legendary}/${d.secret}`, desc: `Legendary at ${d.legendary}%, Secret at ${d.secret}%. Good luck!`, tag: "odds" },
-            ].map((news) => (
+            const featured = getAllPacks().filter(([, p]) => p.tag === "featured" || p.tag === "new");
+            const oddsPack = getAllPacks().find(([, p]) => !p.locked);
+            const items: Array<{ title: string; desc: string; tag: string }> = [];
+            for (const [code, pack] of featured) {
+              const c = getCardsByPack(code);
+              const cardCount = c.length;
+              items.push({
+                title: `${pack.name} is live!`,
+                desc: `${cardCount} cards across ${new Set(c.map((x) => x.idol)).size} idols. Collect them all!`,
+                tag: "new",
+              });
+            }
+            if (oddsPack) {
+              const [, p] = oddsPack;
+              const d = p.dropRates;
+              items.push({
+                title: `Standard odds: ${d.common}/${d.rare}/${d.epic}/${d.legendary}/${d.secret}`,
+                desc: `Legendary at ${d.legendary}%, Secret at ${d.secret}%. Good luck!`,
+                tag: "odds",
+              });
+            }
+            return items;
+          })().map((news) => (
               <div key={news.title} style={{
                 display: "flex", alignItems: "flex-start", gap: 10,
                 padding: "12px 14px", background: "rgba(var(--surface-white-rgb),0.5)",
@@ -305,8 +322,7 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
                   <span style={{ fontSize: 15, color: "var(--text-muted)" }}>{news.desc}</span>
                 </div>
               </div>
-            ));
-          })()}
+            ))}
         </div>
       </div>
 

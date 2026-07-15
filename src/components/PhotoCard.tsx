@@ -3,6 +3,14 @@
 import { useRef, useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Rarity } from "./CardEffects";
+import { GROUPS } from "@/data/artists";
+import { GradeBadge } from "./GradeBadge";
+import type { CardGrade } from "@/db/schema";
+
+function groupLogoPath(groupName: string): string {
+  const g = GROUPS.find((g) => g.name === groupName);
+  return g?.logoPath ?? "/vicious_logo.png";
+}
 import { RarityEffects, NeonGlowBorder } from "./CardEffects";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -35,6 +43,10 @@ export type PhotoCardProps = {
   meta: PhotoCardMeta;
   /** Rarity for visual effects (gems, foil, glitch…) */
   rarity?: Rarity;
+  /** Grade qualitatif de l'exemplaire — badge certification, indépendant de la rareté */
+  grade?: CardGrade;
+  /** Masque le badge texte du grade (garde le liseré pristine/gem) */
+  hideGradeTag?: boolean;
   /** 3D tilt intensity in degrees (default: 15) */
   maxTilt?: number;
   /** Card width in px (default: 220) */
@@ -58,14 +70,19 @@ function CardBack({
   season,
   width,
   rarity,
+  grade,
 }: {
   meta: PhotoCardMeta;
   season: CardSeason;
   width: number;
   rarity?: Rarity;
+  grade?: CardGrade;
 }) {
   const height = Math.round(width * CARD_RATIO);
   const fs = (ratio: number) => Math.round(width * ratio);
+  const GRADE_LABEL: Record<string, string> = {
+    standard: "", fine: "Fine", mint: "Mint", pristine: "Pristine", gem: "Gem",
+  };
 
   return (
     <div
@@ -106,7 +123,7 @@ function CardBack({
         }}
       >
         <img
-          src="/vicious_logo.png"
+          src={groupLogoPath(meta.group)}
           alt={meta.group}
           draggable={false}
           style={{
@@ -189,6 +206,17 @@ function CardBack({
           gap: fs(0.025),
         }}
       >
+        {/* Grade — uniquement si non-standard, cohérent avec le silence visuel */}
+        {grade && grade !== "standard" && (
+          <span style={{
+            fontSize: fs(0.042), fontFamily: "var(--font-mono, monospace)",
+            letterSpacing: "0.1em", textTransform: "uppercase",
+            color: "var(--text-muted)", marginBottom: fs(0.015),
+          }}>
+            Grade · {GRADE_LABEL[grade]}
+          </span>
+        )}
+
         <div style={{ position: "relative", borderRadius: Math.round(width * 0.018), overflow: "hidden" }}>
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -294,6 +322,8 @@ export default function PhotoCard({
   season,
   meta,
   rarity = "common",
+  grade,
+  hideGradeTag,
   maxTilt: _maxTilt,
   width = 224,
   zoomed = false,
@@ -468,6 +498,8 @@ export default function PhotoCard({
             season={season}
             meta={meta}
             rarity={rarity}
+            grade={grade}
+            hideGradeTag
             maxTilt={maxTilt}
             width={Math.min(515, typeof window !== "undefined" ? window.innerWidth * 0.9 : 515)}
             zoomed
@@ -663,6 +695,10 @@ export default function PhotoCard({
                 width={width}
               />
 
+              {/* Grade certification badge — taille auto selon la largeur :
+                  compact si < 160px (grille), full si vue normale/zoom */}
+              <GradeBadge grade={grade} width={width} size={width && width < 160 ? "compact" : "full"} hideTag={hideGradeTag} />
+
             </div>
 
             {/* ── VERSO ── */}
@@ -681,6 +717,7 @@ export default function PhotoCard({
                 season={season}
                 width={width}
                 rarity={rarity}
+                grade={grade}
               />
             </div>
           </div>

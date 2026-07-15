@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { wallets, ownedCards } from "@/db/schema";
+import { wallets, ownedCards, type CardGrade } from "@/db/schema";
 import CARDS, { rarityFromReference } from "@/data/cards";
 import { CRAFT_COSTS } from "@/lib/gameConfig";
 import type { Rarity } from "@/components/CardEffects";
@@ -41,9 +41,9 @@ export async function POST(request: Request) {
   const picked = pool[Math.floor(Math.random() * pool.length)];
 
   await db.insert(ownedCards)
-    .values({ playerId, cardId: picked.id, quantity: 1, firstObtainedAt: now, lastObtainedAt: now })
+    .values({ playerId, cardId: picked.id, grade: "standard", quantity: 1, firstObtainedAt: now, lastObtainedAt: now })
     .onConflictDoUpdate({
-      target: [ownedCards.playerId, ownedCards.cardId],
+      target: [ownedCards.playerId, ownedCards.cardId, ownedCards.grade],
       set: { quantity: sql`${ownedCards.quantity} + 1`, lastObtainedAt: now },
     });
 

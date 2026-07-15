@@ -57,6 +57,8 @@ export type GroupInfo = {
   members: MemberInfo[];
   discography: TrackInfo[];
   social: SocialHandle;
+  /** Path to the group logo image displayed on card backs */
+  logoPath?: string;
 };
 
 // ─── Data ──────────────────────────────────────────────────────────────────
@@ -75,6 +77,7 @@ export const GROUPS: GroupInfo[] = [
     officialColors: ["#FF1493", "#C9B1FF", "#9EE6FF", "#FFE9A8", "#1A0A1E"],
     debutDate: "2026-07-01",
     social: { photoHandle: "@vicious.official", feedHandle: "@vicious" },
+    logoPath: "/vicious_logo.png",
     members: [
       // ─── RIA — Leader, Main Rapper ───────────────────────────────────
       {
@@ -189,6 +192,142 @@ export const GROUPS: GroupInfo[] = [
       { id: "vicious", title: "VICIOUS", type: "mv", releaseDate: "2026-07-01" },
     ],
   },
+  {
+    id: "raze",
+    name: "R\u039bZE",
+    tagline: "RAZE IT ALL",
+    bio: "R\u039bZE arrives \u2014 raw, unfiltered, impossible to ignore. A four-member rage rap / dark trap group with an attitude that cuts through the static. Cortisol over melody, tension over release. Their debut single STATIC drops like a hammer \u2014 75 BPM of pure overload.",
+    color: "#1A0A0A",
+    agency: "IdolBias Entertainment",
+    genre: "Rage rap, trap, dark pop",
+    fandomName: "R\u039bZ\u039eRS",
+    officialColors: ["#FFFFFF", "#FF0000", "#FF8C00", "#FFD700", "#1A0A0A"],
+    debutDate: "2026",
+    social: {},
+    logoPath: "/raze_logo.png",
+    members: [
+      {
+        id: "ash",
+        stageName: "\u039bSH",
+        realName: "Kang Jaeho",
+        birthName: "Kang Jaeho (\uac15\uc7ac\ud638)",
+        position: "Leader \u00b7 Main Vocal",
+        birthday: "May 15, 2003",
+        zodiac: "Taurus",
+        height: "183 cm",
+        weight: "70 kg",
+        bloodType: "O",
+        mbti: "ENTJ",
+        nationality: "South Korean",
+        color: "#1A1A1A",
+        bio: "Calm on the surface, magnetic underneath. Ash carries R\u039bZE with a natural authority and a voice that cuts through the static. The core of the group, quiet but undeniable.",
+        funFacts: [
+          "Hides his eyes behind his hair because he says \"people panic when they stare too long\"",
+          "Has a surprisingly loud laugh that shocks everyone given his usual calm",
+          "Only cooks instant noodles but elevates them to an art form",
+          "Always replies to fan messages with a single word \u2014 but spends hours choosing which one",
+        ],
+        specialties: [
+          "Vocal \u2014 powerful range and impressive stability",
+          "Impression \u2014 can mimic any member\u2019s voice",
+          "Fast learner \u2014 memorizes choreography in one watch",
+        ],
+        social: {},
+        revealed: true,
+      },
+      {
+        id: "grav",
+        stageName: "GR\u039bV",
+        realName: "Choi Hyunseok",
+        birthName: "Choi Hyunseok (\ucd5c\ud604\uc11d)",
+        position: "Lead Rapper",
+        birthday: "November 2, 2004",
+        zodiac: "Scorpio",
+        height: "180 cm",
+        weight: "72 kg",
+        bloodType: "A",
+        mbti: "ISTP",
+        nationality: "South Korean",
+        color: "#FF8C00",
+        bio: "Delinquent chic. The most intimidating at first glance \u2014 sharp jaw, long black hair, a voice that rumbles. But behind the menace is a steady presence the group leans on.",
+        funFacts: [
+          "Has scars on his arms he refuses to explain",
+          "Raises succulents \u2014 he has 30 at home (total contrast with his tough image)",
+          "Never smiles in photos but laughs all the time backstage",
+          "His voice goes soft when he talks to his cat",
+        ],
+        specialties: [
+          "Rap \u2014 deep voice, commanding presence, slow heavy flow",
+          "Dance \u2014 raw power, martial control of movement",
+          "Beatmaking \u2014 produces his own dark atmospheres",
+        ],
+        social: {},
+        revealed: true,
+      },
+      {
+        id: "fall",
+        stageName: "F\u039bLL",
+        realName: "Lee Hajun",
+        birthName: "Lee Hajun (\uc774\ud558\uc900)",
+        position: "Main Dancer",
+        birthday: "June 22, 2004",
+        zodiac: "Cancer",
+        height: "178 cm",
+        weight: "66 kg",
+        bloodType: "AB",
+        mbti: "INFJ",
+        nationality: "South Korean",
+        color: "#FFD700",
+        bio: "Explosive on stage, reserved off it. Fall moves like fire \u2014 every step precise, every gesture controlled. The main dancer who lets his body do the talking.",
+        funFacts: [
+          "Can replicate any choreography after seeing it once",
+          "Writes poems at night \u2014 no one has ever read them",
+          "Hates surprises but throws the best surprise parties for others",
+          "His favorite character in video games is always the \u201csilent protagonist\u201d",
+        ],
+        specialties: [
+          "Dance \u2014 main dancer, explosive and fluid style",
+          "Vocal \u2014 harmonies, vocal support, soft register",
+          "Choreography \u2014 creates the group\u2019s signature moves",
+        ],
+        social: {},
+        revealed: true,
+      },
+      {
+        id: "blaze",
+        stageName: "BL\u039bZE",
+        realName: "Jung Chanho",
+        birthName: "Jung Chanho (\uc815\ucc2c\ud638)",
+        position: "Main Rapper \u00b7 Maknae",
+        birthday: "August 8, 2005",
+        zodiac: "Leo",
+        height: "176 cm",
+        weight: "62 kg",
+        bloodType: "B",
+        mbti: "ENFP",
+        nationality: "South Korean",
+        color: "#FF0000",
+        bio: "Chaotic good. The maknae with a smirk and a flamethrower flow. Unpredictable, flamboyant, and the first to turn a silent room into a warzone.",
+        funFacts: [
+          "Writes lyrics everywhere \u2014 on his hands, his sheets, the studio walls (he has to paper over them)",
+          "Can eat the same thing every day for weeks then suddenly hate it overnight",
+          "Pretends to be lazy but no one works harder in the studio",
+          "His favorite phrase: \u201cIt\u2019s not chaos, it\u2019s jazz\u201d",
+        ],
+        specialties: [
+          "Rap \u2014 unique flow, writes all his lyrics",
+          "Beatbox \u2014 can recreate any sound with his mouth",
+          "Composition \u2014 produces instinctive trap melodies",
+        ],
+        social: {},
+        revealed: true,
+      },
+    ],
+    discography: [
+      { id: "static", title: "STATIC", type: "song", releaseDate: "2026", duration: "3:12" },
+      { id: "raze-mv", title: "STATIC", type: "mv", releaseDate: "2026" },
+    ],
+  },
 ];
 
 export function getGroup(id: string): GroupInfo | undefined {
@@ -197,4 +336,8 @@ export function getGroup(id: string): GroupInfo | undefined {
 
 export function getMember(groupId: string, memberId: string): MemberInfo | undefined {
   return getGroup(groupId)?.members.find((m) => m.id === memberId);
+}
+
+export function findGroupByMember(stageName: string): GroupInfo | undefined {
+  return GROUPS.find((g) => g.members.some((m) => m.stageName === stageName));
 }

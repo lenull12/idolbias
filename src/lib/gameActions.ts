@@ -89,10 +89,10 @@ export async function openPack(packCode: string, bias?: string | null, paymentMe
   return post<OpenPackResult>("/api/pack/open", { packCode, bias, paymentMethod });
 }
 
-export async function disenchantCard(cardId: string, quantity = 1): Promise<{
+export async function disenchantCard(cardId: string, quantity = 1, grade?: string): Promise<{
   quantityDisenchanted: number; dustGained: number; wallet: { tickets: number; gems: number; dust: number };
 }> {
-  return post("/api/cards/disenchant", { cardId, quantity });
+  return post("/api/cards/disenchant", { cardId, grade: grade ?? "standard", quantity });
 }
 
 export async function createTradeOffer(offeredCardId: string, requestedCardId: string): Promise<{ ok: true }> {

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { eq, and, or, inArray, sql, gte, lte } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { wallets, progression, ownedCards, events, eventParticipation } from "@/db/schema";
+import { wallets, progression, ownedCards, events, eventParticipation, type CardGrade } from "@/db/schema";
 import { getPackInfo, getCardsByPack } from "@/data/cards";
 import { generatePull, type ServerCard } from "@/lib/gachaEngine";
 import { XP_PER_RARITY, getMondayStr } from "@/lib/gameConfig";
@@ -65,13 +65,32 @@ export async function POST(request: Request) {
   // ─── Generate cards ───────────────────────────────────────────────────
   const cards: ServerCard[] = generatePull(5, packCode, bias ?? null, rateUpMultiplier, rateUpRarities);
 
+  // ─── Grade-aware "isNew" detection ───────────────────────────────────
+  const pulledKeys = [...new Set(cards.map((c) => `${c.cardId}:${c.grade}`))];
+  const existingRows = pulledKeys.length > 0
+    ? await db.select({ cardId: ownedCards.cardId, grade: ownedCards.grade })
+        .from(ownedCards)
+        .where(and(
+          eq(ownedCards.playerId, playerId),
+          or(...pulledKeys.map((k) => {
+            const [cardId, grade] = k.split(":");
+            return and(eq(ownedCards.cardId, cardId), eq(ownedCards.grade, grade));
+          })),
+        ))
+    : [];
+  const existingGradeKeySet = new Set(existingRows.map((r) => `${r.cardId}:${r.grade}`));
+  const newCardGradeKeySet = new Set(
+    pulledKeys.filter((k) => !existingGradeKeySet.has(k))
+  );
+
+  // ─── Grade-agnostic pour les missions ────────────────────────────────
   const pulledCardIds = [...new Set(cards.map((c) => c.cardId))];
-  const existingRows = pulledCardIds.length > 0
+  const existingCardIdRows = pulledCardIds.length > 0
     ? await db.select({ cardId: ownedCards.cardId }).from(ownedCards)
         .where(and(eq(ownedCards.playerId, playerId), inArray(ownedCards.cardId, pulledCardIds)))
     : [];
-  const existingCardIds = new Set(existingRows.map((r) => r.cardId));
-  const newCardIds = pulledCardIds.filter((id) => !existingCardIds.has(id));
+  const existingCardIdSet = new Set(existingCardIdRows.map((r) => r.cardId));
+  const newCardIds = pulledCardIds.filter((id) => !existingCardIdSet.has(id));
 
   const fanXp = { ...prog.fanXp };
   for (const card of cards) {
@@ -99,15 +118,18 @@ export async function POST(request: Request) {
     weeklyProgress["collect_3_new"] = Math.min(prev + newCardIds.length, 3);
   }
 
-  const cardCounts = new Map<string, number>();
+  const cardCounts = new Map<string, { cardId: string; grade: string; qty: number }>();
   for (const card of cards) {
-    cardCounts.set(card.cardId, (cardCounts.get(card.cardId) ?? 0) + 1);
+    const key = `${card.cardId}|${card.grade}`;
+    const existing = cardCounts.get(key);
+    if (existing) existing.qty++;
+    else cardCounts.set(key, { cardId: card.cardId, grade: card.grade, qty: 1 });
   }
-  const ownedUpserts = Array.from(cardCounts.entries()).map(([cardId, qty]) =>
+  const ownedUpserts = Array.from(cardCounts.values()).map(({ cardId, grade, qty }) =>
     db.insert(ownedCards)
-      .values({ playerId, cardId, quantity: qty, firstObtainedAt: now, lastObtainedAt: now })
+      .values({ playerId, cardId, grade, quantity: qty, firstObtainedAt: now, lastObtainedAt: now })
       .onConflictDoUpdate({
-        target: [ownedCards.playerId, ownedCards.cardId],
+        target: [ownedCards.playerId, ownedCards.cardId, ownedCards.grade],
         set: { quantity: sql`${ownedCards.quantity} + ${qty}`, lastObtainedAt: now },
       })
   );
@@ -157,7 +179,10 @@ export async function POST(request: Request) {
   const [updatedWallet] = await db.select().from(wallets).where(eq(wallets.playerId, playerId)).limit(1);
 
   return NextResponse.json({
-    cards,
+    cards: cards.map((c) => ({
+      ...c,
+      isNew: newCardGradeKeySet.has(`${c.cardId}:${c.grade}`),
+    })),
     wallet: { tickets: updatedWallet.tickets, gems: updatedWallet.gems },
     newCardIds,
   });

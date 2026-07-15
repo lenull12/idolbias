@@ -129,7 +129,11 @@ function PackDisplay({ onOpen, disabled, coverImage }: { onOpen: () => void; dis
           opacity: disabled ? 0.35 : 1,
           animation: disabled ? "none" : phase === "opening" ? "openBurst 0.7s ease-in forwards" : phase === "holding" ? "shake 0.08s linear infinite" : "float 3s ease-in-out infinite",
         }}>
-          <img src={coverImage ?? "/cards/VICIOUS-LUCID SHIFT/banner_wide.webp"} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          {coverImage ? (
+            <img src={coverImage} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          ) : (
+            <div style={{ width: "100%", height: "100%", background: "rgba(var(--text-primary-rgb),0.03)" }} />
+          )}
         </div>
         <div style={{ width: 260, height: 2, background: "rgba(255,158,196,0.06)", borderRadius: 1, overflow: "hidden" }}>
           <div style={{ width: `${progress}%`, height: "100%", background: phase === "opening" ? "transparent" : "linear-gradient(90deg, var(--accent-pink), var(--accent-purple))", borderRadius: 1, transition: phase === "holding" ? "width 0.15s linear" : "none" }} />
@@ -152,7 +156,7 @@ function MiniVersoCard({ card, index, onClick, isRevealed, coverImage, cardWidth
     return (
       <div style={{ width: cardWidth, height: cardHeight, animation: `cardIn 0.4s ease-out ${index * 0.1}s both`, userSelect: "none", WebkitUserSelect: "none", position: "relative" }}>
         <style>{`@keyframes cardIn { 0% { opacity: 0; transform: translateY(24px); } 100% { opacity: 1; transform: translateY(0); } }`}</style>
-        <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} width={cardWidth} />
+        <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} grade={card.grade} width={cardWidth} />
         {card.isNew && (
           <div style={{
             position: "absolute", top: -6, left: -6, zIndex: 2,
@@ -189,8 +193,7 @@ function MiniVersoCard({ card, index, onClick, isRevealed, coverImage, cardWidth
       `}</style>
       <div style={{
         position: "absolute", inset: 0,
-        backgroundImage: `url("${coverImage ?? '/cards/VICIOUS-LUCID SHIFT/banner_wide.webp'}")`,
-        backgroundSize: "cover", backgroundPosition: "center",
+        background: coverImage ? `url("${coverImage}") center/cover` : "rgba(var(--text-primary-rgb),0.03)",
         opacity: 1,
       }} />
     </div>
@@ -300,7 +303,7 @@ function ZoomedSwipeCard({ card, onReveal, coverImage, zoomW = ZOOM_W, zoomH = Z
           </div>
         )}
         <div style={{ animation: `cardPulse ${cfg.pulse} ease-out` }}>
-          <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} width={zoomW} zoomed />
+          <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} grade={card.grade} hideGradeTag width={zoomW} zoomed />
         </div>
       </div>
     );
@@ -329,14 +332,13 @@ function ZoomedSwipeCard({ card, onReveal, coverImage, zoomW = ZOOM_W, zoomH = Z
         }}>
           <div style={{
             position: "absolute", inset: 0,
-            backgroundImage: `url("${coverImage ?? '/cards/VICIOUS-LUCID SHIFT/banner_wide.webp'}")`,
-            backgroundSize: "cover", backgroundPosition: "center",
+            background: coverImage ? `url("${coverImage}") center/cover` : "rgba(var(--text-primary-rgb),0.03)",
             opacity: 1,
           }} />
         </div>
         {/* RECTO */}
         <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden", transform: "rotateY(180deg)", userSelect: "none", WebkitUserSelect: "none" }}>
-          <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} width={zoomW} zoomed />
+          <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} grade={card.grade} hideGradeTag width={zoomW} zoomed />
         </div>
       </div>
     </div>
@@ -383,9 +385,9 @@ function PageMarquee({ onHome }: { onHome: () => void }) {
 
 const TICKER_ITEMS = [
   "✦ BACKSTAGE PASS",
-  "✦ VICIOUS · LUCID SHIFT",
   "✦ NEW DROPS EVERY WEEK",
   "✦ GOOD LUCK ON YOUR PULL",
+  "✦ COLLECT 'EM ALL",
   "✦ COMEBACK SOON",
 ];
 
@@ -472,7 +474,9 @@ function RarityTally({ pullResults, revealedIds }: { pullResults: PullResult[]; 
 
 function ShareButton({ pullResults, bestRarity }: { pullResults: PullResult[]; bestRarity: Rarity | null }) {
   const handleShare = useCallback(async () => {
-    const text = `Pulled ${pullResults.length} VICIOUS cards · The First Bite — best pull: ${bestRarity ? RARITY_LABELS[bestRarity] : "?"} ✦`;
+    const group = pullResults[0]?.meta.group ?? "";
+    const packName = pullResults[0]?.meta.pack ?? "";
+    const text = `Pulled ${pullResults.length} ${group} cards · ${packName} — best pull: ${bestRarity ? RARITY_LABELS[bestRarity] : "?"} ✦`;
     if (navigator.share) {
       try { await navigator.share({ text }); } catch { /* cancelled */ }
     } else {
@@ -765,7 +769,7 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
   const canAffordGems = packed.costGems !== undefined && gems >= packed.costGems;
   const canAfford = paymentMethod === "gems" ? canAffordGems : canAffordTickets;
   const disabledReason = !canAfford ? (paymentMethod === "gems" ? "NO GEMS" : "NO TICKETS") : null;
-  const coverImage = packed.coverImage ?? packed.bannerImage ?? "/cards/VICIOUS-LUCID SHIFT/banner_wide.webp";
+  const coverImage = packed.coverImage ?? packed.bannerImage;
 
   return (
     <div style={{
@@ -839,7 +843,7 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
           <div style={{ position: "relative", animation: "cardIn 0.3s ease" }}>
             {isCurrentRevealed || phase === "recap" ? (
               <>
-                <PhotoCard imageSrc={currentCard.imageSrc} season={currentCard.season} meta={currentCard.meta} rarity={currentCard.rarity} width={cardWidth} />
+                <PhotoCard imageSrc={currentCard.imageSrc} season={currentCard.season} meta={currentCard.meta} rarity={currentCard.rarity} grade={currentCard.grade} width={cardWidth} />
                 {currentCard.isNew && (
                   <div style={{
                     position: "absolute", top: -6, left: -6, zIndex: 2,
@@ -982,7 +986,7 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
           }}>
             {pullResults.map((card) => (
               <div key={card.id} style={{ position: "relative" }}>
-                <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} width={Math.min(140, (typeof window !== "undefined" ? window.innerWidth * 0.22 : 140))} />
+                <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} grade={card.grade} width={Math.min(140, (typeof window !== "undefined" ? window.innerWidth * 0.22 : 140))} />
                 {card.isNew && (
                   <div style={{
                     position: "absolute", top: -4, left: -4, zIndex: 2,

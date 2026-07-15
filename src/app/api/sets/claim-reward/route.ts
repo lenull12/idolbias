@@ -35,7 +35,8 @@ export async function POST(request: Request) {
         )
       );
 
-    if (ownedRows.length < cards.length) {
+    const ownedSet = new Set(ownedRows.map((r) => r.cardId));
+    if (ownedSet.size < cards.length) {
       return NextResponse.json({ error: "Set not complete" }, { status: 400 });
     }
   }

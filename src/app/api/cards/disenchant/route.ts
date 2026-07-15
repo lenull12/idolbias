@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { eq, and, sql, gte } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { wallets, ownedCards, progression } from "@/db/schema";
+import { wallets, ownedCards, progression, type CardGrade } from "@/db/schema";
 import { getCardById, rarityFromReference } from "@/data/cards";
 import { DISENCHANT_VALUES } from "@/lib/gameConfig";
 
@@ -13,15 +13,19 @@ export async function POST(request: Request) {
   const playerId = cookieStore.get(COOKIE_NAME)?.value;
   if (!playerId) return NextResponse.json({ error: "No player" }, { status: 401 });
 
-  const { cardId, quantity: rawQty }: { cardId?: string; quantity?: number } = await request.json();
-  if (!cardId) return NextResponse.json({ error: "Missing cardId" }, { status: 400 });
+  const { cardId, grade, quantity: rawQty }: { cardId?: string; grade?: string; quantity?: number } = await request.json();
+  if (!cardId || !grade) return NextResponse.json({ error: "Missing cardId or grade" }, { status: 400 });
 
   const card = getCardById(cardId);
   if (!card) return NextResponse.json({ error: "Unknown card" }, { status: 400 });
 
   const db = getDb();
   const [owned] = await db.select().from(ownedCards)
-    .where(and(eq(ownedCards.playerId, playerId), eq(ownedCards.cardId, cardId))).limit(1);
+    .where(and(
+      eq(ownedCards.playerId, playerId),
+      eq(ownedCards.cardId, cardId),
+      eq(ownedCards.grade, grade),
+    )).limit(1);
 
   const maxDisenchantable = owned ? owned.quantity - 1 : 0;
   if (maxDisenchantable <= 0)
@@ -32,12 +36,13 @@ export async function POST(request: Request) {
   const dustGained = (DISENCHANT_VALUES[rarity] ?? 0) * quantity;
   const now = new Date();
 
-  // Atomic decrement: only succeeds if quantity >= quantity + 1 (keep at least 1)
+  // Atomic decrement — grade-aware
   const debitResult = await db.update(ownedCards)
     .set({ quantity: sql`${ownedCards.quantity} - ${quantity}` })
     .where(and(
       eq(ownedCards.playerId, playerId),
       eq(ownedCards.cardId, cardId),
+      eq(ownedCards.grade, grade),
       gte(ownedCards.quantity, quantity + 1),
     ))
     .returning({ cardId: ownedCards.cardId });

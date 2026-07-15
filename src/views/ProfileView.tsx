@@ -1,7 +1,7 @@
 "use client";
 
 import CARDS, { getCardsByPack, getPackInfo } from "@/data/cards";
-import { GROUPS } from "@/data/artists";
+import { GROUPS, findGroupByMember } from "@/data/artists";
 import { BIAS_COOLDOWN_DAYS, getFanLevel, STREAK_TICKETS, STREAK_BONUS_GEMS } from "@/lib/gameConfig";
 import { useEffect, useState, useMemo } from "react";
 import { authClient } from "@/lib/auth/client";
@@ -213,7 +213,7 @@ export default function ProfileView({
             </div>
             <div style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent-hotpink)", display: "inline-block" }} />
-              Bias: {bias || "None"} · VICIOUS
+              Bias: {bias || "None"}{bias ? ` · ${findGroupByMember(bias)?.name ?? "VICIOUS"}` : ""}
             </div>
           </div>
         </div>
@@ -426,7 +426,7 @@ export default function ProfileView({
                 {badge("💗", "Rookie Fan", fanLevel >= 5, "Reach Fan Lv.5")}
                 {badge("💜", "Devoted Fan", fanLevel >= 10, "Reach Fan Lv.10")}
                 {badge("👑", "Ultimate Bias", fanLevel >= 20, "Reach Fan Lv.20")}
-                {badge("🐺", "VICIOUS Legend", fanLevel >= 30, "Reach Fan Lv.30")}
+                {badge("🐺", "Legend", fanLevel >= 30, "Reach Fan Lv.30")}
               </div>
             </div>
             <div>

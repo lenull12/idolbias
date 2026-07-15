@@ -53,15 +53,27 @@ const RARITY_FROM_SUFFIX: Record<string, Rarity> = {
   S: "secret",
 };
 
-const MEMBER_MAP: Record<string, string> = {
-  "1": "RIA",
-  "2": "SEORI",
-  "3": "MINA",
-  "4": "HAEUN",
+const GROUP_PREFIX: Record<string, string> = {
+  VC: "VICIOUS",
+  RZ: "R\u039bZE",
 };
 
+const MEMBER_PER_GROUP: Record<string, Record<string, string>> = {
+  VICIOUS: { "1": "RIA", "2": "SEORI", "3": "MINA", "4": "HAEUN" },
+  "R\u039bZE": { "1": "\u039bSH", "2": "GR\u039bV", "3": "F\u039bLL", "4": "BL\u039bZE" },
+};
+
+function groupFromRef(ref: string): string {
+  const prefix = ref.match(/^([A-Z]{2})\d/)?.[1] ?? "VC";
+  return GROUP_PREFIX[prefix] ?? "VICIOUS";
+}
+
+function memberMapForRef(ref: string): Record<string, string> {
+  return MEMBER_PER_GROUP[groupFromRef(ref)] ?? MEMBER_PER_GROUP.VICIOUS;
+}
+
 /** List of available idols, for the bias picker (Profile) */
-export const IDOL_NAMES: string[] = Object.values(MEMBER_MAP);
+export const IDOL_NAMES: string[] = Object.values(MEMBER_PER_GROUP).flatMap(Object.values);
 
 const DEFAULT_DROP_RATES: PackDropRates = {
   common: 100, rare: 0, epic: 0, legendary: 0, secret: 0,
@@ -131,13 +143,24 @@ const PACK_MAP: Record<string, PackInfo> = {
     tags: ["Chrome Y2K", "Dark fantasy"],
     description: "VICIOUS's very first photocard series. A shift between metallic glamour and chiaroscuro — the THE FIRST BITE era captured from every angle.",
   },
+  BF: {
+    name: "BL\u039bCK FL\u039bSH",
+    edition: "EP",
+    dropRates: { common: 50, rare: 30, epic: 14, legendary: 5, secret: 1 },
+    bannerImage: "/cards/R\u039bZE-BLACK FLASH/banner_wide.png",
+    coverImage: "/cards/R\u039bZE-BLACK FLASH/cover.webp",
+    tag: "featured",
+    costTickets: 1,
+    costGems: 80,
+    tags: ["Photoshoot", "Edgy", "Confident"],
+    description: "RAZE arrives — raw, unfiltered, impossible to ignore. A high-contrast photoshoot series where confidence meets edge. Every frame burns with attitude.",
+  },
 };
-
-const GROUP = "VICIOUS";
 
 const PACK_DIRS: Record<string, { dir: string; ext: string }> = {
   NR: { dir: "/cards/VICIOUS-NEW RULES", ext: ".webp" },
   LS: { dir: "/cards/VICIOUS-LUCID SHIFT", ext: ".webp" },
+  BF: { dir: "/cards/R\u039bZE-BLACK FLASH", ext: ".webp" },
 };
 
 const DEFAULT_PACK_DIR = { dir: "/cards/VICIOUS-LUCID SHIFT", ext: ".webp" };
@@ -151,19 +174,20 @@ export function rarityFromReference(ref: string): Rarity {
 
 /** Parse a reference and return all properties */
 export function parseReference(ref: string): {
+  groupPrefix: string;
   member: string;
   packCode: string;
   number: string;
   rarity: Rarity;
 } {
-  // VC1-LS-001C → member=1, packCode=LS, number=001, rarity=C
-  const m = ref.match(/^VC(\d+)-([A-Z]+)-(\d{3})([C|R|E|L|S])$/i);
+  const m = ref.match(/^([A-Z]{2})(\d+)-([A-Z]+)-(\d{3})([C|R|E|L|S])$/i);
   if (!m) throw new Error(`Invalid reference: ${ref}`);
   return {
-    member: m[1],
-    packCode: m[2],
-    number: m[3],
-    rarity: m[4].toUpperCase() as Rarity,
+    groupPrefix: m[1].toUpperCase(),
+    member: m[2],
+    packCode: m[3],
+    number: m[4],
+    rarity: m[5].toUpperCase() as Rarity,
   };
 }
 
@@ -219,6 +243,15 @@ const REFS: string[] = [
   // HAEUN (VC4) — 031→040: C-E-L-S-R-C-C-E-R-C
   "VC4-NR-031C", "VC4-NR-032E", "VC4-NR-033L", "VC4-NR-034S", "VC4-NR-035R",
   "VC4-NR-036C", "VC4-NR-037C", "VC4-NR-038E", "VC4-NR-039R", "VC4-NR-040C",
+  // ── BLΛCK FLΛSH (BF) — 20 cartes ──
+  // ΛSH (RZ1) — 001→005: R-C-E-R-S
+  "RZ1-BF-001R", "RZ1-BF-002C", "RZ1-BF-003E", "RZ1-BF-004R", "RZ1-BF-005S",
+  // GRΛV (RZ2) — 006→010: C-E-L-R-C
+  "RZ2-BF-006C", "RZ2-BF-007E", "RZ2-BF-008L", "RZ2-BF-009R", "RZ2-BF-010C",
+  // FΛLL (RZ3) — 011→015: C-L-E-R-C
+  "RZ3-BF-011C", "RZ3-BF-012L", "RZ3-BF-013E", "RZ3-BF-014R", "RZ3-BF-015C",
+  // BLΛZE (RZ4) — 016→020: E-S-R-C-R
+  "RZ4-BF-016E", "RZ4-BF-017S", "RZ4-BF-018R", "RZ4-BF-019C", "RZ4-BF-020R",
   // ── LUCID SHIFT (LS) — 40 cartes ──
   // RIA (VC1) — 001→010: S-E-E-L-C-R-C-R-C-R
   "VC1-LS-001S", "VC1-LS-002E", "VC1-LS-003E", "VC1-LS-004L", "VC1-LS-005C",
@@ -236,13 +269,14 @@ const REFS: string[] = [
 
 function buildCard(ref: string): CardEntry {
   const p = parseReference(ref);
-  const idol = MEMBER_MAP[p.member] ?? `MEMBER-${p.member}`;
+  const memberMap = memberMapForRef(ref);
+  const idol = memberMap[p.member] ?? `MEMBER-${p.member}`;
   const pack = getPackInfo(p.packCode);
 
   return {
     id: ref.toLowerCase().replace(/[^a-z0-9]/g, "-"),
     idol,
-    group: GROUP,
+    group: groupFromRef(ref),
     pack: pack.name,
     packCode: p.packCode,
     edition: pack.edition,

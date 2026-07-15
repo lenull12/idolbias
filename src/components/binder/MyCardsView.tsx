@@ -5,6 +5,8 @@ import CARDS, { rarityFromReference } from "@/data/cards";
 import { RARITY_ORDER } from "@/lib/gameConfig";
 import { SEASON_COLORS } from "@/lib/rarityTheme";
 import PhotoCard from "@/components/PhotoCard";
+import type { CardGrade } from "@/db/schema";
+import { GRADE_ORDER } from "@/lib/gradeConfig";
 
 function useFavorites(): [Record<string, true>, (id: string) => void] {
   const [favs, setFavs] = useState<Record<string, true>>(() => {
@@ -32,8 +34,9 @@ const selectStyle: React.CSSProperties = {
   fontFamily: "var(--font-sans, monospace)", fontWeight: 600,
 };
 
-export default function MyCardsView({ owned }: {
+export default function MyCardsView({ owned, ownedGrades = {} }: {
   owned: Record<string, number>;
+  ownedGrades?: Record<string, Partial<Record<CardGrade, number>>>;
 }) {
   const [favorites, toggleFav] = useFavorites();
   const [sortBy, setSortBy] = useState<string>("newest");
@@ -176,9 +179,11 @@ export default function MyCardsView({ owned }: {
             const rarity = rarityFromReference(card.reference);
             const qty = owned[card.id] ?? 0;
             const isFav = !!favorites[card.id];
+            const gradesOwned = ownedGrades[card.id] ?? {};
+            const bestGrade = [...GRADE_ORDER].reverse().find((g) => (gradesOwned[g] ?? 0) > 0);
 
             return (
-              <div key={card.id} style={{ position: "relative" }}>
+              <div key={card.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <PhotoCard
                   imageSrc={card.imageSrc}
                   season={SEASON_COLORS[rarity]}
@@ -190,36 +195,38 @@ export default function MyCardsView({ owned }: {
                     reference: card.reference,
                   }}
                   rarity={rarity}
+                  grade={bestGrade}
                   maxTilt={8}
                   width={slotWidth}
                 />
-                {qty > 1 && (
-                  <div style={{
-                    position: "absolute", top: 4, right: 4, zIndex: 2,
-                    padding: "1px 6px", borderRadius: 8,
-                    background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
-                    color: "var(--surface-white)", fontSize: 9, fontWeight: 800,
-                    fontFamily: "var(--font-sans, monospace)",
-                    boxShadow: "1px 1px 0px rgba(var(--text-primary-rgb),0.3)",
-                  }}>
-                    ×{qty}
-                  </div>
-                )}
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleFav(card.id); }}
-                  style={{
-                    position: "absolute", top: 4, left: 4, zIndex: 2,
-                    width: 24, height: 24, borderRadius: "50%",
-                    border: "none", cursor: "pointer", padding: 0,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 13,
-                    background: isFav ? "var(--accent-hotpink)" : "rgba(var(--text-primary-rgb),0.25)",
-                    color: "var(--surface-white)",
-                    transition: "background 0.15s",
-                  }}
-                >
-                  ❤️
-                </button>
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "0 2px",
+                }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleFav(card.id); }}
+                    style={{
+                      width: 24, height: 24, borderRadius: "50%",
+                      border: "none", cursor: "pointer", padding: 0,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 13,
+                      background: isFav ? "var(--accent-hotpink)" : "rgba(var(--text-primary-rgb),0.12)",
+                      color: "var(--surface-white)", flexShrink: 0,
+                    }}
+                  >
+                    ❤️
+                  </button>
+                  {qty > 1 && (
+                    <span style={{
+                      padding: "1px 7px", borderRadius: 8,
+                      background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
+                      color: "var(--surface-white)", fontSize: 9.5, fontWeight: 800,
+                      fontFamily: "var(--font-sans, monospace)",
+                    }}>
+                      ×{qty}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}

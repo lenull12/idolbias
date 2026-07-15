@@ -22,6 +22,7 @@ import type { Reward } from "@/components/RewardToast";
 import AuthStatus from "@/components/AuthStatus";
 import WalletPill from "@/components/WalletPill";
 import { authClient } from "@/lib/auth/client";
+import type { CardGrade } from "@/db/schema";
 import { usePlayer } from "@/lib/usePlayer";
 import {
   claimDailyReward, bumpMissionProgress, claimMissionReward,
@@ -368,6 +369,7 @@ export default function AppShell() {
           <CardsView
             onView={() => handleBumpMission("view_collection")}
             owned={player?.collection ?? {}}
+            ownedGrades={player?.collectionGrades ?? {}}
             onGoToShop={(packCode: string) => { setActivePack(packCode); setView("shop"); }}
             onClaimed={refresh}
           />

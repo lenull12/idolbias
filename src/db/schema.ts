@@ -80,6 +80,7 @@ export const tradeOffers = sqliteTable("trade_offers", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   offererId: text("offerer_id").notNull().references(() => players.id),
   offeredCardId: text("offered_card_id").notNull(),
+  offeredGrade: text("offered_grade").notNull().default("standard"),
   requestedCardId: text("requested_card_id").notNull(),
   status: text("status").notNull().default("open"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
@@ -91,15 +92,20 @@ export const tradeOffers = sqliteTable("trade_offers", {
 }));
 
 // ─── owned_cards ───────────────────────────────────────────────────────────
+export const CARD_GRADES = ["standard", "fine", "mint", "pristine", "gem"] as const;
+export type CardGrade = (typeof CARD_GRADES)[number];
+
 export const ownedCards = sqliteTable("owned_cards", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   playerId: text("player_id").notNull().references(() => players.id),
   cardId: text("card_id").notNull(),
+  grade: text("grade").notNull().default("standard"),
   quantity: integer("quantity").notNull().default(0),
   firstObtainedAt: integer("first_obtained_at", { mode: "timestamp" }).notNull(),
   lastObtainedAt: integer("last_obtained_at", { mode: "timestamp" }).notNull(),
 }, (table) => ({
-  playerCardIdx: uniqueIndex("owned_cards_player_card_idx").on(table.playerId, table.cardId),
+  playerCardGradeIdx: uniqueIndex("owned_cards_player_card_grade_idx")
+    .on(table.playerId, table.cardId, table.grade),
 }));
 
 // ─── feed_subscriptions ─────────────────────────────────────────────────────

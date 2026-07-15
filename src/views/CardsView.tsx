@@ -6,6 +6,7 @@ import BinderView from "@/components/binder/BinderView";
 import BinderAlbumView from "@/components/binder/BinderAlbumView";
 import MyCardsView from "@/components/binder/MyCardsView";
 import SetCompletionModal from "@/components/binder/SetCompletionModal";
+import type { CardGrade } from "@/db/schema";
 import { getAllPacks, getCardsByPack, getPackInfo } from "@/data/cards";
 
 function wereAllCardsOwned(collection: Record<string, number>, packCode: string): boolean {
@@ -14,8 +15,9 @@ function wereAllCardsOwned(collection: Record<string, number>, packCode: string)
   return cards.every((c) => (collection[c.id] ?? 0) > 0);
 }
 
-export default function CardsView({ owned, onView, onGoToShop, onClaimed }: {
+export default function CardsView({ owned, ownedGrades, onView, onGoToShop, onClaimed }: {
   owned: Record<string, number>;
+  ownedGrades?: Record<string, Partial<Record<CardGrade, number>>>;
   onView?: () => void;
   onGoToShop?: (packCode: string) => void;
   onClaimed?: () => void;
@@ -194,7 +196,7 @@ export default function CardsView({ owned, onView, onGoToShop, onClaimed }: {
           {mode === "binder" ? (
             <BinderView owned={effectiveOwned} onSelectPack={setSelectedPack} onGoToShop={onGoToShop} claimedPacks={claimedPacks} />
           ) : mode === "mycards" ? (
-            <MyCardsView owned={effectiveOwned} />
+            <MyCardsView owned={effectiveOwned} ownedGrades={ownedGrades ?? {}} />
           ) : (
             <IndexCards owned={effectiveOwned} onView={onView} onGoToShop={onGoToShop} />
           )}

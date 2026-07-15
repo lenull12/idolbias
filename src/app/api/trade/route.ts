@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { eq, and, ne, sql } from "drizzle-orm";
+import { eq, and, ne, sql, gte } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { tradeOffers, ownedCards } from "@/db/schema";
-import { getCardById } from "@/data/cards";
 
 const COOKIE_NAME = "idolbias_player_id";
 
@@ -27,34 +26,39 @@ export async function POST(request: Request) {
   const playerId = cookieStore.get(COOKIE_NAME)?.value;
   if (!playerId) return NextResponse.json({ error: "No player" }, { status: 401 });
 
-  const { offeredCardId, requestedCardId }: { offeredCardId?: string; requestedCardId?: string } =
-    await request.json();
-  if (!offeredCardId || !requestedCardId)
-    return NextResponse.json({ error: "Missing cardId" }, { status: 400 });
+  const { offeredCardId, offeredGrade, requestedCardId }: {
+    offeredCardId?: string; offeredGrade?: string; requestedCardId?: string;
+  } = await request.json();
+  if (!offeredCardId || !offeredGrade || !requestedCardId)
+    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   if (offeredCardId === requestedCardId)
     return NextResponse.json({ error: "Cannot trade a card for itself" }, { status: 400 });
-  if (!getCardById(offeredCardId) || !getCardById(requestedCardId))
-    return NextResponse.json({ error: "Unknown card" }, { status: 400 });
-
   const db = getDb();
-  const [owned] = await db.select().from(ownedCards)
-    .where(and(eq(ownedCards.playerId, playerId), eq(ownedCards.cardId, offeredCardId))).limit(1);
-
-  if (!owned || owned.quantity <= 1)
-    return NextResponse.json({ error: "No duplicate to trade" }, { status: 400 });
-
   const now = new Date();
-  await db.batch([
-    db.update(ownedCards).set({ quantity: sql`${ownedCards.quantity} - 1` })
-      .where(and(eq(ownedCards.playerId, playerId), eq(ownedCards.cardId, offeredCardId))),
-    db.insert(tradeOffers).values({
-      offererId: playerId,
-      offeredCardId,
-      requestedCardId,
-      status: "open",
-      createdAt: now,
-    }),
-  ]);
+
+  // Atomic decrement : ne réussit que si quantity >= 2 (on garde au moins 1)
+  const debitResult = await db.update(ownedCards)
+    .set({ quantity: sql`${ownedCards.quantity} - 1` })
+    .where(and(
+      eq(ownedCards.playerId, playerId),
+      eq(ownedCards.cardId, offeredCardId),
+      eq(ownedCards.grade, offeredGrade),
+      gte(ownedCards.quantity, 2),
+    ))
+    .returning({ cardId: ownedCards.cardId });
+
+  if (debitResult.length === 0) {
+    return NextResponse.json({ error: "No duplicate to trade" }, { status: 400 });
+  }
+
+  await db.insert(tradeOffers).values({
+    offererId: playerId,
+    offeredCardId,
+    offeredGrade,
+    requestedCardId,
+    status: "open",
+    createdAt: now,
+  });
 
   return NextResponse.json({ ok: true });
 }

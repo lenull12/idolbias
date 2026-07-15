@@ -204,26 +204,35 @@ function RarityBar({ dropRates }: { dropRates: PackDropRates }) {
   );
 }
 
-// ─── Chase cards (legendary + teaser secret unique) ─────────────────────────
+// ─── Chase cards (meilleure rareté par membre, exclut secret) ───────────────
 
 function getChaseCards(cards: CardEntry[]) {
-  return cards
-    .map((c) => ({ card: c, rarity: rarityFromReference(c.reference) }))
-    .filter((c) => c.rarity === "legendary" || c.rarity === "secret");
+  return cards.map((c) => ({ card: c, rarity: rarityFromReference(c.reference) }));
 }
 
 function ChaseCardCarousel({ chase }: { chase: ReturnType<typeof getChaseCards> }) {
   if (chase.length === 0) return null;
-  const legendary = Array.from(
-    new Map(chase.filter((c) => c.rarity === "legendary").map((c) => [c.card.idol, c])).values()
+  // 1 carte par membre avec la meilleure rareté (secret exclue)
+  const bestPerMember = Array.from(
+    chase
+      .filter((c) => c.rarity !== "secret")
+      .reduce((map, c) => {
+        const existing = map.get(c.card.idol);
+        if (!existing || RARITY_ORDER.indexOf(c.rarity) > RARITY_ORDER.indexOf(existing.rarity)) {
+          map.set(c.card.idol, c);
+        }
+        return map;
+      }, new Map<string, typeof chase[0]>())
+      .values()
   );
+  if (bestPerMember.length === 0) return null;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "2px", color: "var(--text-muted)", textTransform: "uppercase" }}>
         Featured cards
       </span>
       <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4 }}>
-        {legendary.map(({ card }) => (
+        {bestPerMember.map(({ card }) => (
           <div key={card.id} style={{
             position: "relative", flex: "0 0 auto", width: "min(112px, 28vw)", aspectRatio: "896/1152",
             borderRadius: 12, overflow: "hidden", border: "1.5px solid rgba(var(--text-primary-rgb),0.08)",
@@ -324,9 +333,10 @@ function PackAbout({ pack, cards }: { pack: PackInfo; cards: CardEntry[] }) {
 
   // ─── Pack detail modal ─────────────────────────────────────────────────────
 
-function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose }: {
+function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose, onGoToGemShop }: {
   code: string; pack: PackInfo; tickets: number; gems: number; bias: string | null;
   onPull: (method: "tickets" | "gems") => void; onClose: () => void;
+  onGoToGemShop?: () => void;
 }) {
   const cards = getCardsByPack(code);
   const chase = getChaseCards(cards);
@@ -445,16 +455,27 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose }: {
                     🎟️ {pack.costTickets} Ticket{pack.costTickets > 1 ? "s" : ""}
                   </button>
                 )}
-                {pack.costGems !== undefined && (
-                  <button onClick={() => onPull("gems")} disabled={gems < pack.costGems} style={{
+                {pack.costGems !== undefined && gems >= pack.costGems && (
+                  <button onClick={() => onPull("gems")} style={{
                     flex: 1, padding: 14, borderRadius: 12, border: "2px solid var(--text-primary)",
                     fontWeight: 700, fontSize: 13, fontFamily: "var(--font-sans, monospace)",
-                    cursor: gems >= pack.costGems ? "pointer" : "default",
+                    cursor: "pointer",
                     boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
-                    background: "var(--accent-hotpink)", color: gems >= pack.costGems ? "#fff" : "rgba(255,255,255,0.4)",
-                    opacity: gems >= pack.costGems ? 1 : 0.4,
+                    background: "var(--accent-hotpink)", color: "#fff",
                   }}>
                     💎 {pack.costGems} Gems
+                  </button>
+                )}
+                {pack.costGems !== undefined && gems < pack.costGems && (
+                  <button onClick={onGoToGemShop} style={{
+                    flex: 1, padding: 14, borderRadius: 12, border: "2px solid var(--text-primary)",
+                    fontWeight: 700, fontSize: 13, fontFamily: "var(--font-sans, monospace)",
+                    cursor: "pointer",
+                    boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
+                    background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
+                    color: "#fff",
+                  }}>
+                    💎 GET GEMS
                   </button>
                 )}
               </div>
@@ -1150,6 +1171,7 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
           bias={bias}
           onPull={(method) => { handlePull(previewCode, method); setPreviewCode(null); }}
           onClose={() => setPreviewCode(null)}
+          onGoToGemShop={() => setShopTab("gems")}
         />
       )}
     </div>

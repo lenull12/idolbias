@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { players, wallets, progression, ownedCards } from "@/db/schema";
+import type { CardGrade } from "@/db/schema";
 
 const COOKIE_NAME = "idolbias_player_id";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 2;
@@ -61,13 +62,18 @@ export async function GET() {
 
     const ownedRows = await db.select().from(ownedCards).where(eq(ownedCards.playerId, playerId));
     const collection: Record<string, number> = {};
-    for (const row of ownedRows) collection[row.cardId] = row.quantity;
+    const collectionGrades: Record<string, Partial<Record<CardGrade, number>>> = {};
+    for (const row of ownedRows) {
+      collection[row.cardId] = (collection[row.cardId] ?? 0) + row.quantity;
+      if (!collectionGrades[row.cardId]) collectionGrades[row.cardId] = {};
+      collectionGrades[row.cardId][row.grade as CardGrade] = row.quantity;
+    }
 
     const [playerRow] = await db.select().from(players).where(eq(players.id, playerId)).limit(1);
     const createdAt = playerRow?.createdAt ?? new Date();
     const welcomePackClaimedAt = playerRow?.welcomePackClaimedAt ?? null;
 
-    const res = NextResponse.json({ playerId, isNew, wallet, progression: prog, collection, createdAt, welcomePackClaimedAt });
+    const res = NextResponse.json({ playerId, isNew, wallet, progression: prog, collection, collectionGrades, createdAt, welcomePackClaimedAt });
     res.cookies.set(COOKIE_NAME, playerId, {
       httpOnly: true, sameSite: "lax", maxAge: COOKIE_MAX_AGE, path: "/",
     });

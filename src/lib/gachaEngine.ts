@@ -1,4 +1,6 @@
 import type { Rarity } from "@/components/CardEffects";
+import type { CardGrade } from "@/db/schema";
+import { rollGrade } from "./gradeConfig";
 import { RARITY_ORDER, BIAS_WEIGHT_MULTIPLIER } from "./gameConfig";
 import { rarityFromReference, getCardsByPack, getPackDropRates } from "@/data/cards";
 
@@ -7,6 +9,7 @@ export type ServerCard = {
   cardId: string;
   imageSrc: string;
   rarity: Rarity;
+  grade: CardGrade;
   idol: string;
   group: string;
   pack: string;
@@ -65,6 +68,7 @@ export function generatePull(count: number, packCode: string, bias?: string | nu
       cardId: card.id,
       imageSrc: card.imageSrc,
       rarity,
+      grade: rollGrade(),
       idol: card.idol,
       group: card.group,
       pack: card.pack,

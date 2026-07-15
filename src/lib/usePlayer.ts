@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { setPlayerId } from "./playerId";
+import type { CardGrade } from "@/db/schema";
 
 type PlayerData = {
   playerId: string;
@@ -23,6 +24,7 @@ type PlayerData = {
     lifetimeClaimed: string[];
   };
   collection: Record<string, number>;
+  collectionGrades: Record<string, Partial<Record<CardGrade, number>>>;
 };
 
 export function usePlayer() {

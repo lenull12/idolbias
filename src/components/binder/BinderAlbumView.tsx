@@ -15,11 +15,12 @@ function getMemberColor(idolName: string): string {
   return "var(--text-muted)";
 }
 
-const KNOWN_MEMBERS = ["RIA", "SEORI", "MINA", "HAEUN"];
-
 function memberSortKey(name: string): number {
-  const idx = KNOWN_MEMBERS.indexOf(name);
-  return idx >= 0 ? idx : 999;
+  for (const group of GROUPS) {
+    const idx = group.members.findIndex((m) => m.stageName === name);
+    if (idx >= 0) return idx;
+  }
+  return 999;
 }
 
 function useCols(): number {

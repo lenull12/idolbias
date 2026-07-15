@@ -101,7 +101,7 @@ function DisenchantTab({ owned, onChanged }: { owned: Record<string, number>; on
     setBusy(true); setError(null);
     try {
       for (const [cardId, qty] of Object.entries(amounts).filter(([, v]) => v > 0)) {
-        await disenchantCard(cardId, qty);
+        await disenchantCard(cardId, qty, "standard");
       }
       setAmounts({});
       onChanged();
@@ -134,7 +134,7 @@ function DisenchantTab({ owned, onChanged }: { owned: Record<string, number>; on
       for (const c of duplicates) {
         const q = owned[c.id] ?? 0;
         if (q <= 1) continue;
-        await disenchantCard(c.id, q - 1);
+        await disenchantCard(c.id, q - 1, "standard");
       }
       setAmounts({});
       onChanged();
