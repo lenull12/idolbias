@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import FanLevelBar from "@/components/FanLevelBar";
+import StyledSelect from "@/components/StyledSelect";
 import { GROUPS, type GroupInfo, type MemberInfo, type TrackInfo } from "@/data/artists";
 import CARDS, { rarityFromReference } from "@/data/cards";
 import type { Rarity } from "@/components/CardEffects";
 import { BIAS_COOLDOWN_DAYS } from "@/lib/gameConfig";
 import { RARITY_LETTER, RARITY_BG, RARITY_FG } from "@/lib/rarityTheme";
 import ProfileStatGrid, { type StatEntry } from "@/components/ProfileStatGrid";
+import { IconChevronLeft } from "@/components/Icons";
 
 // ─── Small shared bits ──────────────────────────────────────────────────────
 
@@ -28,13 +30,13 @@ function BackButton({ label, onClick }: { label: string; onClick: () => void }) 
       onClick={onClick}
       style={{
         display: "inline-flex", alignItems: "center", gap: 6, alignSelf: "flex-start",
-        padding: "6px 12px", borderRadius: 8, border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+        padding: "6px 12px", borderRadius: 8,         border: "2px solid rgba(var(--text-primary-rgb),0.12)",
         background: "rgba(var(--surface-white-rgb),0.6)", cursor: "pointer",
         fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 600,
         color: "rgba(var(--text-primary-rgb),0.6)",
       }}
     >
-      ← {label}
+      <IconChevronLeft size={14} /> {label}
     </button>
   );
 }
@@ -70,7 +72,7 @@ function SocialTile({ label, handle, icon }: { label: string; handle?: string; i
       flex: 1, minWidth: 130, display: "flex", flexDirection: "column", gap: 4,
       padding: "12px 14px", borderRadius: 12, background: "rgba(var(--surface-white-rgb),0.5)",
       backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-      border: "1px solid rgba(255,158,196,0.08)",
+      border: "2px solid rgba(255,158,196,0.08)",
     }}>
       <span style={{ fontSize: 18 }}>{icon}</span>
       <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{label}</span>
@@ -107,9 +109,48 @@ function TrackTile({ track }: { track: TrackInfo }) {
   );
 }
 
-// ─── Level 0: Groups grid ───────────────────────────────────────────────────
+// ─── Level 0: Member grid ───────────────────────────────────────────────────
 
-function GroupsGrid({ onSelect }: { onSelect: (id: string) => void }) {
+function MemberGrid({
+  onSelectMember,
+}: {
+  onSelectMember: (groupId: string, memberId: string) => void;
+}) {
+  const [genderFilter, setGenderFilter] = useState<string>("all");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+
+  useEffect(() => { setGroupFilter("all"); }, [genderFilter]);
+
+  const genders = useMemo(() => [...new Set(GROUPS.map((g) => g.gender).filter(Boolean))], []);
+
+  const genderOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [{ value: "all", label: "All Groups" }];
+    if (genders.includes("female")) opts.push({ value: "female", label: "Girl Groups" });
+    if (genders.includes("male")) opts.push({ value: "male", label: "Boy Groups" });
+    return opts;
+  }, [genders]);
+
+  const groupOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [{ value: "all", label: "All" }];
+    GROUPS.filter((g) => {
+      if (genderFilter === "all") return true;
+      return g.gender === genderFilter;
+    }).forEach((g) => opts.push({ value: g.id, label: g.name }));
+    return opts;
+  }, [genderFilter]);
+
+  const filtered = useMemo(() => {
+    const result: { member: MemberInfo; group: GroupInfo }[] = [];
+    for (const group of GROUPS) {
+      if (genderFilter !== "all" && group.gender !== genderFilter) continue;
+      if (groupFilter !== "all" && group.id !== groupFilter) continue;
+      for (const member of group.members) {
+        if (member.revealed) result.push({ member, group });
+      }
+    }
+    return result;
+  }, [genderFilter, groupFilter]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -128,64 +169,85 @@ function GroupsGrid({ onSelect }: { onSelect: (id: string) => void }) {
           artists
         </h1>
         <span style={{ fontSize: 15, color: "rgba(var(--text-primary-rgb),0.5)", marginTop: 4 }}>
-          Meet the groups behind your photocards.
+          Meet the members behind your photocards.
         </span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {GROUPS.map((group) => (
-          <button
-            key={group.id}
-            onClick={() => onSelect(group.id)}
-            style={{
-              display: "flex", flexDirection: "column", gap: 10, textAlign: "left",
-              padding: 20, borderRadius: 16, cursor: "pointer", border: "2px solid var(--text-primary)",
-              background: "rgba(var(--surface-white-rgb),0.6)", boxShadow: "5px 5px 0px rgba(var(--text-primary-rgb),0.9)",
-              position: "relative", overflow: "hidden",
-            }}
-          >
-            <div style={{
-              position: "absolute", top: -40, right: -40, width: 160, height: 160,
-              background: `radial-gradient(circle, ${group.color}22 0%, transparent 70%)`,
-              pointerEvents: "none",
-            }} />
-            <span style={{
-              fontFamily: "var(--font-display)", fontSize: 26, color: "var(--text-primary)",
-              letterSpacing: "-0.3px",
-            }}>
-              {group.name}
-            </span>
-            <span style={{ fontSize: 14, color: "rgba(var(--text-primary-rgb),0.5)" }}>{group.tagline}</span>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
-              {group.members.map((m) => (
-                <div key={m.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, minWidth: 48 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <StyledSelect options={genderOptions} value={genderFilter} onChange={setGenderFilter} />
+        <StyledSelect options={groupOptions} value={groupFilter} onChange={setGroupFilter} />
+      </div>
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+        gap: 20,
+      }}>
+        {filtered.map(({ member, group }) => {
+          const memberCards = CARDS.filter((c) => c.idol === member.stageName);
+          const coverSrc = memberCards[0]?.imageSrc;
+
+          return (
+            <button
+              key={`${group.id}-${member.id}`}
+              onClick={() => onSelectMember(group.id, member.id)}
+              style={{
+                display: "flex", flexDirection: "column", gap: 0,
+                cursor: "pointer", border: "none", background: "none", padding: 0,
+                transition: "transform 0.2s, filter 0.2s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.filter = "brightness(1.05)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.filter = "none"; }}
+            >
+              <div style={{
+                borderRadius: 16, overflow: "hidden",
+                border: "2px solid var(--text-primary)",
+                boxShadow: "5px 5px 0px rgba(var(--text-primary-rgb),0.9)",
+                aspectRatio: "3/4", width: "100%",
+                position: "relative",
+              }}>
+                {coverSrc ? (
+                  <img src={coverSrc} alt={member.stageName} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                ) : member.profileImage ? (
+                  <img src={member.profileImage} alt={member.stageName} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                ) : (
                   <div style={{
-                    width: 40, height: 40, borderRadius: "50%", overflow: "hidden",
-                    border: "1.5px solid var(--text-primary)",
-                    background: m.profileImage ? "none" : m.color,
+                    width: "100%", height: "100%",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: `linear-gradient(170deg, ${member.color}dd 0%, ${group.color}44 60%, ${member.color}22 100%)`,
                   }}>
-                    {m.profileImage ? (
-                      <img src={m.profileImage} alt={m.stageName} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                    ) : (
-                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "var(--surface-white)" }}>
-                        {m.stageName[0]}
-                      </div>
-                    )}
+                    <span style={{ fontFamily: "var(--font-display)", fontSize: 56, fontWeight: 900, color: "var(--surface-white)", textShadow: "3px 3px 0 rgba(0,0,0,0.3)" }}>
+                      {member.stageName[0]}
+                    </span>
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(var(--text-primary-rgb),0.55)", textAlign: "center", lineHeight: 1.2 }}>
-                    {m.stageName}
-                  </span>
+                )}
+
+                <div style={{
+                  position: "absolute", bottom: 0, left: 0, right: 0,
+                  background: "linear-gradient(transparent 0%, rgba(0,0,0,0.65) 60%)",
+                  padding: "32px 12px 10px",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                      background: group.gender === "female" ? "var(--accent-hotpink)" : "#4A90D9",
+                      boxShadow: group.gender === "female"
+                        ? "0 0 6px var(--accent-hotpink)"
+                        : "0 0 6px #4A90D9",
+                    }} />
+                    <span style={{
+                      fontFamily: "var(--font-display)", fontSize: 15, fontWeight: 800,
+                      color: "var(--surface-white)", textShadow: "1px 1px 0 rgba(0,0,0,0.5)",
+                      lineHeight: 1.2,
+                    }}>
+                      {member.stageName}
+                    </span>
+                  </div>
                 </div>
-              ))}
-            </div>
-            <span style={{
-              marginTop: 6, fontSize: 13, fontWeight: 700, color: group.color,
-              display: "inline-flex", alignItems: "center", gap: 4,
-            }}>
-              View group →
-            </span>
-          </button>
-        ))}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -208,7 +270,7 @@ function GroupDetail({
       <div style={{
         display: "flex", flexDirection: "column", gap: 8, padding: 24, borderRadius: 16,
         background: `linear-gradient(135deg, ${group.color}14, rgba(var(--surface-white-rgb),0.5))`,
-        border: "1px solid rgba(255,158,196,0.08)",
+        border: "2px solid rgba(255,158,196,0.08)",
       }}>
         <span style={{
           fontFamily: "var(--font-display)", fontSize: 30, letterSpacing: "-0.5px",
@@ -352,7 +414,7 @@ function MemberDetail({
       <div style={{
         display: "flex", gap: 16, alignItems: "flex-start", padding: 24, borderRadius: 16,
         background: `linear-gradient(135deg, ${member.color}14, rgba(var(--surface-white-rgb),0.5))`,
-        border: "1px solid rgba(255,158,196,0.08)", flexWrap: "wrap",
+        border: "2px solid rgba(255,158,196,0.08)", flexWrap: "wrap",
       }}>
         <Avatar name={member.stageName} color={member.color} size={84} image={member.profileImage} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1, minWidth: 200 }}>
@@ -380,7 +442,7 @@ function MemberDetail({
                 background: isBias ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "rgba(var(--surface-white-rgb),0.7)",
                 color: "var(--text-primary)",
                 boxShadow: isBias ? "3px 3px 0px rgba(var(--text-primary-rgb),0.9)" : "none",
-                outline: isBias ? "2px solid var(--text-primary)" : "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+                outline: isBias ? "2px solid var(--text-primary)" : "2px solid rgba(var(--text-primary-rgb),0.12)",
                 outlineOffset: -2,
               }}
             >
@@ -402,7 +464,7 @@ function MemberDetail({
                   cursor: "pointer", fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 700,
                   background: isSubscribed ? "var(--accent-hotpink)" : "rgba(var(--surface-white-rgb),0.7)",
                   color: isSubscribed ? "var(--surface-white)" : "var(--text-primary)",
-                  outline: isSubscribed ? "none" : "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+                  outline: isSubscribed ? "none" : "2px solid rgba(var(--text-primary-rgb),0.12)",
                   outlineOffset: -2,
                 }}
               >
@@ -457,7 +519,7 @@ function MemberDetail({
                     padding: "10px 14px", borderRadius: 10,
                     background: "rgba(var(--surface-white-rgb),0.5)",
                     backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-                    border: "1px solid rgba(255,158,196,0.02)",
+                    border: "2px solid rgba(255,158,196,0.02)",
                     fontSize: 13, color: "rgba(var(--text-primary-rgb),0.7)",
                     lineHeight: 1.4,
                   }}>
@@ -496,7 +558,7 @@ function MemberDetail({
         {memberCards.length === 0 ? (
           <div style={{
             padding: "24px 16px", borderRadius: 14, textAlign: "center",
-            background: "rgba(var(--surface-white-rgb),0.4)", border: "1px dashed rgba(var(--text-primary-rgb),0.15)",
+            background: "rgba(var(--surface-white-rgb),0.4)", border: "2px dashed rgba(var(--text-primary-rgb),0.15)",
             fontSize: 13, color: "rgba(var(--text-primary-rgb),0.35)",
           }}>
             No cards revealed yet ✨
@@ -596,7 +658,7 @@ export default function ArtistsView({
       className="mx-auto max-w-[600px] lg:max-w-[1100px]"
       style={{ padding: "20px 16px 48px" }}
     >
-      {!group && <GroupsGrid onSelect={setGroupId} />}
+      {!group && <MemberGrid onSelectMember={(gid, mid) => { setGroupId(gid); setMemberId(mid); }} />}
       {group && !member && (
         <GroupDetail group={group} onBack={() => setGroupId(null)} onSelectMember={setMemberId} />
       )}

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { players, wallets, progression, ownedCards, tradeOffers, feedPosts, feedLikes, feedComments, feedSubscriptions, cosmoPosts, cosmoReplies, cosmoFeaturedResponses, gemPurchases, setCompletions, eventParticipation, user, session, account, verification } from "@/db/schema";
+import { players, wallets, progression, ownedCards, tradeOffers, feedPosts, feedLikes, feedComments, feedSubscriptions, cosmoPosts, cosmoReplies, cosmoFeaturedResponses, gemPurchases, setCompletions, eventParticipation, user, session, account, verification, vendorOffers, marketListings, portfolioSnapshots } from "@/db/schema";
 import { getAuth } from "@/lib/auth";
 
 export async function DELETE() {
@@ -43,6 +43,10 @@ export async function DELETE() {
       await db.delete(gemPurchases).where(eq(gemPurchases.playerId, playerId));
       await db.delete(wallets).where(eq(wallets.playerId, playerId));
       await db.delete(progression).where(eq(progression.playerId, playerId));
+      await db.delete(vendorOffers).where(eq(vendorOffers.claimedByPlayerId, playerId));
+      await db.delete(marketListings).where(eq(marketListings.sellerId, playerId));
+      await db.delete(marketListings).where(eq(marketListings.buyerId, playerId));
+      await db.delete(portfolioSnapshots).where(eq(portfolioSnapshots.playerId, playerId));
       await db.delete(players).where(eq(players.id, playerId));
     }
 

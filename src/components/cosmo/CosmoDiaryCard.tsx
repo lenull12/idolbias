@@ -24,7 +24,7 @@ export default function CosmoDiaryCard({
     <div style={{
       background: "rgba(var(--surface-white-rgb),0.5)",
       borderRadius: 14,
-      border: "1px solid rgba(255,158,196,0.1)",
+       border: "2px solid rgba(255,158,196,0.1)",
       padding: 16,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -71,7 +71,7 @@ export default function CosmoDiaryCard({
       <button
         onClick={onReply}
         style={{
-          marginTop: 12, padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,158,196,0.2)",
+           marginTop: 12, padding: "8px 14px", borderRadius: 8, border: "2px solid rgba(255,158,196,0.2)",
           background: "transparent", color: "var(--accent-hotpink)", fontWeight: 600,
           fontSize: 12, cursor: "pointer", width: "100%",
         }}

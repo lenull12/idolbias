@@ -4,8 +4,14 @@ import { useState, useCallback, useMemo } from "react";
 import GemPackageCard from "./GemPackageCard";
 import { GEM_PACKAGES } from "@/lib/gemShop";
 import type { GemPackage } from "@/lib/gemShop";
+import CloseButton from "@/components/CloseButton";
 
-export default function GemShopSection({ onPurchaseComplete }: { onPurchaseComplete?: () => void }) {
+export default function GemShopSection({
+  gems, onPurchaseComplete,
+}: {
+  gems: number;
+  onPurchaseComplete?: () => void;
+}) {
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const [pendingPkg, setPendingPkg] = useState<GemPackage | null>(null);
   const [guestError, setGuestError] = useState(false);
@@ -18,6 +24,10 @@ export default function GemShopSection({ onPurchaseComplete }: { onPurchaseCompl
       if (ratio > bestRatio) { bestRatio = ratio; best = p.id; }
     }
     return best;
+  }, []);
+
+  const sortedPkgs = useMemo(() => {
+    return [...GEM_PACKAGES].sort((a, b) => a.gems - b.gems);
   }, []);
 
   const handleBuyClick = useCallback((pkg: GemPackage) => {
@@ -62,30 +72,56 @@ export default function GemShopSection({ onPurchaseComplete }: { onPurchaseCompl
     }
   });
 
+  const getBadge = (pkg: GemPackage): string | undefined => {
+    if (pkg.id === bestValueId) return "BEST VALUE";
+    if (pkg.featured) return "POPULAR";
+    return undefined;
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Header */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <span style={{
-          fontSize: 12, fontWeight: 700, letterSpacing: "2px",
-          color: "rgba(var(--text-primary-rgb),0.35)", textTransform: "uppercase",
-        }}>
-          ✦ Get Gems
-        </span>
-        <span style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.4 }}>
-          Buy gems to unlock premium packs and perks. Bonus on larger purchases.
-        </span>
+      {/* Description */}
+      <span style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.5 }}>
+        Choose a pack and top up your wallet. Larger purchases include bonus gems.
+      </span>
+
+      {/* Balance card */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "14px 18px", borderRadius: 12,
+        background: "linear-gradient(135deg, rgba(255,20,147,0.06), rgba(201,177,255,0.06))",
+        border: "2px solid rgba(var(--text-primary-rgb),0.08)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 22, lineHeight: 1 }}>💎</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "1px" }}>
+              Your balance
+            </span>
+            <span style={{
+              fontSize: 22, fontWeight: 900, fontFamily: "var(--font-display)",
+              color: "var(--text-primary)", letterSpacing: "-0.5px", lineHeight: 1,
+            }}>
+              {gems.toLocaleString()} Gems
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Package list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {GEM_PACKAGES.map((pkg) => (
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 14,
+      }}>
+        {sortedPkgs.map((pkg, i) => (
           <GemPackageCard
             key={pkg.id}
             pkg={pkg}
+            gemIndex={i + 1}
+            badge={getBadge(pkg)}
             onBuy={() => handleBuyClick(pkg)}
             loading={buyingId === pkg.id}
-            bestValue={pkg.id === bestValueId}
           />
         ))}
       </div>
@@ -94,11 +130,14 @@ export default function GemShopSection({ onPurchaseComplete }: { onPurchaseCompl
       <div style={{
         display: "inline-flex", alignItems: "center", gap: 6, alignSelf: "center",
         padding: "6px 14px", borderRadius: 8,
-        border: "1.5px solid rgba(99,91,255,0.2)",
-        background: "rgba(99,91,255,0.08)",
+        border: "2px solid rgba(var(--text-primary-rgb),0.08)",
+        background: "rgba(var(--text-primary-rgb),0.03)",
       }}>
-        <span style={{ fontSize: 11, color: "#635BFF" }}>🔒</span>
-        <span style={{ fontSize: 10, fontWeight: 600, color: "#635BFF", fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.3px" }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-disabled)", fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.3px" }}>
           Secured by Stripe · Visa · Mastercard · Apple Pay
         </span>
       </div>
@@ -129,40 +168,25 @@ export default function GemShopSection({ onPurchaseComplete }: { onPurchaseCompl
             }}>
               Sign in / Create account
             </a>
-            <button onClick={() => setGuestError(false)} style={{
-              background: "none", border: "none", padding: "4px 0", cursor: "pointer",
-              fontSize: 12, fontWeight: 600, color: "var(--text-disabled)",
-              fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
-            }}>
-              ✕ Maybe later
-            </button>
+            <CloseButton onClick={() => setGuestError(false)} label="Maybe later" />
           </div>
         </div>
       )}
 
       {/* Waiver modal */}
       {pendingPkg && (
-        <div
-          onClick={() => setPendingPkg(null)}
-          style={{
-            position: "fixed", inset: 0, zIndex: 100,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(0,0,0,0.6)",
-            backdropFilter: "blur(6px)",
-            padding: 20,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "100%", maxWidth: 400,
-              background: "rgba(var(--surface-white-rgb),0.95)",
-              borderRadius: 16,
-              padding: 24,
-              display: "flex", flexDirection: "column", gap: 16,
-              boxShadow: "0 8px 40px rgba(0,0,0,0.3)",
-            }}
-          >
+        <div onClick={() => setPendingPkg(null)} style={{
+          position: "fixed", inset: 0, zIndex: 100,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)", padding: 20,
+        }}>
+          <div onClick={(e) => e.stopPropagation()} style={{
+            width: "100%", maxWidth: 400,
+            background: "rgba(var(--surface-white-rgb),0.95)",
+            borderRadius: 16, padding: 24,
+            display: "flex", flexDirection: "column", gap: 16,
+            boxShadow: "0 8px 40px rgba(0,0,0,0.3)",
+          }}>
             <h3 style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 900, color: "var(--text-primary)", margin: 0 }}>
               Confirm purchase
             </h3>
@@ -181,9 +205,10 @@ export default function GemShopSection({ onPurchaseComplete }: { onPurchaseCompl
                 onClick={() => setPendingPkg(null)}
                 style={{
                   flex: 1, padding: "10px 0", borderRadius: 8,
-                  border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+                  border: "2px solid rgba(var(--text-primary-rgb),0.12)",
                   background: "transparent", color: "var(--text-primary)",
                   fontWeight: 600, fontSize: 13, cursor: "pointer",
+                  fontFamily: "var(--font-display)",
                 }}
               >
                 Cancel
@@ -194,6 +219,7 @@ export default function GemShopSection({ onPurchaseComplete }: { onPurchaseCompl
                   flex: 1, padding: "10px 0", borderRadius: 8, border: "none",
                   background: "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))",
                   color: "var(--surface-white)", fontWeight: 700, fontSize: 13, cursor: "pointer",
+                  fontFamily: "var(--font-display)",
                 }}
               >
                 Confirm & pay

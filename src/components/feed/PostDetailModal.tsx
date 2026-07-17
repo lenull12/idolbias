@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import CloseButton from "@/components/CloseButton";
 
 type Comment = {
   id: string;
@@ -105,16 +106,7 @@ export default function PostDetailModal({
           <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)" }}>
             {post.memberId}
           </span>
-          <button
-            onClick={onClose}
-            style={{
-              background: "rgba(0,0,0,0.05)", border: "none", borderRadius: "50%",
-              width: 28, height: 28, cursor: "pointer", fontSize: 14, color: "var(--text-muted)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}
-          >
-            ✕
-          </button>
+          <CloseButton onClick={onClose} bordered size={16} />
         </div>
 
         {/* Image — capped so comments stay visible */}
@@ -186,8 +178,10 @@ export default function PostDetailModal({
             onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
             placeholder="Write a comment..."
             style={{
-              flex: 1, padding: "6px 0", border: "none", background: "transparent",
+              flex: 1, padding: "6px 0", border: "2px solid rgba(var(--text-primary-rgb),0.12)",
+              borderRadius: 8, background: "transparent",
               fontSize: 13, outline: "none", color: "var(--text-primary)",
+              fontFamily: "var(--font-display)", fontWeight: 600,
             }}
           />
           <button

@@ -25,7 +25,7 @@ export default function WalletPill({ icon, value, tone, onIncrement }: {
       {tone === "cyan" && onIncrement && (
         <button onClick={(e) => { e.stopPropagation(); onIncrement(); }} style={{
           position: "absolute", top: -6, right: -6,
-          width: 18, height: 18, borderRadius: "50%", border: "1.5px solid var(--accent-hotpink)",
+          width: 18, height: 18, borderRadius: "50%", border: "2px solid var(--accent-hotpink)",
           background: "var(--accent-hotpink)", color: "#fff", fontSize: 10, fontWeight: 800,
           cursor: "pointer", padding: 0, display: "flex", alignItems: "center", justifyContent: "center",
           boxShadow: "0 1px 4px rgba(0,0,0,0.3)",

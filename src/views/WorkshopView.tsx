@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import PillBar from "@/components/PillBar";
+import StyledSelect from "@/components/StyledSelect";
 import CARDS, { getCardById, rarityFromReference } from "@/data/cards";
 import type { CardEntry } from "@/data/cards";
 import type { Rarity } from "@/components/CardEffects";
@@ -8,24 +10,29 @@ import { DISENCHANT_VALUES, CRAFT_COSTS, RARITY_ORDER } from "@/lib/gameConfig";
 import {
   disenchantCard, craftCard,
 } from "@/lib/gameActions";
+import type { CardGrade } from "@/db/schema";
+import { GRADE_ORDER } from "@/lib/gradeConfig";
+import { GradeBadge } from "@/components/GradeBadge";
+import { RARITY_LABELS, RARITY_COLORS } from "@/lib/rarityTheme";
 
-const RARITY_LABELS: Record<Rarity, string> = {
-  common: "COMMON", rare: "RARE", epic: "EPIC", legendary: "LEGENDARY", secret: "SECRET",
-};
-const RARITY_COLOR: Record<Rarity, string> = {
-  common: "var(--rarity-common)", rare: "var(--rarity-rare)", epic: "var(--rarity-epic)", legendary: "var(--rarity-legendary)", secret: "var(--rarity-secret-ink)",
+const GRADE_LABELS: Record<CardGrade, string> = {
+  standard: "Standard", fine: "Fine", mint: "Mint", pristine: "Pristine", gem: "Gem",
 };
 
-type Tab = "disenchant" | "craft";
+type Tab = "disenchant" | "craft" | "vendor" | "market" | "leaderboard";
 
 export default function WorkshopView({
   owned = {},
+  ownedGrades = {},
   dust = 0,
+  gems = 0,
   onChanged = () => {},
   onBumpMission,
 }: {
   owned?: Record<string, number>;
+  ownedGrades?: Record<string, Partial<Record<CardGrade, number>>>;
   dust?: number;
+  gems?: number;
   onChanged?: () => void;
   onBumpMission?: (id: string) => void;
 }) {
@@ -54,24 +61,25 @@ export default function WorkshopView({
         }}>💠 {dust} dust</span>
       </div>
 
-      <div style={{
-        display: "flex", gap: 2, padding: 2, borderRadius: 10, marginBottom: 20, width: "fit-content",
-        background: "rgba(var(--text-primary-rgb),0.04)",
-      }}>
-        {([["disenchant", "✨ Disenchant"], ["craft", "🔮 Craft"]] as [Tab, string][]).map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{
-            padding: "6px 14px", borderRadius: 8, border: "none",
-            background: tab === id ? "var(--surface-white)" : "transparent",
-            color: tab === id ? "var(--accent-hotpink)" : "var(--text-muted)",
-            fontSize: 12, fontWeight: 700, cursor: "pointer",
-            fontFamily: "var(--font-sans, monospace)",
-            boxShadow: tab === id ? "1px 1px 0px rgba(var(--text-primary-rgb),0.1)" : "none",
-          }}>{label}</button>
-        ))}
+      <div style={{ marginBottom: 20 }}>
+        <PillBar
+          tabs={[
+            { key: "disenchant" as const, label: "Disenchant" },
+            { key: "craft" as const, label: "Craft" },
+            { key: "vendor" as const, label: "Vendor" },
+            { key: "market" as const, label: "Market" },
+            { key: "leaderboard" as const, label: "Rankings" },
+          ]}
+          activeTab={tab}
+          onTabChange={setTab}
+        />
       </div>
 
       {tab === "disenchant" && <DisenchantTab owned={owned} onChanged={onChanged} />}
       {tab === "craft" && <CraftTab dust={dust} onChanged={onChanged} onBumpMission={onBumpMission} />}
+      {tab === "vendor" && <VendorTab gems={gems} onChanged={onChanged} />}
+      {tab === "market" && <MarketTab ownedGrades={ownedGrades} gems={gems} onChanged={onChanged} />}
+      {tab === "leaderboard" && <LeaderboardTab />}
     </div>
   );
 }
@@ -155,7 +163,7 @@ function DisenchantTab({ owned, onChanged }: { owned: Record<string, number>; on
           const amount = amounts[card.id] ?? 0;
           return (
             <div key={card.id} style={rowStyle}>
-              <img src={card.imageSrc} alt={card.idol} style={{ width: 40, height: 52, objectFit: "cover", borderRadius: 5, border: `2px solid ${RARITY_COLOR[rarity]}` }} />
+              <img src={card.imageSrc} alt={card.idol} style={{ width: 40, height: 52, objectFit: "cover", borderRadius: 5, border: `2px solid ${RARITY_COLORS[rarity]}` }} />
               <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--font-sans, monospace)" }}>{card.idol}</span>
                 <span style={{ fontSize: 10, color: "var(--text-disabled)" }}>{card.reference} · ×{qty} owned</span>
@@ -206,21 +214,21 @@ function DisenchantTab({ owned, onChanged }: { owned: Record<string, number>; on
               <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--font-display, cursive)", textAlign: "center", color: "var(--text-primary)" }}>
                 ⚡ Disenchant all?
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "12px", borderRadius: 10, background: "rgba(var(--text-primary-rgb),0.03)", border: "1px solid rgba(var(--text-primary-rgb),0.06)" }}>
+               <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "12px", borderRadius: 10, background: "rgba(var(--text-primary-rgb),0.03)", border: "2px solid rgba(var(--text-primary-rgb),0.08)" }}>
                 {Object.entries(allSummary).map(([r, v]) => (
                   <div key={r} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontFamily: "var(--font-sans, monospace)" }}>
                     <span>{v.count}× {RARITY_LABELS[r as Rarity]}</span>
                     <span style={{ fontWeight: 700, color: "var(--accent-hotpink)" }}>+{v.dust} 💠</span>
                   </div>
                 ))}
-                <div style={{ borderTop: "1px solid rgba(var(--text-primary-rgb),0.1)", marginTop: 4, paddingTop: 6, display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 800, fontFamily: "var(--font-sans, monospace)" }}>
+                <div style={{ borderTop: "2px solid rgba(var(--text-primary-rgb),0.1)", marginTop: 4, paddingTop: 6, display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 800, fontFamily: "var(--font-sans, monospace)" }}>
                   <span>Total</span>
                   <span style={{ color: "var(--accent-hotpink)" }}>+{totalAllDust} 💠</span>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => setShowAllConfirm(false)} style={{
-                  flex: 1, padding: "10px 0", borderRadius: 10, border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+                  flex: 1, padding: "10px 0", borderRadius: 10, border: "2px solid rgba(var(--text-primary-rgb),0.12)",
                   background: "transparent", color: "var(--text-muted)", cursor: "pointer",
                   fontSize: 13, fontWeight: 700, fontFamily: "var(--font-sans, monospace)",
                 }}>
@@ -277,7 +285,7 @@ function CraftTab({ dust, onChanged, onBumpMission }: { dust: number; onChanged:
         {RARITY_ORDER.map((r) => (
           <button key={r} onClick={() => setRarity(r)} style={{
             padding: "6px 12px", borderRadius: 8, border: `2px solid ${rarity === r ? "var(--text-primary)" : "rgba(var(--text-primary-rgb),0.1)"}`,
-            background: rarity === r ? RARITY_COLOR[r] : "var(--surface-white)",
+            background: rarity === r ? RARITY_COLORS[r] : "var(--surface-white)",
             color: rarity === r && r !== "common" ? "var(--surface-white)" : "var(--text-primary)",
             fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans, monospace)",
           }}>{RARITY_LABELS[r]}</button>
@@ -322,7 +330,7 @@ function CraftTab({ dust, onChanged, onBumpMission }: { dust: number; onChanged:
             animation: "revealIn 0.5s cubic-bezier(0.23, 1, 0.32, 1)",
             width: "min(240px, 75vw)",
             borderRadius: 14, overflow: "hidden",
-            border: `3px solid ${RARITY_COLOR[rarityFromReference(craftResult.reference)]}`,
+            border: `3px solid ${RARITY_COLORS[rarityFromReference(craftResult.reference)]}`,
             boxShadow: `0 0 30px ${isLegendary ? "rgba(218,165,32,0.4)" : "rgba(var(--text-primary-rgb),0.2)"}`,
             background: "var(--surface-white)",
             cursor: "default",
@@ -339,7 +347,7 @@ function CraftTab({ dust, onChanged, onBumpMission }: { dust: number; onChanged:
                 <div style={{
                   padding: "8px 0", borderRadius: 8, marginTop: 4,
                   background: "linear-gradient(135deg, rgba(255,20,147,0.08), rgba(201,177,255,0.06))",
-                  border: "1px solid var(--accent-hotpink)",
+                  border: "2px solid var(--accent-hotpink)",
                   fontSize: 13, fontWeight: 800, fontFamily: "var(--font-sans, monospace)",
                   color: "var(--accent-hotpink)", letterSpacing: "1px", cursor: "pointer",
                 }} onClick={() => setCraftResult(null)}>
@@ -360,7 +368,448 @@ function EmptyState({ text }: { text: string }) {
   return <div style={{ fontSize: 12, color: "var(--text-disabled)", fontStyle: "italic", padding: "12px 0" }}>{text}</div>;
 }
 
-const rowStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 10, padding: "6px 10px", borderRadius: 8, background: "rgba(var(--surface-white-rgb),0.6)", border: "1px solid rgba(var(--text-primary-rgb),0.05)" };
+const rowStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "2px solid rgba(var(--text-primary-rgb),0.08)", background: "rgba(var(--surface-white-rgb),0.5)" };
 const stepperBtnStyle: React.CSSProperties = { width: 24, height: 24, borderRadius: 6, border: "2px solid var(--text-primary)", background: "var(--surface-white)", fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans, monospace)", fontSize: 12 };
 const confirmBtnStyle: React.CSSProperties = { padding: "8px 16px", borderRadius: 8, border: "none", background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))", color: "var(--surface-white)", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans, monospace)" };
-const ghostBtnStyle: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "1.5px solid rgba(var(--text-primary-rgb),0.15)", background: "transparent", color: "var(--text-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans, monospace)" };
+const ghostBtnStyle: React.CSSProperties = { padding: "8px 14px", borderRadius: 8, border: "2px solid rgba(var(--text-primary-rgb),0.15)", background: "transparent", color: "var(--text-muted)", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans, monospace)" };
+const inputStyle: React.CSSProperties = { padding: "6px 8px", borderRadius: 8, border: "2px solid rgba(var(--text-primary-rgb),0.12)", background: "var(--surface-white)", color: "var(--text-primary)", fontSize: 11, fontFamily: "var(--font-display)", fontWeight: 600, outline: "none", transition: "border-color 0.15s" };
+
+// ─── Vendor Tab ────────────────────────────────────────────────────────────
+
+type VendorOffer = {
+  id: number; cardId: string; grade: CardGrade; priceGems: number; claimed: boolean;
+};
+
+function VendorTab({ gems, onChanged }: { gems: number; onChanged: () => void }) {
+  const [offers, setOffers] = useState<VendorOffer[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchOffers = () => {
+    fetch("/api/vendor/offers", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setOffers(d.offers ?? []))
+      .catch(() => {});
+  };
+
+  useEffect(() => { fetchOffers(); }, []);
+
+  const handleBuy = async (offerId: number) => {
+    setBusy(true); setError(null);
+    try {
+      const r = await fetch("/api/vendor/buy", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offerId }), credentials: "include",
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+      onChanged();
+      fetchOffers();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally { setBusy(false); }
+  };
+
+  if (offers.length === 0) return <EmptyState text="Loading today's offers…" />;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "var(--font-sans, monospace)" }}>
+        Limited daily offers — pristine+ quality cards at a discount. Check back tomorrow for a fresh selection.
+      </div>
+      {offers.map((offer) => {
+        const card = getCardById(offer.cardId);
+        if (!card) return null;
+        const rarity = rarityFromReference(card.reference);
+        return (
+          <div key={offer.id} style={rowStyle}>
+            <img src={card.imageSrc} alt={card.idol} style={{ width: 40, height: 52, objectFit: "cover", borderRadius: 5, border: `2px solid ${RARITY_COLORS[rarity]}` }} />
+            <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--font-sans, monospace)" }}>{card.idol}</span>
+              <span style={{ fontSize: 10, color: "var(--text-disabled)" }}>{card.reference} · {RARITY_LABELS[rarity]} · {GRADE_LABELS[offer.grade]}</span>
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--font-sans, monospace)", color: "var(--accent-hotpink)" }}>
+              💎 {offer.priceGems}
+            </span>
+            <button
+              onClick={() => handleBuy(offer.id)}
+              disabled={offer.claimed || gems < offer.priceGems || busy}
+              style={{
+                padding: "6px 14px", borderRadius: 8, border: "none",
+                background: offer.claimed ? "rgba(var(--text-primary-rgb),0.08)" : "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
+                color: offer.claimed ? "var(--text-disabled)" : "var(--surface-white)",
+                fontSize: 11, fontWeight: 700, cursor: offer.claimed ? "default" : "pointer",
+                fontFamily: "var(--font-sans, monospace)", whiteSpace: "nowrap",
+                opacity: gems < offer.priceGems && !offer.claimed ? 0.4 : 1,
+              }}
+            >
+              {offer.claimed ? "Sold" : busy ? "…" : gems < offer.priceGems ? "No gems" : "Buy"}
+            </button>
+          </div>
+        );
+      })}
+      {error && <div style={{ fontSize: 11, color: "var(--state-danger)" }}>{error}</div>}
+    </div>
+  );
+}
+
+// ─── Market Tab ────────────────────────────────────────────────────────────
+
+type MarketListing = {
+  id: number; sellerId: string; cardId: string; grade: CardGrade;
+  priceGems: number; status: string; createdAt: string;
+};
+
+type SellableDuplicate = {
+  cardId: string; grade: CardGrade; qty: number;
+};
+
+function PriceSparkline({ history, color }: { history: number[]; color?: string }) {
+  if (history.length < 2) return null;
+  const h = 24; const w = 100; const pad = 2;
+  const min = Math.min(...history); const max = Math.max(...history);
+  const range = max - min || 1;
+  const pts = history.map((v, i) => {
+    const x = pad + (i / (history.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((v - min) / range) * (h - pad * 2);
+    return `${x},${y}`;
+  });
+  return (
+    <svg width={w} height={h} style={{ flexShrink: 0 }}>
+      <polyline points={pts.join(" ")} fill="none" stroke={color ?? "var(--accent-hotpink)"} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SellableDuplicateRow({ dup, onList }: {
+  dup: SellableDuplicate; onList: (price: number, confirmLastCopy?: boolean) => Promise<any>;
+}) {
+  const [price, setPrice] = useState("");
+  const [suggested, setSuggested] = useState<number | null>(null);
+  const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [listing, setListing] = useState(false);
+  const card = getCardById(dup.cardId);
+  if (!card) return null;
+  const rarity = rarityFromReference(card.reference);
+  const isLastCopy = dup.qty === 1;
+
+  useEffect(() => {
+    fetch(`/api/market/price?cardId=${dup.cardId}&grade=${dup.grade}`)
+      .then((r) => r.json())
+      .then((d) => setSuggested(d.suggestedPrice ?? null))
+      .catch(() => {});
+  }, [dup.cardId, dup.grade]);
+
+  const handleList = async () => {
+    setListing(true);
+    const finalPrice = Number(price) || (suggested ?? 1);
+    try {
+      const res = await onList(finalPrice, needsConfirm);
+      if (res?.code === "LAST_COPY_CONFIRMATION_REQUIRED") {
+        setNeedsConfirm(true);
+      } else if (res?.ok) {
+        setPrice(""); setNeedsConfirm(false);
+      }
+    } finally { setListing(false); }
+  };
+
+  return (
+    <div style={rowStyle}>
+      <img src={card.imageSrc} alt={card.idol} style={{ width: 36, height: 46, objectFit: "cover", borderRadius: 5, border: `2px solid ${RARITY_COLORS[rarity]}` }} />
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--font-sans, monospace)" }}>{card.idol}</span>
+        <span style={{ fontSize: 10, color: isLastCopy ? "var(--accent-hotpink)" : "var(--text-disabled)" }}>
+          {card.reference} · {isLastCopy ? "your only copy" : `${dup.qty - 1} to spare`}
+        </span>
+      </div>
+      <GradeBadge grade={dup.grade} size="compact" width={100} />
+      {!needsConfirm ? (
+        <>
+          <input
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            type="number"
+            placeholder={suggested !== null ? String(suggested) : "..."}
+            style={{ ...inputStyle, width: 72 }}
+          />
+          <button
+            onClick={handleList}
+            disabled={listing}
+            style={{
+              padding: "5px 10px", borderRadius: 7, border: "none",
+              background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
+              color: "var(--surface-white)", fontSize: 10, fontWeight: 700, cursor: "pointer",
+              fontFamily: "var(--font-sans, monospace)", whiteSpace: "nowrap",
+              opacity: listing ? 0.5 : 1,
+            }}
+          >
+            {listing ? "…" : "List"}
+          </button>
+        </>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 10, color: "var(--accent-hotpink)", fontWeight: 600, fontFamily: "var(--font-sans, monospace)", whiteSpace: "nowrap" }}>
+            Sell last copy?
+          </span>
+          <button onClick={() => setNeedsConfirm(false)} style={{ padding: "4px 8px", borderRadius: 6, border: "2px solid rgba(var(--text-primary-rgb),0.12)", background: "transparent", color: "var(--text-muted)", fontSize: 10, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-sans, monospace)" }}>
+            Cancel
+          </button>
+          <button onClick={handleList} disabled={listing} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "var(--accent-hotpink)", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-sans, monospace)" }}>
+            {listing ? "…" : "Confirm"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MarketTab({ ownedGrades, gems, onChanged }: {
+  ownedGrades: Record<string, Partial<Record<CardGrade, number>>>;
+  gems: number; onChanged: () => void;
+}) {
+  const [listings, setListings] = useState<MarketListing[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [filterCardId, setFilterCardId] = useState<string | null>(null);
+  const [filterGrade, setFilterGrade] = useState<string | null>(null);
+  const [priceData, setPriceData] = useState<{ baseValue: number; volMultiplier: number; recentSales: { priceGems: number; soldAt: Date }[] } | null>(null);
+
+  const sellable = useMemo(() => {
+    const dups: SellableDuplicate[] = [];
+    for (const [cardId, grades] of Object.entries(ownedGrades)) {
+      for (const [grade, qty] of Object.entries(grades)) {
+        if (qty > 0) dups.push({ cardId, grade: grade as CardGrade, qty });
+      }
+    }
+    return dups.sort((a, b) => b.qty - a.qty);
+  }, [ownedGrades]);
+
+  const fetchListings = () => {
+    fetch("/api/market/listings", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setListings(d.listings ?? []))
+      .catch(() => {});
+  };
+
+  useEffect(() => { fetchListings(); }, []);
+
+  useEffect(() => {
+    if (!filterCardId || !filterGrade) { setPriceData(null); return; }
+    fetch(`/api/market/price?cardId=${filterCardId}&grade=${filterGrade}`)
+      .then((r) => r.json())
+      .then((d) => setPriceData({ baseValue: d.baseValue, volMultiplier: d.volMultiplier, recentSales: d.recentSales ?? [] }))
+      .catch(() => {});
+  }, [filterCardId, filterGrade]);
+
+  const handleList = async (cardId: string, grade: CardGrade, priceGems: number, confirmLastCopy?: boolean) => {
+    setBusy(true); setError(null);
+    try {
+      const r = await fetch("/api/market/list", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cardId, grade, priceGems, confirmLastCopy }),
+        credentials: "include",
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        if (data.code === "LAST_COPY_CONFIRMATION_REQUIRED") return data;
+        throw new Error(data.error);
+      }
+      onChanged();
+      fetchListings();
+      return data;
+    } catch (e) {
+      setError((e as Error).message);
+      return { error: (e as Error).message };
+    } finally { setBusy(false); }
+  };
+
+  const handleBuy = async (listingId: number) => {
+    setBusy(true); setError(null);
+    try {
+      const r = await fetch(`/api/market/${listingId}/buy`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: "{}", credentials: "include",
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error);
+      onChanged();
+      fetchListings();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "var(--font-sans, monospace)" }}>
+        Peer-to-peer marketplace. Commission: 8%. List a duplicate at your price.
+      </div>
+
+      {/* Sellable duplicates */}
+      {sellable.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {sellable.map((dup) => (
+            <SellableDuplicateRow
+              key={`${dup.cardId}-${dup.grade}`}
+              dup={dup}
+              onList={(price, confirmLastCopy) => handleList(dup.cardId, dup.grade, price, confirmLastCopy)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Active listings */}
+      <div>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "1px", color: "var(--text-muted)", textTransform: "uppercase", display: "block", marginBottom: 8 }}>
+          Active listings
+        </span>
+        {listings.length === 0 ? (
+          <EmptyState text="No active listings right now." />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {listings.map((listing) => {
+              const card = getCardById(listing.cardId);
+              if (!card) return null;
+              const rarity = rarityFromReference(card.reference);
+              return (
+                <div key={listing.id} style={rowStyle}>
+                  <img src={card.imageSrc} alt={card.idol} style={{ width: 36, height: 46, objectFit: "cover", borderRadius: 5, border: `2px solid ${RARITY_COLORS[rarity]}` }} />
+                  <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--font-sans, monospace)" }}>{card.idol}</span>
+                    <span style={{ fontSize: 10, color: "var(--text-disabled)" }}>{card.reference} · {GRADE_LABELS[listing.grade]}</span>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--font-sans, monospace)", color: "var(--accent-hotpink)" }}>
+                    💎 {listing.priceGems}
+                  </span>
+                  <button onClick={() => handleBuy(listing.id)} disabled={gems < listing.priceGems || busy} style={{
+                    padding: "5px 12px", borderRadius: 7, border: "none",
+                    background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
+                    color: "var(--surface-white)", fontSize: 11, fontWeight: 700, cursor: "pointer",
+                    fontFamily: "var(--font-sans, monospace)", opacity: gems >= listing.priceGems ? 1 : 0.4,
+                  }}>
+                    Buy
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Live index — sélecteur de carte pour consulter son prix */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: 10, borderRadius: 10, background: "rgba(var(--surface-white-rgb),0.5)", border: "2px solid rgba(var(--text-primary-rgb),0.08)" }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "1px", color: "var(--text-muted)", textTransform: "uppercase" }}>
+          📊 Live index
+        </span>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <input
+            value={filterCardId ?? ""}
+            onChange={(e) => setFilterCardId(e.target.value || null)}
+            placeholder="Card ID"
+            style={{ ...inputStyle, flex: 1, minWidth: 120 }}
+          />
+          <StyledSelect
+            options={[{ value: "", label: "All grades" }, ...GRADE_ORDER.map((g) => ({ value: g, label: GRADE_LABELS[g] }))]}
+            value={filterGrade ?? ""}
+            onChange={(v) => setFilterGrade(v || null)}
+          />
+        </div>
+        {priceData && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, fontFamily: "var(--font-sans, monospace)" }}>
+            <span>Base: 💎 {priceData.baseValue}</span>
+            <span>Vol: ×{priceData.volMultiplier.toFixed(2)}</span>
+            <span style={{ marginLeft: "auto", color: "var(--text-disabled)" }}>
+              {priceData.recentSales.length} sales (24h)
+            </span>
+          </div>
+        )}
+      </div>
+      {error && <div style={{ fontSize: 11, color: "var(--state-danger)" }}>{error}</div>}
+    </div>
+  );
+}
+
+// ─── Leaderboard Tab ────────────────────────────────────────────────────────
+
+type LBEntry = { playerId: string; portfolioValue: number; dateStr: string };
+type RareEntry = { playerId: string; cardId: string; idol: string; pack: string; rarity: Rarity; grade: string; quantity: number };
+
+function LeaderboardTab() {
+  const [top, setTop] = useState<LBEntry[]>([]);
+  const [myRank, setMyRank] = useState<{ rank: number; portfolioValue: number } | null>(null);
+  const [rarest, setRarest] = useState<RareEntry[]>([]);
+
+  useEffect(() => {
+    fetch("/api/leaderboard/portfolio", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { setTop(d.leaderboard ?? []); setMyRank(d.myRank); })
+      .catch(() => {});
+    fetch("/api/leaderboard/rarest", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setRarest(d.rarest ?? []))
+      .catch(() => {});
+  }, []);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* Portfolio leaderboard */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-sans, monospace)" }}>
+          🏆 Portfolio Value
+        </span>
+        {myRank && (
+          <div style={{ padding: "8px 12px", borderRadius: 8, background: "linear-gradient(135deg, rgba(255,20,147,0.08), rgba(201,177,255,0.06))", border: "2px solid var(--accent-hotpink)", fontSize: 12, fontFamily: "var(--font-sans, monospace)" }}>
+            Your rank: <b>#{myRank.rank}</b> · 💎 {myRank.portfolioValue}
+          </div>
+        )}
+        {top.length === 0 ? (
+          <EmptyState text="No data yet. Come back after the first daily computation." />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {top.map((entry, i) => (
+              <div key={entry.playerId} style={{
+                ...rowStyle,
+                background: i < 3 ? "rgba(255,215,0,0.06)" : "rgba(var(--surface-white-rgb),0.6)",
+              }}>
+                <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--font-sans, monospace)", minWidth: 24, color: i < 3 ? "var(--accent-hotpink)" : "var(--text-muted)" }}>
+                  #{i + 1}
+                </span>
+                <span style={{ fontSize: 12, fontFamily: "var(--font-sans, monospace)", flex: 1 }}>
+                  Player {entry.playerId.slice(0, 8)}…
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--font-sans, monospace)", color: "var(--accent-hotpink)" }}>
+                  💎 {entry.portfolioValue}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Rarest cards */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-sans, monospace)" }}>
+          💎 Rarest Cards
+        </span>
+        {rarest.length === 0 ? (
+          <EmptyState text="No gem/pristine legendary+ cards discovered yet." />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {rarest.map((entry, i) => (
+              <div key={`${entry.cardId}-${entry.playerId}`} style={rowStyle}>
+                <span style={{ fontSize: 10, fontFamily: "var(--font-sans, monospace)", color: "var(--text-muted)", minWidth: 16 }}>{i + 1}.</span>
+                <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--font-sans, monospace)", flex: 1 }}>{entry.idol}</span>
+                <GradeBadge grade={entry.grade as CardGrade} size="compact" width={100} />
+                <span style={{ fontSize: 10, color: "var(--text-disabled)", fontFamily: "var(--font-sans, monospace)" }}>
+                  ×{entry.quantity}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Shared styles ─────────────────────────────────────────────────────────

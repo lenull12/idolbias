@@ -87,7 +87,7 @@ export default function FeedView({
     }
   }, [mode]);
 
-  useEffect(() => { fetchPosts(null); onBumpMission?.("view_feed"); }, [fetchPosts, onBumpMission]);
+  useEffect(() => { fetchPosts(null); }, [fetchPosts, onBumpMission]);
 
   const handleModeChange = (newMode: FeedMode) => {
     if (newMode === mode) return;
@@ -276,7 +276,7 @@ export default function FeedView({
                 onClick={() => fetchPosts(cursor)}
                 disabled={loading}
                 style={{
-                  padding: "8px 20px", borderRadius: 8, border: "1px solid rgba(255,158,196,0.2)",
+                  padding: "8px 20px", borderRadius: 8, border: "2px solid rgba(255,158,196,0.2)",
                   background: "transparent", color: "var(--accent-hotpink)", fontWeight: 600,
                   fontSize: 13, cursor: "pointer",
                 }}

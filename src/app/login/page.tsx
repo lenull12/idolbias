@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { authClient } from "@/lib/auth/client";
+import StyledInput from "@/components/StyledInput";
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -87,14 +88,6 @@ export default function LoginPage() {
     }
   };
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "12px 14px", borderRadius: 10,
-    border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
-    background: "rgba(var(--surface-white-rgb),0.6)",
-    color: "var(--text-primary)", fontSize: 14, outline: "none",
-    fontFamily: "var(--font-sans)", boxSizing: "border-box",
-  };
-
   return (
     <div style={{
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -106,7 +99,7 @@ export default function LoginPage() {
         display: "flex", flexDirection: "column", gap: 16,
         padding: "32px 24px", borderRadius: 16,
         background: "rgba(var(--surface-white-rgb),0.5)",
-        border: "1px solid rgba(255,158,196,0.08)",
+        border: "2px solid rgba(var(--text-primary-rgb),0.08)",
       }}>
         <h1 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 900, margin: 0, color: "var(--text-primary)" }}>
           {mode === "signin" ? "Sign in" : "Create account"}
@@ -116,12 +109,12 @@ export default function LoginPage() {
         </p>
 
         {error && (
-          <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(255,80,80,0.08)", border: "1px solid rgba(255,80,80,0.2)", color: "#ff5050", fontSize: 13, fontWeight: 600 }}>
+          <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(255,80,80,0.08)", border: "2px solid rgba(255,80,80,0.2)", color: "#ff5050", fontSize: 13, fontWeight: 600 }}>
             {error}
           </div>
         )}
         {success && (
-          <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(80,200,80,0.08)", border: "1px solid rgba(80,200,80,0.2)", color: "#22c55e", fontSize: 13, fontWeight: 600 }}>
+          <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(80,200,80,0.08)", border: "2px solid rgba(80,200,80,0.2)", color: "#22c55e", fontSize: 13, fontWeight: 600 }}>
             {success}
           </div>
         )}
@@ -130,7 +123,7 @@ export default function LoginPage() {
         <button onClick={handleGoogle} disabled={loading !== null} style={{
           display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
           padding: "12px 0", borderRadius: 10,
-          border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+          border: "2px solid rgba(var(--text-primary-rgb),0.12)",
           background: "rgba(var(--surface-white-rgb),0.6)",
           color: "var(--text-primary)", fontWeight: 600, fontSize: 14,
           cursor: loading !== null ? "default" : "pointer",
@@ -156,10 +149,10 @@ export default function LoginPage() {
 
         {/* Email / Password form */}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
-          <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
+          <StyledInput placeholder="Email" type="email" value={email} onChange={setEmail} />
+          <StyledInput placeholder="Password" type="password" value={password} onChange={setPassword} />
           {mode === "signup" && (
-            <input placeholder="Display name" type="text" value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+            <StyledInput placeholder="Display name" value={name} onChange={setName} />
           )}
 
           {mode === "signin" && (

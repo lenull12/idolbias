@@ -50,7 +50,7 @@ export default function PublicWall({ memberId }: { memberId: string }) {
       {items.map((item) => (
         <div key={item.id} style={{
           background: "rgba(var(--surface-white-rgb),0.4)",
-          borderRadius: 12, border: "1px solid rgba(201,177,255,0.15)",
+           borderRadius: 12, border: "2px solid rgba(201,177,255,0.15)",
           padding: 14,
         }}>
           {/* Context quote */}
@@ -80,7 +80,7 @@ export default function PublicWall({ memberId }: { memberId: string }) {
           <div style={{
             padding: "10px 14px", borderRadius: 8,
             background: "linear-gradient(135deg, rgba(255,158,196,0.1), rgba(201,177,255,0.1))",
-            border: "1px solid rgba(255,158,196,0.15)",
+             border: "2px solid rgba(255,158,196,0.15)",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
               <span style={{

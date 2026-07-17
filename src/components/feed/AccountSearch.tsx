@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import CloseButton from "@/components/CloseButton";
 
 type SearchResult = {
   memberId: string;
@@ -105,12 +106,7 @@ export default function AccountSearch({
           }}
         />
         {query && (
-          <button
-            onClick={() => { setQuery(""); setResults([]); }}
-            style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 16, padding: 0 }}
-          >
-            ✕
-          </button>
+          <CloseButton onClick={() => { setQuery(""); setResults([]); }} size={14} />
         )}
       </div>
 
@@ -143,7 +139,7 @@ export default function AccountSearch({
               <button
                 onClick={(e) => { e.stopPropagation(); handleToggleFollow(r.memberId, r.groupId, r.isFollowedByMe); }}
                 style={{
-                  padding: "4px 10px", borderRadius: 6, border: "1px solid",
+                  padding: "4px 10px", borderRadius: 6, border: "2px solid",
                   borderColor: r.isFollowedByMe ? "var(--accent-hotpink)" : "rgba(var(--text-primary-rgb),0.15)",
                   background: r.isFollowedByMe ? "var(--accent-hotpink)" : "transparent",
                   color: r.isFollowedByMe ? "var(--surface-white)" : "var(--text-muted)",

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { STREAK_TICKETS, STREAK_BONUS_GEMS } from "@/lib/gameConfig";
+import CloseButton from "@/components/CloseButton";
 
 export default function StreakModal({
   streak,
@@ -169,7 +170,7 @@ export default function StreakModal({
             <div style={{
               textAlign: "center", padding: "12px", borderRadius: 10,
               background: "rgba(var(--text-primary-rgb),0.03)",
-              border: "1px solid rgba(var(--text-primary-rgb),0.06)",
+               border: "2px solid rgba(var(--text-primary-rgb),0.06)",
             }}>
               <span style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font-display, cursive)", color: "var(--text-primary)" }}>
                 {todayGems > 0 ? `+${todayGems} gems` : todayTickets > 0 ? `+${todayTickets} tickets` : "+15 gems"}
@@ -182,7 +183,7 @@ export default function StreakModal({
           {isBroken && !claimed && (
             <div style={{
               textAlign: "center", padding: "10px", borderRadius: 10,
-              background: "rgba(255,20,147,0.04)", border: "1px solid rgba(255,20,147,0.15)",
+              background: "rgba(255,20,147,0.04)",         border: "2px solid rgba(255,20,147,0.15)",
             }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: "var(--accent-hotpink)", fontFamily: "var(--font-display, cursive)" }}>
                 💔 Streak broken!<br />Start again today.
@@ -195,7 +196,7 @@ export default function StreakModal({
             <div style={{
               textAlign: "center", padding: "10px", borderRadius: 10,
               background: "linear-gradient(135deg, rgba(255,20,147,0.06), rgba(255,158,196,0.04))",
-              border: "1px solid var(--accent-hotpink)",
+               border: "2px solid var(--accent-hotpink)",
             }}>
               <span style={{ fontSize: 16, fontWeight: 800, fontFamily: "var(--font-display, cursive)", color: "var(--accent-hotpink)" }}>
                 +{[
@@ -232,14 +233,7 @@ export default function StreakModal({
           </div>
 
           {/* Close */}
-          <button onClick={onClose} style={{
-            background: "none", border: "none", padding: "2px 0",
-            cursor: "pointer", fontSize: 11, fontWeight: 600,
-            color: "var(--text-disabled)", fontFamily: "var(--font-sans, monospace)",
-            letterSpacing: "0.5px",
-          }}>
-            ✕ Close
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
       </div>
     </div>

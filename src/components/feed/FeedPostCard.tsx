@@ -65,7 +65,7 @@ export default function FeedPostCard({
       style={{
         background: "rgba(var(--surface-white-rgb),0.5)",
         borderRadius: 14,
-        border: "1px solid rgba(255,158,196,0.1)",
+        border: "2px solid rgba(255,158,196,0.1)",
         overflow: "hidden",
       }}
     >
@@ -99,7 +99,7 @@ export default function FeedPostCard({
         <button
           onClick={(e) => { e.stopPropagation(); onToggleSubscribe(); }}
           style={{
-            padding: "4px 10px", borderRadius: 6, border: "1px solid",
+            padding: "4px 10px", borderRadius: 6, border: "2px solid rgba(var(--text-primary-rgb),0.12)",
             borderColor: post.isSubscribed ? "var(--accent-hotpink)" : "rgba(var(--text-primary-rgb),0.15)",
             background: post.isSubscribed ? "var(--accent-hotpink)" : "transparent",
             color: post.isSubscribed ? "var(--surface-white)" : "var(--text-muted)",
@@ -178,7 +178,7 @@ export default function FeedPostCard({
           onKeyDown={(e) => { if (e.key === "Enter") handleSubmitComment(); }}
           placeholder={`Comment as ${playerName}...`}
           style={{
-            flex: 1, padding: "6px 0", border: "none", background: "transparent",
+             flex: 1, padding: "6px 12px", border: "2px solid rgba(var(--text-primary-rgb),0.12)", background: "transparent", borderRadius: "8px",
             fontSize: 13, outline: "none", color: "var(--text-primary)",
           }}
         />

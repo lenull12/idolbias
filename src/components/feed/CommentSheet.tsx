@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import CloseButton from "@/components/CloseButton";
 
 type Comment = {
   id: string;
@@ -69,7 +70,7 @@ export default function CommentSheet({
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
           <span style={{ fontWeight: 700, fontSize: 15 }}>Comments</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--text-muted)" }}>✕</button>
+          <CloseButton onClick={onClose} size={16} />
         </div>
 
         <div style={{ flex: 1, overflow: "auto", padding: "8px 0" }}>
@@ -102,7 +103,7 @@ export default function CommentSheet({
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             placeholder="Write a comment..."
             style={{
-              flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)",
+              flex: 1, padding: "8px 12px", borderRadius: 8, border: "2px solid rgba(0,0,0,0.1)",
               fontSize: 13, outline: "none", background: "rgba(0,0,0,0.02)",
             }}
           />

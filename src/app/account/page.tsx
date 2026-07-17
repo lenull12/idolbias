@@ -82,7 +82,7 @@ export default function AccountPage() {
           padding: 16,
           borderRadius: 12,
           background: "rgba(var(--surface-white-rgb),0.5)",
-          border: "1px solid rgba(255,158,196,0.08)",
+          border: "2px solid rgba(255,158,196,0.08)",
         }}
       >
         {session.user.image && (
@@ -103,7 +103,7 @@ export default function AccountPage() {
         style={{
           padding: "10px 0",
           borderRadius: 8,
-          border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+          border: "2px solid rgba(var(--text-primary-rgb),0.12)",
           background: "transparent",
           color: "var(--text-primary)",
           fontWeight: 600,

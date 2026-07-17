@@ -230,9 +230,7 @@ export interface PoolMissionDef extends MissionDef {
 }
 
 export const DAILY_POOL: PoolMissionDef[] = [
-  { id: "open_pack", label: "Open 1 pack", target: 1, reward: { gems: 20 }, difficulty: "easy", weight: 4 },
-  { id: "view_artist", label: "Visit an artist profile", target: 1, reward: { gems: 10 }, difficulty: "easy", weight: 4 },
-  { id: "view_collection", label: "Browse the card catalogue", target: 1, reward: { gems: 10 }, difficulty: "easy", weight: 4 },
+  // open_pack is already in FIXED_DAILY — don't duplicate it here
   { id: "like_posts", label: "Like 3 posts", target: 3, reward: { gems: 15 }, difficulty: "normal", weight: 3 },
   { id: "comment_posts", label: "Comment 1 time", target: 1, reward: { gems: 15 }, difficulty: "normal", weight: 3 },
   { id: "collect_rare_plus", label: "Collect 2 Rare+ cards or better", target: 2, reward: { dust: 20 }, difficulty: "normal", weight: 2 },
@@ -240,14 +238,13 @@ export const DAILY_POOL: PoolMissionDef[] = [
   { id: "like_10_posts", label: "Like 10 posts", target: 10, reward: { tickets: 1 }, difficulty: "hard", weight: 1 },
   { id: "collect_5_new", label: "Collect 5 cards", target: 5, reward: { dust: 50 }, difficulty: "hard", weight: 1 },
   { id: "craft_card", label: "Craft 1 card", target: 1, reward: { gems: 40 }, difficulty: "hard", weight: 1 },
-  { id: "view_feed", label: "Visit the feed", target: 1, reward: { gems: 10 }, difficulty: "easy", weight: 3 },
-  // removed: follow_member (not enough artists at launch)
+  // removed: view_feed (unverifiable server-side)
 ];
 
 export const WEEKLY_POOL: PoolMissionDef[] = [
   { id: "open_5_packs", label: "Open 5 packs", target: 5, reward: { gems: 100 }, difficulty: "normal", weight: 3 },
   { id: "collect_3_new", label: "Collect 3 cards", target: 3, reward: { gems: 60 }, difficulty: "normal", weight: 3 },
-  { id: "visit_3_artists", label: "Visit 3 distinct artists", target: 3, reward: { gems: 60 }, difficulty: "normal", weight: 2 },
+  // removed: visit_3_artists (unverifiable server-side)
   // removed: daily_streak_5 (moved to FIXED_WEEKLY)
   { id: "like_20_posts", label: "Like 20 posts", target: 20, reward: { gems: 150 }, difficulty: "normal", weight: 2 },
   { id: "comment_10_posts", label: "Comment 10 times", target: 10, reward: { gems: 60 }, difficulty: "normal", weight: 2 },

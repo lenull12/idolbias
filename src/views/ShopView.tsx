@@ -2,32 +2,25 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { getAllPacks, getCardsByPack, rarityFromReference } from "@/data/cards";
+import PillBar from "@/components/PillBar";
+import StyledSelect from "@/components/StyledSelect";
+import CARDS, { getAllPacks, getCardsByPack, rarityFromReference } from "@/data/cards";
 import type { PackInfo, PackTag, PackDropRates, CardEntry } from "@/data/cards";
 import type { Rarity } from "@/components/CardEffects";
 import { RARITY_ORDER } from "@/lib/gameConfig";
+import RarityOdds from "@/components/RarityOdds";
 import { GROUPS } from "@/data/artists";
 import RaffleTicketBadge from "@/components/RaffleTicketBadge";
 import HeroPullSlot from "@/components/HeroPullSlot";
 import PackPriceAction from "@/components/PackPriceAction";
 import GemShopSection from "@/components/shop/GemShopSection";
+import ArrowButton from "@/components/ArrowButton";
 import EventCountdown from "@/components/EventCountdown";
 
 const RARITY_LETTER: Record<Rarity, string> = {
   common: "C", rare: "R", epic: "E", legendary: "L", secret: "S",
 };
 
-const RARITY_LABELS: Record<Rarity, string> = {
-  common: "COMMON", rare: "RARE", epic: "EPIC", legendary: "LEGENDARY", secret: "SECRET",
-};
-
-const RARITY_BADGE_COLORS: Record<Rarity, { bg: string; fg: string }> = {
-  common: { bg: "rgba(var(--text-primary-rgb),0.03)", fg: "rgba(var(--text-primary-rgb),0.4)" },
-  rare: { bg: "rgba(255,158,196,0.06)", fg: "var(--accent-pink)" },
-  epic: { bg: "rgba(201,177,255,0.06)", fg: "var(--accent-purple)" },
-  legendary: { bg: "rgba(255,215,0,0.06)", fg: "var(--rarity-legendary-badge)" },
-  secret: { bg: "rgba(var(--text-primary-rgb),0.04)", fg: "var(--text-primary)" },
-};
 
 const BADGE_CONFIG: Record<PackTag, { label: (p: PackInfo) => string; bg: string; fg: string }> = {
   featured: { label: () => "★ FEATURED", bg: "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))", fg: "var(--text-primary)" },
@@ -75,7 +68,7 @@ function PackBadge({ pack, size = "md" }: { pack: PackInfo; size?: "sm" | "md" }
       fontWeight: 800,
       letterSpacing: "0.5px",
       fontFamily: "var(--font-sans, monospace)",
-      border: "1.5px solid var(--text-primary)",
+      border: "2px solid var(--text-primary)",
       boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
       transform: "rotate(-3deg)",
       whiteSpace: "nowrap",
@@ -120,57 +113,8 @@ function PackArt({ src, alt, locked }: { src?: string; alt: string; locked?: boo
   );
 }
 
-// ─── Pastilles de drop rates ────────────────────────────────────────────────
-
-const RARITY_BADGE_COLORS_BANNER: Record<Rarity, { bg: string; fg: string }> = {
-  common: { bg: "rgba(var(--text-primary-rgb),0.55)", fg: "var(--surface-white)" },
-  rare: { bg: "rgba(255,158,196,0.92)", fg: "var(--text-primary)" },
-  epic: { bg: "rgba(201,177,255,0.92)", fg: "var(--text-primary)" },
-  legendary: { bg: "rgba(255,215,0,0.92)", fg: "var(--text-primary)" },
-  secret: { bg: "var(--surface-white)", fg: "var(--surface-white)" },
-};
-
-function RarityOdds({ dropRates, size = "md", variant = "default" }: {
-  dropRates: PackDropRates; size?: "sm" | "md"; variant?: "default" | "banner";
-}) {
-  const colors = variant === "banner" ? RARITY_BADGE_COLORS_BANNER : RARITY_BADGE_COLORS;
-  const total = RARITY_ORDER.reduce((s, r) => s + dropRates[r], 0);
-  return (
-    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-      {RARITY_ORDER.map((r) => {
-        const pct = total > 0 ? (dropRates[r] / total) * 100 : 0;
-        const label = pct.toFixed(0) + "% " + (variant === "banner" && size !== "sm" ? RARITY_LABELS[r] : RARITY_LETTER[r]);
-        if (variant === "banner" && r === "secret") {
-          return (
-            <span key={r} style={{
-              padding: size === "sm" ? "1px 6px" : "2px 7px", borderRadius: 4,
-              background: "var(--surface-white)",
-              fontSize: size === "sm" ? 9 : 10, fontWeight: 700,
-              fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px",
-            }}>
-              <span style={{
-                backgroundImage: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple), var(--holo-c))",
-                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-              }}>
-                {label}
-              </span>
-            </span>
-          );
-        }
-        return (
-          <span key={r} style={{
-            padding: size === "sm" ? "1px 6px" : "2px 7px", borderRadius: 4,
-            background: colors[r].bg, color: colors[r].fg,
-            fontSize: size === "sm" ? 9 : 10, fontWeight: 700,
-            fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px",
-          }}>
-            {label}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
+// ─── Drop rates component ────────────────────────────────────────────────────
+// (imported from @/components/RarityOdds)
 
 const RARITY_BAR_COLOR: Record<Rarity, string> = {
   common: "var(--rarity-common-graphic)", rare: "var(--accent-pink)", epic: "var(--accent-purple)", legendary: "var(--rarity-legendary-badge)", secret: "var(--text-primary)",
@@ -182,7 +126,7 @@ function RarityBar({ dropRates }: { dropRates: PackDropRates }) {
   const total = RARITY_ORDER.reduce((s, r) => s + dropRates[r], 0);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", width: "100%", height: 10, borderRadius: 6, overflow: "hidden", border: "1.5px solid var(--text-primary)" }}>
+      <div style={{ display: "flex", width: "100%", height: 10, borderRadius: 6, overflow: "hidden", border: "2px solid var(--text-primary)" }}>
         {RARITY_ORDER.map((r) => {
           const pct = total > 0 ? (dropRates[r] / total) * 100 : 0;
           if (pct <= 0) return null;
@@ -235,7 +179,7 @@ function ChaseCardCarousel({ chase }: { chase: ReturnType<typeof getChaseCards> 
         {bestPerMember.map(({ card }) => (
           <div key={card.id} style={{
             position: "relative", flex: "0 0 auto", width: "min(112px, 28vw)", aspectRatio: "896/1152",
-            borderRadius: 12, overflow: "hidden", border: "1.5px solid rgba(var(--text-primary-rgb),0.08)",
+            borderRadius: 12, overflow: "hidden", border: "2px solid rgba(var(--text-primary-rgb),0.08)",
             boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
           }}>
             <img src={card.imageSrc} alt={card.idol} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -279,7 +223,7 @@ function PackAbout({ pack, cards }: { pack: PackInfo; cards: CardEntry[] }) {
       {group && (
         <span style={{
           fontFamily: "var(--font-display, cursive)", fontSize: 20, fontWeight: 800,
-          color: "var(--accent-hotpink)", letterSpacing: "0.5px",
+          color: GROUPS.find(g => g.name === group)?.gender === "male" ? "#4A90D9" : "var(--accent-pink)", letterSpacing: "0.5px",
         }}>
           {group}
         </span>
@@ -306,7 +250,7 @@ function PackAbout({ pack, cards }: { pack: PackInfo; cards: CardEntry[] }) {
               <div key={name} title={name} style={{
                 width: 36, height: 36, borderRadius: "50%", overflow: "hidden",
                 background: pfp ? "none" : color,
-                border: "1.5px solid var(--text-primary)", display: "flex", alignItems: "center", justifyContent: "center",
+                border: "2px solid var(--text-primary)", display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 {pfp ? (
                   <img src={pfp} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -389,7 +333,7 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose, onG
               <span style={{
                 display: "inline-block", padding: "4px 10px", borderRadius: 6,
                 background: "var(--surface-white)", color: "var(--accent-hotpink)", fontSize: 11, fontWeight: 800,
-                fontFamily: "var(--font-sans, monospace)", border: "1.5px solid var(--text-primary)",
+                fontFamily: "var(--font-sans, monospace)", border: "2px solid var(--text-primary)",
                 boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)", transform: "rotate(2deg)", whiteSpace: "nowrap",
               }}>
                 💖 YOUR BIAS
@@ -425,7 +369,7 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose, onG
 
               {/* ─── Discount / limited banners ─── */}
               {pack.tag === "discount" && pack.originalCostGems !== undefined && pack.costGems !== undefined && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: "rgba(255,20,147,0.06)", border: "1.5px dashed var(--accent-hotpink)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10,                   background: "rgba(255,20,147,0.06)", border: "2px dashed var(--accent-hotpink)"  }}>
                   <span style={{ fontSize: 16 }}>💸</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent-hotpink)", fontFamily: "var(--font-sans, monospace)" }}>
                     You save {pack.originalCostGems - pack.costGems} 💎 on this pack
@@ -433,7 +377,7 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose, onG
                 </div>
               )}
               {pack.tag === "limited" && countdown && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10, background: "rgba(var(--text-primary-rgb),0.04)", border: "1.5px dashed var(--text-primary)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 10,                   background: "rgba(var(--text-primary-rgb),0.04)", border: "2px dashed var(--text-primary)"  }}>
                   <span style={{ fontSize: 16 }}>⏳</span>
                   <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-sans, monospace)" }}>
                     Ends in {countdown} — won't be back
@@ -521,9 +465,9 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose, onG
                     secret: "linear-gradient(90deg, rgba(255,20,147,0.08), rgba(201,177,255,0.10), rgba(158,230,255,0.08))",
                   };
                   const borders: Record<string, string> = {
-                    epic: "1px solid rgba(201,177,255,0.3)",
-                    legendary: "1.5px solid rgba(232,182,90,0.45)",
-                    secret: "1.5px solid var(--text-primary)",
+                    epic: "2px solid rgba(201,177,255,0.3)",
+                    legendary: "2px solid rgba(232,182,90,0.45)",
+                    secret: "2px solid var(--text-primary)",
                   };
                   const boxShadows: Record<string, string> = {
                     secret: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
@@ -666,7 +610,7 @@ function FeaturedPackCard({ featuredPacks, tickets, gems, bias, onPull, onPrevie
             <span style={{
               padding: "2px 8px", borderRadius: 5, background: "var(--surface-white)", color: "var(--accent-hotpink)",
               fontSize: 10, fontWeight: 800, fontFamily: "var(--font-sans, monospace)",
-              border: "1.5px solid var(--text-primary)", whiteSpace: "nowrap",
+              border: "2px solid var(--text-primary)", whiteSpace: "nowrap",
             }}>
               💖 YOUR BIAS
             </span>
@@ -682,9 +626,10 @@ function FeaturedPackCard({ featuredPacks, tickets, gems, bias, onPull, onPrevie
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, minWidth: 0, pointerEvents: "none" }}>
             {group && (
               <span style={{
-                fontWeight: 800, letterSpacing: "1px", color: "var(--accent-pink)",
+                fontWeight: 800, letterSpacing: "1px",
+                color: GROUPS.find(g => g.name === group)?.gender === "male" ? "#4A90D9" : "var(--accent-pink)",
                 textTransform: "uppercase", fontFamily: "var(--font-sans, monospace)",
-                fontSize: "clamp(10px, 2.5vw, 12px)",
+                fontSize: "clamp(14px, 3.5vw, 20px)",
               }}>
                 {group}
               </span>
@@ -762,34 +707,12 @@ function FeaturedPackCard({ featuredPacks, tickets, gems, bias, onPull, onPrevie
       {/* Arrows */}
       {featuredPacks.length > 1 && (
         <>
-          <button
-            onClick={(e) => { e.stopPropagation(); prev(); resetTimer(); }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.5)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.25)"; }}
-            style={{
-              position: "absolute", top: "50%", left: 4, translate: "0 -50%", zIndex: 5,
-              width: 30, height: 30, borderRadius: "50%",
-              border: "2px solid var(--text-primary)", background: "rgba(0,0,0,0.25)",
-              boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
-              color: "var(--surface-white)", fontSize: 16, fontWeight: 700,
-              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "background 0.15s", padding: 0,
-            }}
-          >‹</button>
-          <button
-            onClick={(e) => { e.stopPropagation(); next(); resetTimer(); }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.5)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.25)"; }}
-            style={{
-              position: "absolute", top: "50%", right: 4, translate: "0 -50%", zIndex: 5,
-              width: 30, height: 30, borderRadius: "50%",
-              border: "2px solid var(--text-primary)", background: "rgba(0,0,0,0.25)",
-              boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
-              color: "var(--surface-white)", fontSize: 16, fontWeight: 700,
-              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-              transition: "background 0.15s", padding: 0,
-            }}
-          >›</button>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: "50%", left: 4, translate: "0 -50%", zIndex: 5 }}>
+            <ArrowButton direction="left" variant="overlay" onClick={() => { prev(); resetTimer(); }} size={16} />
+          </div>
+          <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: "50%", right: 4, translate: "0 -50%", zIndex: 5 }}>
+            <ArrowButton direction="right" variant="overlay" onClick={() => { next(); resetTimer(); }} size={16} />
+          </div>
         </>
       )}
     </div>
@@ -840,18 +763,30 @@ function CarouselPackCard({ code, pack, bias, onPreview }: {
           >
             {pack.name}
           </span>
-          <button
-            onClick={() => onPreview(code)}
-            style={{
-              alignSelf: "flex-start", display: "inline-flex", alignItems: "center", gap: 4,
-              padding: "6px 12px", borderRadius: 8, border: "none",
-              background: "linear-gradient(120deg, #ffb8dd, #c9b3ff)", color: "#3f2f57",
-              fontFamily: "var(--font-sans)", fontSize: 11, fontWeight: 700,
-              cursor: "pointer", whiteSpace: "nowrap",
-            }}
-          >
-            View details
-          </button>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {pack.costTickets !== undefined && (
+              <span style={{ fontSize: 10, fontWeight: 700, color: "var(--surface-white)", fontFamily: "var(--font-sans, monospace)" }}>
+                🎟️ {pack.costTickets}
+              </span>
+            )}
+            {pack.costGems !== undefined && (
+              <span style={{ fontSize: 10, fontWeight: 700, color: "var(--surface-white)", fontFamily: "var(--font-sans, monospace)" }}>
+                💎 {pack.costGems}
+              </span>
+            )}
+            <button
+              onClick={() => onPreview(code)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                padding: "6px 12px", borderRadius: 8, border: "none",
+                background: "linear-gradient(120deg, #ffb8dd, #c9b3ff)", color: "#3f2f57",
+                fontFamily: "var(--font-sans)", fontSize: 11, fontWeight: 700,
+                cursor: "pointer", whiteSpace: "nowrap",
+              }}
+            >
+              View details
+            </button>
+          </div>
         </div>
       )}
       {locked && (
@@ -870,8 +805,10 @@ function CarouselPackCard({ code, pack, bias, onPreview }: {
 
 // ─── Ligne : catalogue complet ──────────────────────────────────────────────
 
-function PackListRow({ code, pack, bias, onPreview }: {
+function PackListRow({ code, pack, bias, tickets, gems, onPull, onPreview }: {
   code: string; pack: PackInfo; bias: string | null;
+  tickets: number; gems: number;
+  onPull: (code: string, method: "tickets" | "gems") => void;
   onPreview: (code: string) => void;
 }) {
   const locked = pack.locked;
@@ -883,7 +820,7 @@ function PackListRow({ code, pack, bias, onPreview }: {
     <div style={{
       borderRadius: 16, overflow: "hidden", position: "relative",
       background: locked ? "rgba(var(--text-primary-rgb),0.04)" : undefined,
-      border: "1px solid rgba(255,158,196,0.08)", opacity: locked ? 0.6 : 1,
+      border: "2px solid rgba(255,158,196,0.08)", opacity: locked ? 0.6 : 1,
     }}>
       {!locked && pack.bannerImage && (
         <img src={pack.bannerImage} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
@@ -899,7 +836,7 @@ function PackListRow({ code, pack, bias, onPreview }: {
 
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4, justifyContent: "center", minWidth: 0 }}>
             {!locked && group && (
-              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "1px", color: "var(--accent-pink)", textTransform: "uppercase" }}>
+              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "1px", color: GROUPS.find(g => g.name === group)?.gender === "male" ? "#4A90D9" : "var(--accent-pink)", textTransform: "uppercase" }}>
                 {group}
               </span>
             )}
@@ -922,18 +859,9 @@ function PackListRow({ code, pack, bias, onPreview }: {
             LOCKED
           </span>
         ) : (
-          <button
-            onClick={() => onPreview(code)}
-            style={{
-              alignSelf: "center", flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 4,
-              padding: "10px 16px", borderRadius: 10, border: "none",
-              background: "linear-gradient(120deg, #ffb8dd, #c9b3ff)", color: "#3f2f57",
-              fontFamily: "var(--font-sans)", fontSize: 12, fontWeight: 700,
-              cursor: "pointer", whiteSpace: "nowrap",
-            }}
-          >
-            View details
-          </button>
+          <div style={{ alignSelf: "center", flexShrink: 0 }}>
+            <PackPriceAction pack={pack} tickets={tickets} gems={gems} size="sm" align="end" onPull={(m) => onPull(code, m)} />
+          </div>
         )}
       </div>
     </div>
@@ -980,6 +908,52 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
   );
   const previewPack = previewCode ? packs.find(([c]) => c === previewCode)?.[1] : null;
 
+  const packGroups = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    CARDS.forEach((card) => {
+      if (!map[card.packCode]) map[card.packCode] = new Set();
+      map[card.packCode].add(card.group);
+    });
+    return map;
+  }, []);
+
+  const [packGenderFilter, setPackGenderFilter] = useState("all");
+  const [packGroupFilter, setPackGroupFilter] = useState("all");
+
+  useEffect(() => { setPackGroupFilter("all"); }, [packGenderFilter]);
+
+  const packGenderOptions = useMemo(() => {
+    const allGroups = new Set(CARDS.map((c) => c.group));
+    const groupsWithGender = GROUPS.filter((g) => allGroups.has(g.name));
+    const opts: { value: string; label: string }[] = [{ value: "all", label: "All Groups" }];
+    if (groupsWithGender.some((g) => g.gender === "female")) opts.push({ value: "female", label: "Girl Groups" });
+    if (groupsWithGender.some((g) => g.gender === "male")) opts.push({ value: "male", label: "Boy Groups" });
+    return opts;
+  }, []);
+
+  const packGroupOptions = useMemo(() => {
+    const allGroups = new Set(CARDS.map((c) => c.group));
+    const opts: { value: string; label: string }[] = [{ value: "all", label: "All" }];
+    GROUPS.filter((g) => {
+      if (packGenderFilter === "all") return allGroups.has(g.name);
+      return allGroups.has(g.name) && g.gender === packGenderFilter;
+    }).forEach((g) => opts.push({ value: g.name, label: g.name }));
+    return opts;
+  }, [packGenderFilter]);
+
+  const filteredPacks = useMemo(() => {
+    return packs.filter(([code]) => {
+      if (packGenderFilter === "all" && packGroupFilter === "all") return true;
+      const groups = packGroups[code];
+      if (!groups || groups.size === 0) return true;
+      const genderMatch = packGenderFilter === "all" ||
+        [...groups].some((g) => GROUPS.find((x) => x.name === g)?.gender === packGenderFilter);
+      if (!genderMatch) return false;
+      if (packGroupFilter === "all") return true;
+      return groups.has(packGroupFilter);
+    });
+  }, [packs, packGenderFilter, packGroupFilter, packGroups]);
+
   const handlePull = (code: string, method: "tickets" | "gems") => {
     onOpenPull?.(code, method);
   };
@@ -1000,10 +974,10 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
           ✦ Shop
         </span>
         <h1 style={{ fontFamily: "var(--font-display, cursive)", fontSize: 28, letterSpacing: "-0.3px", margin: 0, background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple), var(--holo-c))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-          {shopTab === "packs" ? "available packs" : "gem shop"}
+          {shopTab === "packs" ? "available packs" : "get gems"}
         </h1>
         <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
-          {shopTab === "packs" ? "Pick a pack and try your luck ✨" : "Buy gems to unlock premium content 💎"}
+          {shopTab === "packs" ? "Pick a pack and try your luck" : "Buy gems to unlock premium content"}
         </span>
         {bias && (
           <span style={{
@@ -1018,31 +992,14 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
 
 
       {/* ─── Tab bar ─── */}
-      <div style={{
-        display: "flex", gap: 2, padding: 2, borderRadius: 10, width: "fit-content",
-        background: "rgba(var(--text-primary-rgb),0.04)",
-      }}>
-        <button onClick={() => setShopTab("packs")} style={{
-          padding: "8px 18px", borderRadius: 8, border: "none",
-          background: shopTab === "packs" ? "var(--surface-white)" : "transparent",
-          color: shopTab === "packs" ? "var(--accent-hotpink)" : "var(--text-muted)",
-          fontSize: 12, fontWeight: 700, cursor: "pointer",
-          fontFamily: "var(--font-sans, monospace)",
-          boxShadow: shopTab === "packs" ? "1px 1px 0px rgba(var(--text-primary-rgb),0.1)" : "none",
-        }}>
-          📦 Packs
-        </button>
-        <button onClick={() => setShopTab("gems")} style={{
-          padding: "8px 18px", borderRadius: 8, border: "none",
-          background: shopTab === "gems" ? "var(--surface-white)" : "transparent",
-          color: shopTab === "gems" ? "var(--accent-hotpink)" : "var(--text-muted)",
-          fontSize: 12, fontWeight: 700, cursor: "pointer",
-          fontFamily: "var(--font-sans, monospace)",
-          boxShadow: shopTab === "gems" ? "1px 1px 0px rgba(var(--text-primary-rgb),0.1)" : "none",
-        }}>
-          💎 Gems
-        </button>
-      </div>
+      <PillBar
+        tabs={[
+          { key: "packs" as const, label: "Packs" },
+          { key: "gems" as const, label: "Get Gems" },
+        ]}
+        activeTab={shopTab}
+        onTabChange={setShopTab}
+      />
       {shopTab === "packs" && (<>
         {/* ─── Rate-up events banner ─── */}
         {activeRateUps.length > 0 && activeRateUps.map((ev) => (
@@ -1100,20 +1057,9 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
                   background: "linear-gradient(to right, transparent, var(--bg) 70%)",
                   pointerEvents: "none",
                 }} />
-                <button
-                  onClick={() => carouselRef.current?.scrollBy({ left: 220, behavior: "smooth" })}
-                  aria-label="Scroll for more packs"
-                  style={{
-                    position: "absolute", top: "50%", right: 6, transform: "translateY(-50%)",
-                    width: 28, height: 28, borderRadius: "50%",
-                    border: "2px solid var(--text-primary)", background: "var(--surface-white)",
-                    boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer", fontSize: 13, fontWeight: 700, color: "var(--text-primary)", padding: 0,
-                  }}
-                >
-                  ›
-                </button>
+                <div style={{ position: "absolute", top: "50%", right: 6, transform: "translateY(-50%)" }}>
+                  <ArrowButton direction="right" variant="overlay" onClick={() => carouselRef.current?.scrollBy({ left: 220, behavior: "smooth" })} size={14} />
+                </div>
               </>
             )}
           </div>
@@ -1122,12 +1068,18 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
 
       {/* ─── Catalogue complet ─── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "2px", color: "var(--text-disabled)", textTransform: "uppercase" }}>
-          All packs
-        </span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "2px", color: "var(--text-disabled)", textTransform: "uppercase" }}>
+            All packs
+          </span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <StyledSelect options={packGenderOptions} value={packGenderFilter} onChange={setPackGenderFilter} />
+            <StyledSelect options={packGroupOptions} value={packGroupFilter} onChange={setPackGroupFilter} />
+          </div>
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {packs.map(([code, pack]) => (
-            <PackListRow key={code} code={code} pack={pack} bias={bias} onPreview={setPreviewCode} />
+          {filteredPacks.map(([code, pack]) => (
+            <PackListRow key={code} code={code} pack={pack} bias={bias} tickets={tickets} gems={gems} onPull={handlePull} onPreview={setPreviewCode} />
           ))}
         </div>
       </div>
@@ -1136,14 +1088,20 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
       <div style={{
         padding: "16px 20px", borderRadius: 12, background: "rgba(var(--surface-white-rgb),0.5)",
         backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-        border: "1px solid rgba(255,158,196,0.04)", display: "flex", flexDirection: "column", gap: 8,
+        border: "2px solid rgba(255,158,196,0.04)", display: "flex", flexDirection: "column", gap: 8,
       }}>
         <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "2px", color: "var(--text-disabled)", textTransform: "uppercase" }}>
-          💎 About
+          About
         </span>
         <span style={{ fontSize: 15, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-          Each pack contains 5 random cards from <strong style={{ color: "var(--accent-hotpink)" }}>{GROUPS.map(g => g.name).join(" · ")}</strong>.
-          Rarities range from Common to Secret. Reveal each card one by one by swiping.
+          Each pack contains 5 random cards from{" "}
+            {GROUPS.map((g, i) => (
+              <span key={g.id}>
+                {i > 0 && " · "}
+                <strong style={{ color: g.gender === "male" ? "#4A90D9" : "var(--accent-pink)" }}>{g.name}</strong>
+              </span>
+            ))}
+            . Rarities range from Common to Secret. Reveal each card one by one by swiping.
         </span>
         <span style={{ fontSize: 15, color: "var(--text-disabled)" }}>
           ✦ New packs and limited editions coming soon
@@ -1151,7 +1109,7 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
       </div>
 
       </>)}
-      {shopTab === "gems" && <GemShopSection onPurchaseComplete={onPurchaseComplete} />}
+      {shopTab === "gems" && <GemShopSection gems={gems} onPurchaseComplete={onPurchaseComplete} />}
       {/* ─── Footer ─── */}
       <div style={{
         textAlign: "center", fontSize: 10, letterSpacing: "3px", textTransform: "uppercase",

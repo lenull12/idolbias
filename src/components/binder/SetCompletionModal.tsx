@@ -1,5 +1,7 @@
 "use client";
 
+import CloseButton from "@/components/CloseButton";
+
 export default function SetCompletionModal({
   packCode,
   packName,
@@ -110,7 +112,7 @@ export default function SetCompletionModal({
             display: "flex", gap: 12, justifyContent: "center",
             padding: "12px", borderRadius: 10,
             background: "rgba(var(--text-primary-rgb),0.03)",
-            border: "1px solid rgba(var(--text-primary-rgb),0.06)",
+             border: "2px solid rgba(var(--text-primary-rgb),0.06)",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 18 }}>✨</span>
@@ -132,7 +134,7 @@ export default function SetCompletionModal({
             <div style={{
               padding: "10px 0", borderRadius: 10,
               background: "linear-gradient(135deg, rgba(218,165,32,0.08), rgba(255,215,0,0.06))",
-              border: "1.5px solid #DAA520",
+              border: "2px solid #DAA520",
               textAlign: "center", fontSize: 13, fontWeight: 800,
               fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px",
               color: "#DAA520",
@@ -145,7 +147,7 @@ export default function SetCompletionModal({
               disabled={claiming}
               style={{
                 padding: "10px 0", borderRadius: 10,
-                border: "1.5px solid var(--accent-hotpink)",
+                border: "2px solid var(--accent-hotpink)",
                 background: claiming ? "rgba(255,20,147,0.04)" : "linear-gradient(135deg, rgba(255,20,147,0.06), rgba(255,158,196,0.04))",
                 color: claiming ? "var(--text-disabled)" : "var(--accent-hotpink)",
                 fontSize: 13, fontWeight: 800, cursor: claiming ? "default" : "pointer",
@@ -157,14 +159,7 @@ export default function SetCompletionModal({
           )}
 
           {/* Dismiss */}
-          <button onClick={onDismiss} style={{
-            background: "none", border: "none", padding: "4px 0",
-            cursor: "pointer", fontSize: 11, fontWeight: 600,
-            color: "var(--text-disabled)", fontFamily: "var(--font-sans, monospace)",
-            letterSpacing: "0.5px",
-          }}>
-            ✕ Close
-          </button>
+          <CloseButton onClick={onDismiss} />
         </div>
       </div>
     </div>

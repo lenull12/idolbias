@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { eq, and } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { feedLikes } from "@/db/schema";
+import { syncLikeMissionProgress } from "@/lib/missionBump";
 
 const COOKIE_NAME = "idolbias_player_id";
 
@@ -29,7 +30,10 @@ export async function POST(
     if (existing.length > 0) {
       await db.delete(feedLikes)
         .where(and(eq(feedLikes.postId, postId), eq(feedLikes.userId, playerId)));
-      return NextResponse.json(
+    // Seul endroit légitime qui touche à like_posts/like_10_posts
+    await syncLikeMissionProgress(playerId);
+
+    return NextResponse.json(
         { liked: false },
         { headers: { "Cache-Control": "no-store, must-revalidate" } }
       );

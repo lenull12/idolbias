@@ -49,6 +49,7 @@ export type GroupInfo = {
   tagline: string;
   bio: string;
   color: string;
+  gender?: "male" | "female";
   agency?: string;
   genre?: string;
   fandomName?: string;
@@ -69,6 +70,7 @@ export const GROUPS: GroupInfo[] = [
     id: "vicious",
     name: "VICIOUS",
     tagline: "있는 그대로 — RAW",
+    gender: "female",
     bio: "VICIOUS is the first virtual group of IdolBias. A Y2K concept tinged with dark fantasy — launched with the RAW era. Each member carries a different facet of the group: glamour, danger, mystery, bite.",
     color: "#FF1493",
     agency: "IdolBias Entertainment",
@@ -196,6 +198,7 @@ export const GROUPS: GroupInfo[] = [
     id: "raze",
     name: "R\u039bZE",
     tagline: "RAZE IT ALL",
+    gender: "male",
     bio: "R\u039bZE arrives \u2014 raw, unfiltered, impossible to ignore. A four-member rage rap / dark trap group with an attitude that cuts through the static. Cortisol over melody, tension over release. Their debut single STATIC drops like a hammer \u2014 75 BPM of pure overload.",
     color: "#1A0A0A",
     agency: "IdolBias Entertainment",

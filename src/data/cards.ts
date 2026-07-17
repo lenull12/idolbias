@@ -41,6 +41,7 @@ export type CardEntry = {
   edition: string;
   reference: string;
   imageSrc: string;
+  desirabilityMultiplier?: number;
 };
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -144,10 +145,10 @@ const PACK_MAP: Record<string, PackInfo> = {
     description: "VICIOUS's very first photocard series. A shift between metallic glamour and chiaroscuro — the THE FIRST BITE era captured from every angle.",
   },
   BF: {
-    name: "BL\u039bCK FL\u039bSH",
+    name: "BLΛCK FLΛSH",
     edition: "EP",
-    dropRates: { common: 50, rare: 30, epic: 14, legendary: 5, secret: 1 },
-    bannerImage: "/cards/R\u039bZE-BLACK FLASH/banner_wide.png",
+    dropRates: { common: 54, rare: 31, epic: 13.2, legendary: 1.5, secret: 0.3 },
+    bannerImage: "/cards/RΛZE-BLACK FLASH/banner_wide.png",
     coverImage: "/cards/R\u039bZE-BLACK FLASH/cover.webp",
     tag: "featured",
     costTickets: 1,
@@ -229,6 +230,10 @@ export function getCardById(id: string): CardEntry | undefined {
 
 // ─── Card Database ─────────────────────────────────────────────────────────
 
+const DESIRABILITY_OVERRIDES: Record<string, number> = {
+  // À remplir manuellement — ex: "VC1-NR-002L": 1.4
+};
+
 const REFS: string[] = [
   // ── NEW RULES (NR) — 40 cartes ──
   // RIA (VC1) — 001→010: C-L-E-R-C-R-C-S-R-E
@@ -282,6 +287,7 @@ function buildCard(ref: string): CardEntry {
     edition: pack.edition,
     reference: ref,
     imageSrc: imagePathFromReference(ref),
+    desirabilityMultiplier: DESIRABILITY_OVERRIDES[ref] ?? 1,
   };
 }
 

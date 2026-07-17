@@ -22,6 +22,7 @@ import type { Reward } from "@/components/RewardToast";
 import AuthStatus from "@/components/AuthStatus";
 import WalletPill from "@/components/WalletPill";
 import { authClient } from "@/lib/auth/client";
+import { IconX } from "@/components/Icons";
 import type { CardGrade } from "@/db/schema";
 import { usePlayer } from "@/lib/usePlayer";
 import {
@@ -367,7 +368,7 @@ export default function AppShell() {
       case "cards":
         return (
           <CardsView
-            onView={() => handleBumpMission("view_collection")}
+            onView={() => {}}
             owned={player?.collection ?? {}}
             ownedGrades={player?.collectionGrades ?? {}}
             onGoToShop={(packCode: string) => { setActivePack(packCode); setView("shop"); }}
@@ -378,7 +379,9 @@ export default function AppShell() {
         return (
           <WorkshopView
             owned={player?.collection ?? {}}
+            ownedGrades={player?.collectionGrades ?? {}}
             dust={player?.wallet.dust ?? 0}
+            gems={gems}
             onChanged={refresh}
             onBumpMission={handleBumpMission}
           />
@@ -388,7 +391,7 @@ export default function AppShell() {
           <ArtistsView
             bias={bias}
             onSetBias={handleSetBias}
-            onVisitMember={() => { handleBumpMission("view_artist"); handleBumpWeekly("visit_3_artists"); }}
+            onVisitMember={() => {}}
             getFanXp={(idol: string) => prog?.fanXp[idol] ?? 0}
             biasCooldown={biasCooldown}
             onOpenCosmo={(memberId: string) => setCosmoMemberId(memberId)}
@@ -493,7 +496,7 @@ export default function AppShell() {
           <button onClick={() => setError(null)} style={{
             marginLeft: 12, background: "none", border: "none", color: "var(--accent-pink)",
             cursor: "pointer", fontSize: 14, fontWeight: 700,
-          }}>✕</button>
+          }}><IconX size={12} /></button>
         </div>
       )}
 
@@ -516,7 +519,8 @@ export default function AppShell() {
           <span style={{ opacity: 0.3, margin: "0 6px" }}>·</span>
           <Link href="/legal/terms" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Terms</Link>
           <span style={{ opacity: 0.3, margin: "0 6px" }}>·</span>
-          <button onClick={() => setView("faq")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 11, color: "var(--text-muted)", textDecoration: "none", fontFamily: "inherit" }}>
+          <button onClick={() => setView("faq")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 11, color: "var(--text-muted)", textDecoration: "none", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 3 }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
             FAQ
           </button>
         </div>

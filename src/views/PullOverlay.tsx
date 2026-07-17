@@ -10,7 +10,7 @@ import { getPackDropRates, getCardsByPack, getPackInfo } from "@/data/cards";
 import { openPack } from "@/lib/gameActions";
 import type { ServerCard } from "@/lib/gachaEngine";
 import { RARITY_ORDER } from "@/lib/gameConfig";
-import { SEASON_COLORS } from "@/lib/rarityTheme";
+import { RARITY_LABELS, RARITY_COLORS, RARITY_STARS, SEASON_COLORS } from "@/lib/rarityTheme";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -51,21 +51,6 @@ function useResponsiveZoomSize(): { w: number; h: number } {
   return { w: zoomW, h: Math.round(zoomW * (ZOOM_H / ZOOM_W)) };
 }
 
-const RARITY_LABELS: Record<Rarity, string> = {
-  common: "COMMON", rare: "RARE", epic: "EPIC", legendary: "LEGENDARY", secret: "SECRET",
-};
-
-const RARITY_COLORS: Record<Rarity, string> = {
-  common: "rgba(var(--text-primary-rgb),0.3)",
-  rare: "var(--accent-pink)",
-  epic: "var(--accent-purple)",
-  legendary: "var(--rarity-legendary)",
-  secret: "var(--text-primary)",
-};
-
-const RARITY_STARS: Record<Rarity, string> = {
-  common: "★", rare: "★★", epic: "★★★", legendary: "★★★★", secret: "★★★★★",
-};
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -1033,6 +1018,6 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
   );
 }
 
-export { RARITY_STARS, RARITY_LABELS, RARITY_COLORS, SEASON_COLORS };
+export { RARITY_STARS } from "@/lib/rarityTheme";
 
 

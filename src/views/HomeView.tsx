@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import CARDS, { getAllPacks, getPackDropRates, getCardsByPack, getPackInfo } from "@/data/cards";
-import { RARITY_ORDER } from "@/lib/gameConfig";
 import { GROUPS } from "@/data/artists";
-import { RARITY_LETTER } from "@/lib/rarityTheme";
+import RarityOdds from "@/components/RarityOdds";
+import ArrowButton from "@/components/ArrowButton";
 
 const FEATURED_PACKS = getAllPacks()
   .filter(([, p]) => p.tag === "featured");
@@ -99,7 +99,7 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
                     : "var(--surface-white)",
                   fontSize: 9, fontWeight: 800, letterSpacing: "0.5px",
                   fontFamily: "var(--font-sans, monospace)",
-                  border: "1.5px solid var(--text-primary)",
+                  border: "2px solid var(--text-primary)",
                   boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
                   transform: "rotate(-3deg)",
                   whiteSpace: "nowrap",
@@ -121,9 +121,10 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, minWidth: 0, pointerEvents: "none" }}>
                 {fcGroup && (
                   <span style={{
-                    fontWeight: 800, letterSpacing: "1px", color: "var(--accent-pink)",
+                    fontWeight: 800, letterSpacing: "1px",
+                    color: GROUPS.find(g => g.name === fcGroup)?.gender === "male" ? "#4A90D9" : "var(--accent-pink)",
                     textTransform: "uppercase", fontFamily: "var(--font-sans, monospace)",
-                    fontSize: "clamp(10px, 2.5vw, 12px)",
+                    fontSize: "clamp(14px, 3.5vw, 20px)",
                   }}>
                     {fcGroup}
                   </span>
@@ -142,67 +143,7 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
                 }}>
                   {fcPack.edition.toUpperCase()} · {fcCards.length} CARDS
                 </span>
-                {/* Same RarityOdds layout as ShopView */}
-                <div className="hidden sm:flex" style={{ gap: 4, flexWrap: "wrap" }}>
-                  {RARITY_ORDER.map((r) => {
-                    const rates = fcPack.dropRates;
-                    const t = RARITY_ORDER.reduce((s, rr) => s + rates[rr], 0);
-                    const pct = t > 0 ? (rates[r] / t) * 100 : 0;
-                    const colors: Record<string, { bg: string; fg: string }> = {
-                      common: { bg: "rgba(var(--text-primary-rgb),0.55)", fg: "var(--surface-white)" },
-                      rare: { bg: "rgba(255,158,196,0.92)", fg: "var(--text-primary)" },
-                      epic: { bg: "rgba(201,177,255,0.92)", fg: "var(--text-primary)" },
-                      legendary: { bg: "rgba(255,215,0,0.92)", fg: "var(--text-primary)" },
-                      secret: { bg: "var(--surface-white)", fg: "var(--surface-white)" },
-                    };
-                    return (
-                      <span key={r} style={{
-                        padding: "2px 7px", borderRadius: 4,
-                        background: r === "secret" ? "var(--surface-white)" : colors[r].bg,
-                        color: colors[r].fg, fontSize: 10, fontWeight: 700,
-                        fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px",
-                      }}>
-                        {r === "secret" ? (
-                          <span style={{ backgroundImage: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple), var(--holo-c))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                            {pct.toFixed(0)}% {RARITY_LETTER[r]}
-                          </span>
-                        ) : (
-                          <>{pct.toFixed(0)}% {RARITY_LETTER[r]}</>
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
-                <div className="flex sm:hidden" style={{ gap: 4, flexWrap: "wrap" }}>
-                  {RARITY_ORDER.map((r) => {
-                    const rates = fcPack.dropRates;
-                    const t = RARITY_ORDER.reduce((s, rr) => s + rates[rr], 0);
-                    const pct = t > 0 ? (rates[r] / t) * 100 : 0;
-                    const colors: Record<string, { bg: string; fg: string }> = {
-                      common: { bg: "rgba(var(--text-primary-rgb),0.55)", fg: "var(--surface-white)" },
-                      rare: { bg: "rgba(255,158,196,0.92)", fg: "var(--text-primary)" },
-                      epic: { bg: "rgba(201,177,255,0.92)", fg: "var(--text-primary)" },
-                      legendary: { bg: "rgba(255,215,0,0.92)", fg: "var(--text-primary)" },
-                      secret: { bg: "var(--surface-white)", fg: "var(--surface-white)" },
-                    };
-                    return (
-                      <span key={r} style={{
-                        padding: "2px 7px", borderRadius: 4,
-                        background: r === "secret" ? "var(--surface-white)" : colors[r].bg,
-                        color: colors[r].fg, fontSize: 10, fontWeight: 700,
-                        fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px",
-                      }}>
-                        {r === "secret" ? (
-                          <span style={{ backgroundImage: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple), var(--holo-c))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                            {pct.toFixed(0)}% {RARITY_LETTER[r]}
-                          </span>
-                        ) : (
-                          <>{pct.toFixed(0)}% {RARITY_LETTER[r]}</>
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
+                <RarityOdds dropRates={fcPack.dropRates} variant="banner" />
               </div>
             </div>
 
@@ -228,20 +169,12 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
           {/* Arrows — outside overflow:hidden */}
           {FEATURED_PACKS.length > 1 && (
             <>
-              <button onClick={(e) => { e.stopPropagation(); prev(); resetTimer(); }} style={{
-                position: "absolute", top: "50%", left: 4, translate: "0 -50%", zIndex: 5,
-                width: 30, height: 30, borderRadius: "50%", border: "2px solid var(--text-primary)",
-                background: "rgba(0,0,0,0.25)", color: "var(--surface-white)", fontSize: 16, fontWeight: 700,
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
-                boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
-              }}>‹</button>
-              <button onClick={(e) => { e.stopPropagation(); next(); resetTimer(); }} style={{
-                position: "absolute", top: "50%", right: 4, translate: "0 -50%", zIndex: 5,
-                width: 30, height: 30, borderRadius: "50%", border: "2px solid var(--text-primary)",
-                background: "rgba(0,0,0,0.25)", color: "var(--surface-white)", fontSize: 16, fontWeight: 700,
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
-                boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
-              }}>›</button>
+              <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: "50%", left: 4, translate: "0 -50%", zIndex: 5 }}>
+                <ArrowButton direction="left" variant="overlay" onClick={() => { prev(); resetTimer(); }} size={16} />
+              </div>
+              <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: "50%", right: 4, translate: "0 -50%", zIndex: 5 }}>
+                <ArrowButton direction="right" variant="overlay" onClick={() => { next(); resetTimer(); }} size={16} />
+              </div>
             </>
           )}
         </div>
@@ -251,9 +184,9 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
       <div style={{
         padding: "14px 18px", borderRadius: 14, background: "rgba(var(--surface-white-rgb),0.5)",
         backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-        border: "1px solid rgba(255,158,196,0.04)",
+        border: "2px solid rgba(255,158,196,0.04)",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
             Collection
           </span>
@@ -296,9 +229,11 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
             if (oddsPack) {
               const [, p] = oddsPack;
               const d = p.dropRates;
+              const total = d.common + d.rare + d.epic + d.legendary + d.secret;
+              const pct = (v: number) => `${Math.round((v / total) * 100)}%`;
               items.push({
-                title: `Standard odds: ${d.common}/${d.rare}/${d.epic}/${d.legendary}/${d.secret}`,
-                desc: `Legendary at ${d.legendary}%, Secret at ${d.secret}%. Good luck!`,
+                title: `Standard odds: Common ${pct(d.common)} · Rare ${pct(d.rare)} · Epic ${pct(d.epic)} · Legendary ${pct(d.legendary)} · Secret ${pct(d.secret)}`,
+                desc: `Legendary at ${pct(d.legendary)}, Secret at ${pct(d.secret)}. Good luck!`,
                 tag: "odds",
               });
             }
@@ -307,7 +242,7 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
               <div key={news.title} style={{
                 display: "flex", alignItems: "flex-start", gap: 10,
                 padding: "12px 14px", background: "rgba(var(--surface-white-rgb),0.5)",
-                backdropFilter: "blur(12px)", borderRadius: 12, border: "1px solid rgba(255,158,196,0.02)",
+                backdropFilter: "blur(12px)", borderRadius: 12, border: "2px solid rgba(255,158,196,0.02)",
               }}>
                 <span style={{
                   flexShrink: 0, padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 700,
@@ -324,11 +259,6 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
               </div>
             ))}
         </div>
-      </div>
-
-      {/* ─── Footer ─── */}
-      <div style={{ textAlign: "center", fontSize: 10, letterSpacing: "3px", textTransform: "uppercase", color: "var(--text-disabled)", marginTop: 16 }}>
-        Ⓒ IDOLBIAS — COLLECT YOUR BIAS
       </div>
     </div>
   );

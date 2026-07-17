@@ -99,7 +99,7 @@ export default function PrivateThread({
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           placeholder="Send a private message..."
           style={{
-            flex: 1, padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(255,158,196,0.15)",
+             flex: 1, padding: "10px 12px", borderRadius: 10, border: "2px solid rgba(255,158,196,0.15)",
             fontSize: 13, outline: "none", background: "rgba(255,255,255,0.03)",
             color: "var(--text-primary)",
           }}

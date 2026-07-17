@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import StyledInput from "@/components/StyledInput";
 
 export default function ResetPasswordPage() {
   const { token } = useParams<{ token: string }>();
@@ -43,14 +44,6 @@ export default function ResetPasswordPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "12px 14px", borderRadius: 10,
-    border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
-    background: "rgba(var(--surface-white-rgb),0.6)",
-    color: "var(--text-primary)", fontSize: 14, outline: "none",
-    fontFamily: "var(--font-sans)", boxSizing: "border-box",
   };
 
   return (
@@ -99,8 +92,8 @@ export default function ResetPasswordPage() {
             )}
 
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <input placeholder="New password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
-              <input placeholder="Confirm password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} style={inputStyle} />
+              <StyledInput placeholder="New password" type="password" value={password} onChange={setPassword} />
+              <StyledInput placeholder="Confirm password" type="password" value={confirm} onChange={setConfirm} />
               <button type="submit" disabled={loading} style={{
                 padding: "12px 0", borderRadius: 10, border: "none",
                 background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",

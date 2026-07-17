@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import CloseButton from "@/components/CloseButton";
+import StyledInput from "@/components/StyledInput";
 
 export default function ContactModal({ onClose, initialName, initialEmail }: {
   onClose: () => void;
@@ -37,9 +39,9 @@ export default function ContactModal({ onClose, initialName, initialEmail }: {
   };
 
   const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "10px 12px", borderRadius: 8, border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+    width: "100%", padding: "10px 12px", borderRadius: 8, border: "2px solid rgba(var(--text-primary-rgb),0.12)",
     background: "rgba(var(--text-primary-rgb),0.02)", color: "var(--text-primary)",
-    fontSize: 13, fontFamily: "var(--font-sans, monospace)", outline: "none",
+    fontSize: 13, fontFamily: "var(--font-display)", fontWeight: 600, outline: "none",
     boxSizing: "border-box",
   };
 
@@ -88,18 +90,16 @@ export default function ContactModal({ onClose, initialName, initialEmail }: {
             </div>
           ) : (
             <>
-              <input
+              <StyledInput
                 placeholder="Your name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={inputStyle}
+                onChange={setName}
               />
-              <input
+              <StyledInput
                 placeholder="Your email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={inputStyle}
+                onChange={setEmail}
               />
               <textarea
                 placeholder="Your message"
@@ -141,13 +141,7 @@ export default function ContactModal({ onClose, initialName, initialEmail }: {
             </>
           )}
 
-          <button onClick={onClose} style={{
-            background: "none", border: "none", padding: "4px 0", cursor: "pointer",
-            fontSize: 11, fontWeight: 600, color: "var(--text-disabled)",
-            fontFamily: "var(--font-sans, monospace)",
-          }}>
-            ✕ Close
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
       </div>
     </div>

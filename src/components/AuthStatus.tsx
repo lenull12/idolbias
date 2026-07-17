@@ -64,7 +64,7 @@ export default function AuthStatus() {
                 minWidth: 160, padding: 6, borderRadius: 10,
                 background: "rgba(var(--surface-white-rgb),0.95)",
                 backdropFilter: "blur(20px)",
-                border: "1px solid rgba(255,158,196,0.1)",
+                border: "2px solid rgba(255,158,196,0.1)",
                 boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
                 zIndex: 50,
               }}

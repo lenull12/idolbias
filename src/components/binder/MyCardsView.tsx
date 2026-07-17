@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { IconHeart } from "@/components/Icons";
+import StyledSelect from "@/components/StyledSelect";
 import CARDS, { rarityFromReference } from "@/data/cards";
 import { RARITY_ORDER } from "@/lib/gameConfig";
 import { SEASON_COLORS } from "@/lib/rarityTheme";
@@ -27,13 +29,6 @@ function useFavorites(): [Record<string, true>, (id: string) => void] {
   return [favs, toggle];
 }
 
-const selectStyle: React.CSSProperties = {
-  padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,158,196,0.06)",
-  background: "rgba(var(--surface-white-rgb),0.5)", color: "var(--text-secondary)",
-  fontSize: 11, outline: "none", cursor: "pointer",
-  fontFamily: "var(--font-sans, monospace)", fontWeight: 600,
-};
-
 export default function MyCardsView({ owned, ownedGrades = {} }: {
   owned: Record<string, number>;
   ownedGrades?: Record<string, Partial<Record<CardGrade, number>>>;
@@ -44,6 +39,7 @@ export default function MyCardsView({ owned, ownedGrades = {} }: {
   const [filterMember, setFilterMember] = useState("all");
   const [filterPack, setFilterPack] = useState("all");
   const [filterRarity, setFilterRarity] = useState("all");
+  const [filterGrade, setFilterGrade] = useState<string>("all");
 
   const [cols, setCols] = useState(5);
   useEffect(() => {
@@ -77,6 +73,7 @@ export default function MyCardsView({ owned, ownedGrades = {} }: {
     if (filterMember !== "all") list = list.filter((c) => c.idol === filterMember);
     if (filterPack !== "all") list = list.filter((c) => c.pack === filterPack);
     if (filterRarity !== "all") list = list.filter((c) => rarityFromReference(c.reference) === filterRarity);
+    if (filterGrade !== "all") list = list.filter((c) => (ownedGrades[c.id]?.[filterGrade as CardGrade] ?? 0) > 0);
 
     list.sort((a, b) => {
       switch (sortBy) {
@@ -94,7 +91,7 @@ export default function MyCardsView({ owned, ownedGrades = {} }: {
     });
 
     return list;
-  }, [owned, sortBy, favFilter, favorites, filterMember, filterPack, filterRarity, cardIndex]);
+  }, [owned, sortBy, favFilter, favorites, filterMember, filterPack, filterRarity, filterGrade, cardIndex]);
 
   const totalUnique = ownedCards.length;
   const totalQty = useMemo(() =>
@@ -116,7 +113,10 @@ export default function MyCardsView({ owned, ownedGrades = {} }: {
             fontSize: 10, fontWeight: 700, letterSpacing: "1px", color: "var(--accent-hotpink)",
             fontFamily: "var(--font-sans, monospace)",
           }}>
-            ❤️ Favorites only
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <IconHeart filled={true} size={12} />
+              Favorites only
+            </span>
           </span>
         )}
       </div>
@@ -126,48 +126,67 @@ export default function MyCardsView({ owned, ownedGrades = {} }: {
         display: "flex", gap: 8, alignItems: "center", marginBottom: 20,
         padding: "8px 12px", background: "rgba(var(--surface-white-rgb),0.6)",
         backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-        borderRadius: 12, border: "1px solid rgba(255,158,196,0.04)", flexWrap: "wrap",
+        borderRadius: 12, border: "2px solid rgba(var(--text-primary-rgb),0.08)", flexWrap: "wrap",
       }}>
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.5px", color: "var(--text-disabled)", textTransform: "uppercase" }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.5px",           color: "var(--text-muted)", textTransform: "uppercase", fontFamily: "var(--font-display)" }}>
           Sort
         </span>
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} style={selectStyle}>
-          <option value="newest">Newest</option>
-          <option value="oldest">Oldest</option>
-          <option value="member">Member</option>
-          <option value="rarity">Rarity</option>
-          <option value="set">Set</option>
-        </select>
+        <StyledSelect
+          options={[
+            { value: "newest", label: "Newest" },
+            { value: "oldest", label: "Oldest" },
+            { value: "member", label: "Member" },
+            { value: "rarity", label: "Rarity" },
+            { value: "set", label: "Set" },
+          ]}
+          value={sortBy}
+          onChange={setSortBy}
+        />
 
-        <select value={filterMember} onChange={(e) => setFilterMember(e.target.value)} style={selectStyle}>
-          <option value="all">All Members</option>
-          {members.map((m) => (<option key={m} value={m}>{m}</option>))}
-        </select>
-        <select value={filterPack} onChange={(e) => setFilterPack(e.target.value)} style={selectStyle}>
-          <option value="all">All Packs</option>
-          {packs.map((p) => (<option key={p} value={p}>{p}</option>))}
-        </select>
-        <select value={filterRarity} onChange={(e) => setFilterRarity(e.target.value)} style={selectStyle}>
-          <option value="all">All Rarities</option>
-          {RARITY_ORDER.map((r) => (<option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>))}
-        </select>
+        <StyledSelect
+          options={[{ value: "all", label: "All Members" }, ...members.map((m) => ({ value: m, label: m }))]}
+          value={filterMember}
+          onChange={setFilterMember}
+        />
+        <StyledSelect
+          options={[{ value: "all", label: "All Packs" }, ...packs.map((p) => ({ value: p, label: p }))]}
+          value={filterPack}
+          onChange={setFilterPack}
+        />
+        <StyledSelect
+          options={[{ value: "all", label: "All Rarities" }, ...RARITY_ORDER.map((r) => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))]}
+          value={filterRarity}
+          onChange={setFilterRarity}
+        />
+
+        <StyledSelect
+          options={[{ value: "all", label: "All Grades" }, ...GRADE_ORDER.map((g) => ({ value: g, label: g.charAt(0).toUpperCase() + g.slice(1) }))]}
+          value={filterGrade}
+          onChange={setFilterGrade}
+        />
 
         <button onClick={() => setFavFilter((v) => !v)} style={{
-          display: "flex", alignItems: "center", gap: 4,
-          padding: "4px 10px", borderRadius: 6, border: "1.5px solid rgba(var(--text-primary-rgb),0.06)",
-          background: favFilter ? "rgba(255,20,147,0.06)" : "transparent",
+          display: "flex", alignItems: "center", gap: 5,
+          padding: "5px 10px", borderRadius: 8, cursor: "pointer",
+          border: "2px solid rgba(var(--text-primary-rgb),0.12)",
+          background: favFilter ? "rgba(255,20,147,0.08)" : "transparent",
           color: favFilter ? "var(--accent-hotpink)" : "var(--text-muted)",
-          fontSize: 11, fontWeight: 700, cursor: "pointer",
-          fontFamily: "var(--font-sans, monospace)", whiteSpace: "nowrap",
-        }}>
-          ❤️ {favFilter ? "Favorites" : "All"}
+          fontSize: 11, fontWeight: 700,
+          fontFamily: "var(--font-display)",
+          transition: "border-color 0.15s, background 0.15s",
+        }}
+        onMouseEnter={(e) => { if (!favFilter) e.currentTarget.style.borderColor = "var(--text-primary)"; }}
+        onMouseLeave={(e) => { if (!favFilter) e.currentTarget.style.borderColor = "rgba(var(--text-primary-rgb),0.12)"; }}
+        >
+          <IconHeart filled={favFilter} size={14} />
+          {favFilter ? "Favorites" : "All"}
         </button>
       </div>
 
       {/* Grid */}
       {ownedCards.length === 0 ? (
         <div style={{ textAlign: "center", padding: 48, color: "var(--text-disabled)", fontSize: 15 }}>
-          {favFilter ? "No favorited cards yet. Tap the ❤️ on a card to add it." : "You don't own any cards yet. Pull a pack to start your collection ✨"}
+          {favFilter           ? "No favorited cards yet. Tap the heart icon on a card to add it." : "You don't own any cards yet. Pull a pack to start your collection ✨"}
         </div>
       ) : (
         <div style={{
@@ -203,18 +222,19 @@ export default function MyCardsView({ owned, ownedGrades = {} }: {
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                   padding: "0 2px",
                 }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleFav(card.id); }}
-                    style={{
-                      width: 24, height: 24, borderRadius: "50%",
-                      border: "none", cursor: "pointer", padding: 0,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 13,
-                      background: isFav ? "var(--accent-hotpink)" : "rgba(var(--text-primary-rgb),0.12)",
-                      color: "var(--surface-white)", flexShrink: 0,
-                    }}
+                  <button onClick={(e) => { e.stopPropagation(); toggleFav(card.id); }} style={{
+                    width: 26, height: 26, borderRadius: "50%",
+                    border: "2px solid rgba(var(--text-primary-rgb),0.12)", cursor: "pointer", padding: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: isFav ? "var(--accent-hotpink)" : "transparent",
+                    color: isFav ? "var(--surface-white)" : "var(--text-disabled)",
+                    flexShrink: 0, transition: "background 0.15s, border-color 0.15s",
+                    lineHeight: 1,
+                  }}
+                  onMouseEnter={(e) => { if (!isFav) e.currentTarget.style.borderColor = "rgba(var(--text-primary-rgb),0.3)"; }}
+                  onMouseLeave={(e) => { if (!isFav) e.currentTarget.style.borderColor = "rgba(var(--text-primary-rgb),0.12)"; }}
                   >
-                    ❤️
+                    <IconHeart filled={isFav} size={13} />
                   </button>
                   {qty > 1 && (
                     <span style={{

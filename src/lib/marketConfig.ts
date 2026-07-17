@@ -1,0 +1,3 @@
+export const MARKET_COMMISSION_RATE = 0.08;
+export const MARKET_MIN_PRICE_GEMS = 1;
+export const MARKET_PRICE_HISTORY_LIMIT = 10;

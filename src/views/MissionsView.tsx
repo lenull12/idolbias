@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import PillBar from "@/components/PillBar";
 import MissionRow from "@/components/MissionRow";
 import { useCountdown } from "@/lib/useCountdown";
 import type { MissionDef, MissionState, LifetimeMissionDef, LifetimeTier, MissionDifficulty } from "@/lib/gameConfig";
@@ -105,42 +106,16 @@ export default function MissionsView({
       </div>
 
       {/* ─── Tab bar ─── */}
-      <div style={{
-        display: "flex", gap: 0, borderRadius: 10, border: "2px solid var(--text-primary)",
-        overflow: "hidden", background: "rgba(var(--text-primary-rgb),0.03)",
-      }}>
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
-          const badgeCount = tab.key === "daily" ? claimableDaily : tab.key === "weekly" ? claimableWeekly : claimableLifetime;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                flex: 1, padding: "8px 4px", border: "none", cursor: "pointer",
-                fontFamily: "var(--font-display)", fontSize: 12, fontWeight: 700,
-                background: isActive
-                  ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))"
-                  : "transparent",
-                color: isActive ? "var(--text-primary)" : "rgba(var(--text-primary-rgb),0.4)",
-                position: "relative", transition: "all 0.15s",
-              }}
-            >
-              {tab.label}
-              {badgeCount > 0 && (
-                <span style={{
-                  position: "absolute", top: 4, right: 4,
-                  padding: "1px 5px", borderRadius: 8, fontSize: 9, fontWeight: 700,
-                  background: "var(--accent-hotpink)", color: "var(--surface-white)",
-                  lineHeight: 1.3,
-                }}>
-                  {badgeCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <PillBar
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        badges={{
+          daily: claimableDaily,
+          weekly: claimableWeekly,
+          achievements: claimableLifetime,
+        }}
+      />
 
       <style>{`@keyframes titleFoil{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}`}</style>
 

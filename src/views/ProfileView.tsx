@@ -20,38 +20,7 @@ type Purchase = {
   createdAt: number;
 };
 
-function PurchaseHistory() {
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/purchases")
-      .then((r) => r.json())
-      .then((data) => setPurchases(data.purchases ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading || purchases.length === 0) return null;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {purchases.map((p) => {
-        const date = new Date(p.createdAt);
-        const priceStr = (p.amountPaid / 100).toLocaleString("fr-FR", { style: "currency", currency: p.currency.toUpperCase() });
-        return (
-          <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, padding: "6px 0", borderBottom: "1px solid rgba(var(--text-primary-rgb),0.04)" }}>
-            <div>
-              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>+{p.gemsCredited.toLocaleString()} Gems</span>
-              <span style={{ color: "var(--text-disabled)", marginLeft: 6 }}>{date.toLocaleDateString()}</span>
-            </div>
-            <span style={{ color: "var(--text-muted)" }}>{priceStr}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+// ─── Types ─────────────────────────────────────────────────────────────────
 
 export default function ProfileView({
   bias, onSetBias, tickets, gems, collectionCount, uniqueCards, biasCooldown,
@@ -76,6 +45,14 @@ export default function ProfileView({
   const [session, setSession] = useState<any>(null);
   useEffect(() => { authClient.getSession().then((r) => setSession(r.data)); }, []);
   const user = session?.user;
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [purchasesLoaded, setPurchasesLoaded] = useState(false);
+  useEffect(() => {
+    fetch("/api/purchases", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => { setPurchases(data.purchases ?? []); setPurchasesLoaded(true); })
+      .catch(() => { setPurchasesLoaded(true); });
+  }, []);
   const displayName = playerName || user?.name || "FAN";
   const initial = displayName[0]?.toUpperCase() || "F";
   const daysSince = createdAt ? Math.floor((Date.now() - new Date(createdAt).getTime()) / 86400000) : 0;
@@ -95,6 +72,7 @@ export default function ProfileView({
   const [selectedGroup, setSelectedGroup] = useState<string>(GROUPS[0]?.id ?? "");
   const [showContact, setShowContact] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteHover, setDeleteHover] = useState(false);
 
   const [claimingStreak, setClaimingStreak] = useState(false);
   const handleClickDaily = async () => {
@@ -197,18 +175,19 @@ export default function ProfileView({
               <h1 style={{ fontFamily: "var(--font-display, cursive)", fontSize: 20, fontWeight: 900, margin: 0, color: "var(--text-primary)", lineHeight: 1 }}>
                 {displayName}
               </h1>
-              <span style={{
-                padding: "2px 8px", borderRadius: 20,
-                background: "linear-gradient(135deg, #2E1F4D, #1A0F2E)",
-                color: "var(--accent-hotpink)", fontSize: 10, fontWeight: 700,
-                fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
-              }}>
-                FOUNDER
-              </span>
+          <span style={{
+            padding: "2px 8px", borderRadius: 20,
+            background: "linear-gradient(135deg, #2E1F4D, #1A0F2E)",
+            color: "var(--accent-hotpink)", fontSize: 10, fontWeight: 700,
+            fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
+            display: user ? undefined : "none",
+          }}>
+            FOUNDER
+          </span>
             </div>
             <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
               {createdAt
-                ? `Member since ${new Date(createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · ${daysSince} days on IdolBias`
+                ? `Member since ${new Date(createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}${daysSince === 0 ? "" : ` · ${daysSince} days on IdolBias`}`
                 : "Member"}
             </div>
             <div style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
@@ -221,14 +200,14 @@ export default function ProfileView({
         {/* Wallet */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 16 }}>
           {[
-            { icon: "🎟️", value: tickets, label: "Tickets", color: "var(--accent-hotpink)" },
-            { icon: "💎", value: gems, label: "Gems", color: "var(--currency-gems)" },
-            { icon: "✨", value: dust, label: "Dust", color: "var(--accent-purple)" },
+            { icon: "", value: tickets, label: "Tickets", color: "var(--accent-hotpink)" },
+            { icon: "", value: gems, label: "Gems", color: "var(--currency-gems)" },
+            { icon: "", value: dust, label: "Dust", color: "var(--accent-purple)" },
           ].map((item) => (
             <div key={item.label} style={{
               padding: 14, textAlign: "center", borderRadius: 10,
               background: "rgba(var(--text-primary-rgb),0.02)",
-              border: "1px solid rgba(var(--text-primary-rgb),0.06)",
+              border: "2px solid rgba(var(--text-primary-rgb),0.08)",
             }}>
               <div style={{ fontSize: 14, marginBottom: 2 }}>{item.icon}</div>
               <div style={{ fontFamily: "var(--font-display, cursive)", fontSize: 20, fontWeight: 800, color: item.color, lineHeight: 1.1 }}>
@@ -278,7 +257,7 @@ export default function ProfileView({
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 20 }}>🔥</span>
             <span style={{ fontFamily: "var(--font-display, cursive)", fontSize: 18, fontWeight: 700 }}>
-              {canClaimDaily ? streak : Math.max(streak - 1, 0) || streak}-day streak
+              {streak > 0 ? `${canClaimDaily ? streak : Math.max(streak - 1, 0) || streak}-day streak` : "No streak yet"}
             </span>
           </div>
           <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "1px", textTransform: "uppercase" }}>
@@ -487,7 +466,23 @@ export default function ProfileView({
           </SystemWindow>
 
           <SystemWindow title="Purchase history" width="100%">
-            <PurchaseHistory />
+            {purchasesLoaded && purchases.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {purchases.map((p) => {
+                  const date = new Date(p.createdAt);
+                  const priceStr = (p.amountPaid / 100).toLocaleString("fr-FR", { style: "currency", currency: p.currency.toUpperCase() });
+                  return (
+                    <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, padding: "6px 0", borderBottom: "2px solid rgba(var(--text-primary-rgb),0.04)" }}>
+                      <div>
+                        <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>+{p.gemsCredited.toLocaleString()} Gems</span>
+                        <span style={{ color: "var(--text-disabled)", marginLeft: 6 }}>{date.toLocaleDateString()}</span>
+                      </div>
+                      <span style={{ color: "var(--text-muted)" }}>{priceStr}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </SystemWindow>
 
           <SystemWindow title="Choose Your Bias" width="100%">
@@ -506,10 +501,10 @@ export default function ProfileView({
                     key={g.id}
                     onClick={() => setSelectedGroup(g.id)}
                     style={{
-                      padding: "6px 14px", borderRadius: 8, cursor: "pointer", border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
-                      background: selectedGroup === g.id ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "transparent",
-                      color: selectedGroup === g.id ? "var(--text-primary)" : "var(--text-secondary)",
-                      fontFamily: "var(--font-display, cursive)", fontSize: 12, fontWeight: 700,
+                       padding: "6px 14px", borderRadius: 8, cursor: "pointer", border: "2px solid rgba(var(--text-primary-rgb),0.12)",
+                       background: selectedGroup === g.id ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "transparent",
+                       color: selectedGroup === g.id ? "var(--text-primary)" : "var(--text-secondary)",
+                       fontFamily: "var(--font-display)", fontSize: 12, fontWeight: 700,
                     }}
                   >
                     {g.name}
@@ -528,8 +523,8 @@ export default function ProfileView({
                     key={member.id}
                     onClick={() => onSetBias(member.stageName)}
                     style={{
-                      padding: "8px 14px", borderRadius: 10, cursor: "pointer", border: "none",
-                      outline: isActive ? "2px solid var(--text-primary)" : "1.5px solid rgba(var(--text-primary-rgb),0.12)",
+                       padding: "8px 14px", borderRadius: 8, cursor: "pointer", border: "none",
+                       outline: isActive ? "2px solid var(--text-primary)" : "2px solid rgba(var(--text-primary-rgb),0.12)",
                       outlineOffset: -2,
                       background: isActive ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "rgba(var(--surface-white-rgb),0.6)",
                       color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
@@ -562,24 +557,26 @@ export default function ProfileView({
                   <button
                     onClick={() => setShowContact(true)}
                     style={{
-                      padding: "6px 14px", borderRadius: 8,
-                      border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
-                      background: "transparent", color: "var(--text-muted)",
-                      fontSize: 12, fontWeight: 600, cursor: "pointer",
-                      fontFamily: "var(--font-sans, monospace)",
-                    }}
-                  >
-                    🆘 Help / Contact
+                       padding: "6px 14px", borderRadius: 8,
+                       border: "2px solid rgba(var(--text-primary-rgb),0.12)",
+                       background: "transparent", color: "var(--text-muted)",
+                       fontSize: 12, fontWeight: 600, cursor: "pointer",
+                       fontFamily: "var(--font-display)",
+                     }}
+                   >
+                     Help / Contact
                   </button>
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
                     style={{
-                      padding: "6px 14px", borderRadius: 8,
-                      border: "1.5px solid rgba(var(--text-primary-rgb),0.08)",
-                      background: "transparent", color: "rgba(var(--text-primary-rgb),0.35)",
-                      fontSize: 12, fontWeight: 500, cursor: "pointer",
-                      fontFamily: "var(--font-sans, monospace)",
-                    }}
+                       padding: "6px 14px", borderRadius: 8,
+                       border: `2px solid rgba(var(--state-danger-rgb, 220,38,38),${deleteHover ? 0.5 : 0.2})`,
+                       background: "transparent", color: "rgba(var(--text-primary-rgb),0.35)",
+                       fontSize: 12, fontWeight: 500, cursor: "pointer",
+                       fontFamily: "var(--font-sans, monospace)",
+                     }}
+                     onMouseEnter={() => setDeleteHover(true)}
+                     onMouseLeave={() => setDeleteHover(false)}
                   >
                     Delete account
                   </button>

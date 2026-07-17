@@ -282,3 +282,73 @@ export const cosmoFeaturedResponses = sqliteTable("cosmo_featured_responses", {
   responseContent: text("response_content").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
+
+// ─── vendor_offers ─────────────────────────────────────────────────────────
+export const vendorOffers = sqliteTable("vendor_offers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dateStr: text("date_str").notNull(),
+  slotIndex: integer("slot_index").notNull(),
+  cardId: text("card_id").notNull(),
+  grade: text("grade").notNull(),
+  priceGems: integer("price_gems").notNull(),
+  claimedByPlayerId: text("claimed_by_player_id"),
+  claimedAt: integer("claimed_at", { mode: "timestamp" }),
+}, (table) => ({
+  dateSlotIdx: uniqueIndex("vendor_offers_date_slot_idx").on(table.dateStr, table.slotIndex),
+}));
+
+// ─── market_listings ───────────────────────────────────────────────────────
+export const marketListings = sqliteTable("market_listings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  sellerId: text("seller_id").notNull().references(() => players.id),
+  cardId: text("card_id").notNull(),
+  grade: text("grade").notNull(),
+  priceGems: integer("price_gems").notNull(),
+  status: text("status").notNull().default("open"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  resolvedAt: integer("resolved_at", { mode: "timestamp" }),
+  buyerId: text("buyer_id"),
+}, (table) => ({
+  cardGradeStatusIdx: index("market_listings_card_grade_status_idx")
+    .on(table.cardId, table.grade, table.status),
+  sellerIdx: index("market_listings_seller_idx").on(table.sellerId),
+}));
+
+export const marketSales = sqliteTable("market_sales", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  cardId: text("card_id").notNull(),
+  grade: text("grade").notNull(),
+  priceGems: integer("price_gems").notNull(),
+  soldAt: integer("sold_at", { mode: "timestamp" }).notNull(),
+}, (table) => ({
+  cardGradeIdx: index("market_sales_card_grade_idx").on(table.cardId, table.grade),
+}));
+
+// ─── leaderboard_meta ──────────────────────────────────────────────────────
+export const leaderboardMeta = sqliteTable("leaderboard_meta", {
+  id: integer("id").primaryKey(),
+  lastComputedDate: text("last_computed_date").notNull().default(""),
+});
+
+// ─── portfolio_snapshots ───────────────────────────────────────────────────
+export const portfolioSnapshots = sqliteTable("portfolio_snapshots", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  dateStr: text("date_str").notNull(),
+  playerId: text("player_id").notNull(),
+  portfolioValue: integer("portfolio_value").notNull(),
+}, (table) => ({
+  snapshotDatePlayerIdx: uniqueIndex("portfolio_snapshots_date_player_idx")
+    .on(table.dateStr, table.playerId),
+}));
+
+// ─── price_checkpoints ────────────────────────────────────────────────────
+export const priceCheckpoints = sqliteTable("price_checkpoints", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  cardId: text("card_id").notNull(),
+  grade: text("grade").notNull(),
+  lastHour: integer("last_hour").notNull(),
+  volMultiplier: real("vol_multiplier").notNull().default(1),
+  history: text("history").notNull(),
+}, (table) => ({
+  cardGradeIdx: uniqueIndex("price_checkpoints_card_grade_idx").on(table.cardId, table.grade),
+}));

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { getCardsByPack, getPackInfo, rarityFromReference, type CardEntry } from "@/data/cards";
 import { GROUPS } from "@/data/artists";
 import CardSlot from "./CardSlot";
+import ArrowButton from "@/components/ArrowButton";
 
 const CARDS_PER_PAGE = 20;
 
@@ -105,17 +106,7 @@ export default function BinderAlbumView({ packCode, owned, onBack, onGoToShop, o
     <div style={{ padding: "24px 16px 48px" }}>
       {/* Header — back + title + progress */}
       <div style={{ maxWidth: 720, margin: "0 auto", marginBottom: 28 }}>
-        <button onClick={onBack} style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "6px 12px", borderRadius: 8,
-          border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
-          background: "rgba(var(--text-primary-rgb),0.04)",
-          cursor: "pointer", color: "var(--text-secondary)",
-          fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 600,
-          marginBottom: 16,
-        }}>
-          ← Back to Binder
-        </button>
+        <ArrowButton direction="left" label="Back to Binder" onClick={onBack} size={14} />
 
         {typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.search.includes("dev=1")) && onDevComplete && (
           <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
@@ -123,14 +114,14 @@ export default function BinderAlbumView({ packCode, owned, onBack, onGoToShop, o
               DEV:
             </span>
             <button onClick={(e) => { e.stopPropagation(); onDevComplete(packCode, "complete"); }} style={{
-              padding: "2px 10px", borderRadius: 4, border: "1px solid #ffcc00",
+              padding: "2px 10px", borderRadius: 4, border: "2px solid #ffcc00",
               background: "rgba(255,204,0,0.08)", color: "#cc9900",
               fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "monospace",
             }}>
               ⚡ Complete set
             </button>
             <button onClick={(e) => { e.stopPropagation(); onDevComplete(packCode, "reset"); }} style={{
-              padding: "2px 10px", borderRadius: 4, border: "1px solid #ff6666",
+              padding: "2px 10px", borderRadius: 4, border: "2px solid #ff6666",
               background: "rgba(255,0,0,0.05)", color: "#cc4444",
               fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "monospace",
             }}>
@@ -204,7 +195,7 @@ export default function BinderAlbumView({ packCode, owned, onBack, onGoToShop, o
                         <div style={{
                           display: "flex", alignItems: "center", justifyContent: "space-between",
                           paddingBottom: 10, marginBottom: 12,
-                          borderBottom: "1px solid rgba(var(--text-primary-rgb),0.08)",
+                          borderBottom: "2px solid rgba(var(--text-primary-rgb),0.08)",
                         }}>
                           <span style={{
                             fontSize: 13, fontWeight: 700, letterSpacing: "2px",
@@ -272,32 +263,14 @@ export default function BinderAlbumView({ packCode, owned, onBack, onGoToShop, o
           maxWidth: 720, margin: "24px auto 0",
           display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12,
         }}>
-          <button onClick={handlePrev} disabled={!canPrev} style={{
-            padding: "6px 12px", borderRadius: 6,
-            border: "1.5px solid rgba(var(--text-primary-rgb),0.15)",
-            background: canPrev ? "rgba(var(--text-primary-rgb),0.04)" : "transparent",
-            color: canPrev ? "var(--text-muted)" : "var(--text-disabled)",
-            cursor: canPrev ? "pointer" : "default",
-            fontFamily: "var(--font-sans, monospace)", fontSize: 13, fontWeight: 600,
-          }}>
-            ◀
-          </button>
+          <ArrowButton direction="left" onClick={handlePrev} disabled={!canPrev} size={14} />
           <span style={{
             fontSize: 11, fontWeight: 600, fontFamily: "var(--font-sans, monospace)",
             color: "var(--text-disabled)", letterSpacing: "1px",
           }}>
             {safePage + 1} / {totalPages}
           </span>
-          <button onClick={handleNext} disabled={!canNext} style={{
-            padding: "6px 12px", borderRadius: 6,
-            border: "1.5px solid rgba(var(--text-primary-rgb),0.15)",
-            background: canNext ? "rgba(var(--text-primary-rgb),0.04)" : "transparent",
-            color: canNext ? "var(--text-muted)" : "var(--text-disabled)",
-            cursor: canNext ? "pointer" : "default",
-            fontFamily: "var(--font-sans, monospace)", fontSize: 13, fontWeight: 600,
-          }}>
-            ▶
-          </button>
+          <ArrowButton direction="right" onClick={handleNext} disabled={!canNext} size={14} />
         </div>
       )}
     </div>

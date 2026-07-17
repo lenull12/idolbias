@@ -50,7 +50,7 @@ export default function ProfileStatGrid({
                   style={{
                     width: 16, height: 16, borderRadius: 4,
                     background: c,
-                    border: "1px solid rgba(var(--text-primary-rgb),0.12)",
+                    border: "2px solid rgba(var(--text-primary-rgb),0.12)",
                     flexShrink: 0,
                   }}
                 />

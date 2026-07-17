@@ -203,21 +203,22 @@ function CardBack({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: fs(0.025),
+          justifyContent: "flex-end",
         }}
       >
-        {/* Grade — uniquement si non-standard, cohérent avec le silence visuel */}
+        {/* Grade — empilé au-dessus de la ref sans la décaler */}
         {grade && grade !== "standard" && (
           <span style={{
             fontSize: fs(0.042), fontFamily: "var(--font-mono, monospace)",
             letterSpacing: "0.1em", textTransform: "uppercase",
-            color: "var(--text-muted)", marginBottom: fs(0.015),
+            color: "var(--text-muted)", marginBottom: fs(0.02),
           }}>
             Grade · {GRADE_LABEL[grade]}
           </span>
         )}
 
-        <div style={{ position: "relative", borderRadius: Math.round(width * 0.018), overflow: "hidden" }}>
+        {/* Ref chip — toujours ancré en bas du bloc */}
+        <div style={{ borderRadius: Math.round(width * 0.018), overflow: "hidden" }}>
           <div style={{
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: `${fs(0.005)}px ${fs(0.035)}px`,
@@ -238,12 +239,6 @@ function CardBack({
               {meta.reference}
             </span>
           </div>
-          {rarity === "secret" && (
-            <NeonGlowBorder colors={["#FF69B4", "#8B5CF6", "#ffffff"]} pulseSpeed={2} />
-          )}
-          {rarity === "legendary" && (
-            <NeonGlowBorder colors={["#FFD700", "#E8B65A", "#DAA520"]} pulseSpeed={3} />
-          )}
         </div>
       </div>
 

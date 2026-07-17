@@ -21,7 +21,7 @@ export default function DailyMissionsCard({
                 display: "flex", flexDirection: "column", gap: 6,
                 padding: "10px 12px", borderRadius: 10,
                 background: m.claimed ? "rgba(var(--text-primary-rgb),0.02)" : "rgba(255,158,196,0.05)",
-                border: "1px solid rgba(var(--text-primary-rgb),0.06)",
+                border: "2px solid rgba(var(--text-primary-rgb),0.06)",
                 opacity: m.claimed ? 0.5 : 1,
               }}
             >

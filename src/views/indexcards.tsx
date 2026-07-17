@@ -1,20 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { IconGrid, IconSearch } from "@/components/Icons";
+import ArrowButton from "@/components/ArrowButton";
+import StyledSelect from "@/components/StyledSelect";
 import CARDS, { rarityFromReference } from "@/data/cards";
 import type { CardEntry } from "@/data/cards";
 import type { Rarity } from "@/components/CardEffects";
 import PhotoCard from "@/components/PhotoCard";
 import { RARITY_ORDER } from "@/lib/gameConfig";
-import { RARITY_BG, SEASON_COLORS } from "@/lib/rarityTheme";
-
-const RARITY_LABELS: Record<Rarity, string> = {
-  common: "COMMON",
-  rare: "RARE",
-  epic: "EPIC",
-  legendary: "LEGENDARY",
-  secret: "SECRET",
-};
+import { RARITY_LABELS, RARITY_BG, SEASON_COLORS } from "@/lib/rarityTheme";
 
 const RARITY_TEXT: Record<Rarity, string> = {
   common: "rgba(var(--text-primary-rgb),0.3)",
@@ -33,20 +28,6 @@ function getPacks(cards: CardEntry[]): string[] {
 function getMembers(cards: CardEntry[]): string[] {
   return [...new Set(cards.map((c) => c.idol))].sort();
 }
-
-const selectStyle: React.CSSProperties = {
-  padding: "6px 10px",
-  borderRadius: 8,
-  border: "1px solid rgba(255,158,196,0.06)",
-  background: "rgba(var(--surface-white-rgb),0.6)",
-  color: "var(--text-secondary)",
-  fontSize: 12,
-  outline: "none",
-  cursor: "pointer",
-  fontFamily: "var(--font-sans, monospace)",
-  minWidth: 100,
-  fontWeight: 500,
-};
 
 const ROWS = 4;
 const PAGE_SIZE = 20;
@@ -125,6 +106,11 @@ export default function IndexCards({
     return { unlocked, total };
   }, [owned]);
 
+  const canPrev = safePage > 0;
+  const canNext = safePage < totalPages - 1;
+  const handlePrev = () => setPage((p) => Math.max(0, p - 1));
+  const handleNext = () => setPage((p) => Math.min(totalPages - 1, p + 1));
+
   return (
     <div className="mx-auto max-w-[600px] lg:max-w-[1100px]" style={{ padding: "24px 16px" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 4, flexWrap: "wrap" }}>
@@ -154,56 +140,81 @@ export default function IndexCards({
       <div style={{
         display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 20,
         padding: "8px 12px", background: "rgba(var(--surface-white-rgb),0.6)", backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)", borderRadius: 12, border: "1px solid rgba(255,158,196,0.04)",
+        WebkitBackdropFilter: "blur(12px)", borderRadius: 12, border: "2px solid rgba(var(--text-primary-rgb),0.08)",
       }}>
         <div style={{
-          display: "flex", gap: 2, padding: 2, borderRadius: 8,
-          background: "rgba(var(--text-primary-rgb),0.04)",
+          display: "flex", gap: 0, borderRadius: 8,
+          border: "2px solid rgba(var(--text-primary-rgb),0.12)",
+          overflow: "hidden",
         }}>
           <button onClick={() => setViewMode("collection")} style={{
-            padding: "4px 10px", borderRadius: 6, border: "none",
-            background: viewMode === "collection" ? "var(--surface-white)" : "transparent",
-            color: viewMode === "collection" ? "var(--accent-hotpink)" : "var(--text-muted)",
+            display: "inline-flex", alignItems: "center", gap: 4,
+            padding: "5px 12px", border: "none",
+            background: viewMode === "collection"
+              ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))"
+              : "transparent",
+            color: viewMode === "collection" ? "var(--text-primary)" : "var(--text-muted)",
             fontSize: 11, fontWeight: 700, cursor: "pointer",
-            fontFamily: "var(--font-sans, monospace)", whiteSpace: "nowrap",
-            boxShadow: viewMode === "collection" ? "1px 1px 0px rgba(var(--text-primary-rgb),0.1)" : "none",
-          }}>🖼 Collection</button>
+            fontFamily: "var(--font-display)", whiteSpace: "nowrap",
+            transition: "background 0.15s",
+          }}>
+            <IconGrid size={13} /> Collection
+          </button>
           <button onClick={() => setViewMode("all")} style={{
-            padding: "4px 10px", borderRadius: 6, border: "none",
-            background: viewMode === "all" ? "var(--surface-white)" : "transparent",
-            color: viewMode === "all" ? "var(--accent-hotpink)" : "var(--text-muted)",
+            display: "inline-flex", alignItems: "center", gap: 4,
+            padding: "5px 12px", border: "none",
+            background: viewMode === "all"
+              ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))"
+              : "transparent",
+            color: viewMode === "all" ? "var(--text-primary)" : "var(--text-muted)",
             fontSize: 11, fontWeight: 700, cursor: "pointer",
-            fontFamily: "var(--font-sans, monospace)", whiteSpace: "nowrap",
-            boxShadow: viewMode === "all" ? "1px 1px 0px rgba(var(--text-primary-rgb),0.1)" : "none",
-          }}>🔍 All cards</button>
+            fontFamily: "var(--font-display)", whiteSpace: "nowrap",
+            transition: "background 0.15s",
+          }}>
+            <IconSearch size={13} /> All cards
+          </button>
         </div>
 
         <input placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} style={{
-          flex: "1 1 160px", padding: "5px 10px", borderRadius: 6, border: "1px solid rgba(255,158,196,0.06)",
+          flex: "1 1 160px", padding: "6px 10px", borderRadius: 8,
+          border: "2px solid rgba(var(--text-primary-rgb),0.12)",
           background: "rgba(var(--surface-white-rgb),0.5)", color: "var(--text-primary)", fontSize: 12, outline: "none",
-          fontFamily: "var(--font-sans, monospace)", fontWeight: 500,
-        }} />
-        <select value={filterGroup} onChange={(e) => setFilterGroup(e.target.value)} style={selectStyle}>
-          <option value="all">All Groups</option>
-          {groups.map((g) => (<option key={g} value={g}>{g}</option>))}
-        </select>
-        <select value={filterMember} onChange={(e) => setFilterMember(e.target.value)} style={selectStyle}>
-          <option value="all">All Members</option>
-          {members.map((m) => (<option key={m} value={m}>{m}</option>))}
-        </select>
-        <select value={filterRarity} onChange={(e) => setFilterRarity(e.target.value)} style={selectStyle}>
-          <option value="all">All Rarities</option>
-          {RARITY_ORDER.map((r) => (<option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>))}
-        </select>
-        <select value={filterPack} onChange={(e) => setFilterPack(e.target.value)} style={selectStyle}>
-          <option value="all">All Packs</option>
-          {packs.map((p) => (<option key={p} value={p}>{p}</option>))}
-        </select>
+          fontFamily: "var(--font-display)", fontWeight: 600,
+          transition: "border-color 0.15s",
+        }}
+        onFocus={(e) => e.target.style.borderColor = "var(--accent-hotpink)"}
+        onBlur={(e) => e.target.style.borderColor = "rgba(var(--text-primary-rgb),0.12)"}
+        />
+        <StyledSelect
+          options={[{ value: "all", label: "All Groups" }, ...groups.map((g) => ({ value: g, label: g }))]}
+          value={filterGroup}
+          onChange={setFilterGroup}
+        />
+        <StyledSelect
+          options={[{ value: "all", label: "All Members" }, ...members.map((m) => ({ value: m, label: m }))]}
+          value={filterMember}
+          onChange={setFilterMember}
+        />
+        <StyledSelect
+          options={[{ value: "all", label: "All Rarities" }, ...RARITY_ORDER.map((r) => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))]}
+          value={filterRarity}
+          onChange={setFilterRarity}
+        />
+        <StyledSelect
+          options={[{ value: "all", label: "All Packs" }, ...packs.map((p) => ({ value: p, label: p }))]}
+          value={filterPack}
+          onChange={setFilterPack}
+        />
         <button onClick={() => { setSearch(""); setFilterGroup("all"); setFilterPack("all"); setFilterMember("all"); setFilterRarity("all"); }} style={{
-          padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(var(--text-primary-rgb),0.04)",
-          background: "transparent", color: "var(--text-muted)", fontSize: 13, cursor: "pointer",
-          fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px", fontWeight: 600,
-        }}>RESET</button>
+          padding: "5px 10px", borderRadius: 8, cursor: "pointer",
+          border: "2px solid rgba(var(--text-primary-rgb),0.12)",
+          background: "transparent", color: "var(--text-muted)", fontSize: 11,
+          fontFamily: "var(--font-display)", letterSpacing: "1px", fontWeight: 700,
+          transition: "border-color 0.15s, color 0.15s",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--text-primary)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(var(--text-primary-rgb),0.12)"; e.currentTarget.style.color = "var(--text-muted)"; }}
+        >RESET</button>
       </div>
 
       <div style={{ fontSize: 10, color: "var(--text-disabled)", fontFamily: "var(--font-sans, monospace)", marginBottom: 12, fontWeight: 500 }}>
@@ -298,36 +309,14 @@ export default function IndexCards({
 
       {totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 20 }}>
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={safePage === 0}
-            style={{
-              padding: "6px 14px", borderRadius: 8, border: "2px solid var(--text-primary)",
-              background: safePage === 0 ? "rgba(var(--text-primary-rgb),0.06)" : "var(--surface-white)",
-              color: safePage === 0 ? "var(--text-disabled)" : "var(--text-primary)",
-              fontFamily: "var(--font-sans, monospace)", fontSize: 12, fontWeight: 700,
-              cursor: safePage === 0 ? "default" : "pointer",
-              boxShadow: safePage === 0 ? "none" : "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
-            }}
-          >← Prev</button>
+          <ArrowButton direction="left" label="Prev" onClick={canPrev ? handlePrev : undefined} disabled={!canPrev} size={13} />
           <span style={{
             fontSize: 12, fontWeight: 700, color: "var(--text-secondary)",
             fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
           }}>
             {safePage + 1} / {totalPages}
           </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={safePage >= totalPages - 1}
-            style={{
-              padding: "6px 14px", borderRadius: 8, border: "2px solid var(--text-primary)",
-              background: safePage >= totalPages - 1 ? "rgba(var(--text-primary-rgb),0.06)" : "var(--surface-white)",
-              color: safePage >= totalPages - 1 ? "var(--text-disabled)" : "var(--text-primary)",
-              fontFamily: "var(--font-sans, monospace)", fontSize: 12, fontWeight: 700,
-              cursor: safePage >= totalPages - 1 ? "default" : "pointer",
-              boxShadow: safePage >= totalPages - 1 ? "none" : "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
-            }}
-          >Next →</button>
+          <ArrowButton direction="right" label="Next" onClick={canNext ? handleNext : undefined} disabled={!canNext} size={13} />
         </div>
       )}
 

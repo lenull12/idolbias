@@ -1,17 +1,9 @@
 "use client";
 
 import PhotoCard from "@/components/PhotoCard";
-import { SEASON_COLORS, RARITY_BG, RARITY_FG } from "@/lib/rarityTheme";
+import { RARITY_LABELS, SEASON_COLORS, RARITY_BG, RARITY_FG } from "@/lib/rarityTheme";
 import type { Rarity } from "@/components/CardEffects";
 import type { CardEntry } from "@/data/cards";
-
-const RARITY_LABELS: Record<Rarity, string> = {
-  common: "COMMON",
-  rare: "RARE",
-  epic: "EPIC",
-  legendary: "LEGENDARY",
-  secret: "SECRET",
-};
 
 const CARD_RATIO = 1152 / 896;
 

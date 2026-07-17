@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import PillBar from "@/components/PillBar";
 import IndexCards from "./indexcards";
 import BinderView from "@/components/binder/BinderView";
 import BinderAlbumView from "@/components/binder/BinderAlbumView";
@@ -152,45 +153,18 @@ export default function CardsView({ owned, ownedGrades, onView, onGoToShop, onCl
           <div style={{
             position: "sticky", top: 0, zIndex: 10,
             padding: "12px 16px 8px",
-            display: "flex", gap: 2,
           }}
             className="mx-auto max-w-[600px] lg:max-w-[1100px]"
           >
-            <div style={{
-              display: "flex", gap: 2, padding: 2, borderRadius: 8,
-              background: "rgba(var(--text-primary-rgb),0.04)",
-            }}>
-              <button onClick={() => setMode("binder")} style={{
-                padding: "4px 14px", borderRadius: 6, border: "none",
-                background: mode === "binder" ? "var(--surface-white)" : "transparent",
-                color: mode === "binder" ? "var(--accent-hotpink)" : "var(--text-muted)",
-                fontSize: 12, fontWeight: 700, cursor: "pointer",
-                fontFamily: "var(--font-sans, monospace)", whiteSpace: "nowrap",
-                boxShadow: mode === "binder" ? "1px 1px 0px rgba(var(--text-primary-rgb),0.1)" : "none",
-              }}>
-                📁 Binder
-              </button>
-              <button onClick={() => setMode("mycards")} style={{
-                padding: "4px 14px", borderRadius: 6, border: "none",
-                background: mode === "mycards" ? "var(--surface-white)" : "transparent",
-                color: mode === "mycards" ? "var(--accent-hotpink)" : "var(--text-muted)",
-                fontSize: 12, fontWeight: 700, cursor: "pointer",
-                fontFamily: "var(--font-sans, monospace)", whiteSpace: "nowrap",
-                boxShadow: mode === "mycards" ? "1px 1px 0px rgba(var(--text-primary-rgb),0.1)" : "none",
-              }}>
-                ❤️ My Cards
-              </button>
-              <button onClick={() => setMode("catalogue")} style={{
-                padding: "4px 14px", borderRadius: 6, border: "none",
-                background: mode === "catalogue" ? "var(--surface-white)" : "transparent",
-                color: mode === "catalogue" ? "var(--accent-hotpink)" : "var(--text-muted)",
-                fontSize: 12, fontWeight: 700, cursor: "pointer",
-                fontFamily: "var(--font-sans, monospace)", whiteSpace: "nowrap",
-                boxShadow: mode === "catalogue" ? "1px 1px 0px rgba(var(--text-primary-rgb),0.1)" : "none",
-              }}>
-                🖼 Catalogue
-              </button>
-            </div>
+            <PillBar
+              tabs={[
+                { key: "binder" as const, label: "Binder" },
+                { key: "mycards" as const, label: "My Cards" },
+                { key: "catalogue" as const, label: "Catalogue" },
+              ]}
+              activeTab={mode}
+              onTabChange={setMode}
+            />
           </div>
 
           {mode === "binder" ? (
