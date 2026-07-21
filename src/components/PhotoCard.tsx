@@ -55,6 +55,8 @@ export type PhotoCardProps = {
   zoomed?: boolean;
   /** Start in back-face mode */
   startFlipped?: boolean;
+  /** Market price (standard grade), displayed as a small badge */
+  priceGems?: number;
 };
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -323,6 +325,7 @@ export default function PhotoCard({
   width = 224,
   zoomed = false,
   startFlipped = false,
+  priceGems,
 }: PhotoCardProps) {
   const maxTilt = _maxTilt ?? (rarity === "legendary" || rarity === "secret" ? 20 : 12);
   const height = Math.round(width * CARD_RATIO);
@@ -693,6 +696,18 @@ export default function PhotoCard({
               {/* Grade certification badge — taille auto selon la largeur :
                   compact si < 160px (grille), full si vue normale/zoom */}
               <GradeBadge grade={grade} width={width} size={width && width < 160 ? "compact" : "full"} hideTag={hideGradeTag} />
+
+              {priceGems !== undefined && (
+                <span style={{
+                  position: "absolute", top: 6, right: 6, zIndex: 1,
+                  fontSize: Math.max(10, Math.round(width * 0.05)), fontFamily: "var(--font-display)", fontWeight: 700,
+                  color: "var(--surface-white)", textShadow: "1px 1px 0 rgba(0,0,0,0.4)",
+                  padding: "2px 6px", borderRadius: 5, background: "rgba(0,0,0,0.45)",
+                  backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+                }}>
+                  💎 {priceGems}
+                </span>
+              )}
 
             </div>
 

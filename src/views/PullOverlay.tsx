@@ -11,6 +11,7 @@ import { openPack } from "@/lib/gameActions";
 import type { ServerCard } from "@/lib/gachaEngine";
 import { RARITY_ORDER } from "@/lib/gameConfig";
 import { RARITY_LABELS, RARITY_COLORS, RARITY_STARS, SEASON_COLORS } from "@/lib/rarityTheme";
+import { HARD_PITY_THRESHOLD } from "@/lib/pullConfig";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,19 @@ function useResponsiveCardWidth(): number {
     return () => window.removeEventListener('resize', handler);
   }, []);
   return Math.min(280, Math.max(180, (w - 48) * 0.55));
+}
+
+function useGridCardWidth(cols: number): number {
+  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  useEffect(() => {
+    const handler = () => setW(window.innerWidth);
+    handler();
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  const pad = 64;
+  const gap = 16 * (cols - 1);
+  return Math.min(200, Math.max(60, Math.floor((w - pad - gap) / cols)));
 }
 
 function useResponsiveZoomSize(): { w: number; h: number } {
@@ -133,13 +147,14 @@ function PackDisplay({ onOpen, disabled, coverImage }: { onOpen: () => void; dis
 
 // ─── Mini Verso Card ───────────────────────────────────────────────────────
 
-function MiniVersoCard({ card, index, onClick, isRevealed, coverImage, cardWidth = CARD_W }: {
-  card: PullResult; index: number; onClick: (e: React.MouseEvent) => void; isRevealed: boolean; coverImage?: string; cardWidth?: number;
+function MiniVersoCard({ card, index, onClick, isRevealed, coverImage, cardWidth = CARD_W, priceGems }: {
+  card: PullResult; index: number; onClick: (e: React.MouseEvent) => void; isRevealed: boolean; coverImage?: string; cardWidth?: number; priceGems?: number;
 }) {
   const cardHeight = Math.round(cardWidth * (CARD_H / CARD_W));
+  const wrapperHeight = cardHeight + 24; // reserve space for price gems
   if (isRevealed) {
     return (
-      <div style={{ width: cardWidth, height: cardHeight, animation: `cardIn 0.4s ease-out ${index * 0.1}s both`, userSelect: "none", WebkitUserSelect: "none", position: "relative" }}>
+      <div style={{ width: cardWidth, minHeight: wrapperHeight, animation: `cardIn 0.4s ease-out ${index * 0.1}s both`, userSelect: "none", WebkitUserSelect: "none", position: "relative" }}>
         <style>{`@keyframes cardIn { 0% { opacity: 0; transform: translateY(24px); } 100% { opacity: 1; transform: translateY(0); } }`}</style>
         <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} grade={card.grade} width={cardWidth} />
         {card.isNew && (
@@ -157,13 +172,18 @@ function MiniVersoCard({ card, index, onClick, isRevealed, coverImage, cardWidth
             NEW
           </div>
         )}
+        {priceGems !== undefined && (
+          <div style={{ textAlign: "center", marginTop: 4 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(var(--text-primary-rgb),0.6)", fontFamily: "var(--font-display)" }}>💎 {priceGems}</span>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div onClick={onClick} style={{
-      width: cardWidth, height: cardHeight, borderRadius: Math.round(cardWidth * 0.045), overflow: "hidden", cursor: "pointer",
+      width: cardWidth, height: wrapperHeight, borderRadius: Math.round(cardWidth * 0.045), overflow: "hidden", cursor: "pointer",
       position: "relative",
       background: "rgba(var(--surface-white-rgb),0.75)",
       animation: `cardIn 0.4s ease-out ${index * 0.1}s both`,
@@ -187,9 +207,9 @@ function MiniVersoCard({ card, index, onClick, isRevealed, coverImage, cardWidth
 
 // ─── Zoomed Swipe Card ─────────────────────────────────────────────────────
 
-function ZoomedSwipeCard({ card, onReveal, coverImage, zoomW = ZOOM_W, zoomH = ZOOM_H }: {
+function ZoomedSwipeCard({ card, onReveal, coverImage, zoomW = ZOOM_W, zoomH = ZOOM_H, priceGems }: {
   card: PullResult; onReveal: () => void; coverImage?: string;
-  zoomW?: number; zoomH?: number;
+  zoomW?: number; zoomH?: number; priceGems?: number;
 }) {
   const [swipeX, setSwipeX] = useState(0);
   const [flipDone, setFlipDone] = useState(false);
@@ -251,7 +271,7 @@ function ZoomedSwipeCard({ card, onReveal, coverImage, zoomW = ZOOM_W, zoomH = Z
     const rarityCfg: Record<string, { color: string; flash: string; pulse: string; shimmer: boolean; prismatic: boolean }> = {
       common:    { color: "26,10,30",    flash: "0.4s", pulse: "0.3s", shimmer: false, prismatic: false },
       rare:      { color: "0,0,0", flash: "0.6s", pulse: "0.4s", shimmer: false, prismatic: false },
-      epic:      { color: "201,177,255", flash: "0.8s", pulse: "0.5s", shimmer: true,  prismatic: false },
+      epic:      { color: "124,92,255",   flash: "0.8s", pulse: "0.5s", shimmer: true,  prismatic: false },
       legendary: { color: "245,240,225", flash: "1s",   pulse: "0.6s", shimmer: true,  prismatic: false },
       secret:    { color: "255,255,255", flash: "1.2s", pulse: "0.7s", shimmer: true,  prismatic: true },
     };
@@ -289,9 +309,14 @@ function ZoomedSwipeCard({ card, onReveal, coverImage, zoomW = ZOOM_W, zoomH = Z
         )}
         <div style={{ animation: `cardPulse ${cfg.pulse} ease-out` }}>
           <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} grade={card.grade} hideGradeTag width={zoomW} zoomed />
-        </div>
       </div>
-    );
+      {priceGems !== undefined && (
+        <div style={{ textAlign: "center", marginTop: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(var(--text-primary-rgb),0.6)", fontFamily: "var(--font-display)" }}>💎 {priceGems}</span>
+        </div>
+      )}
+    </div>
+  );
   }
 
   const dragRotation = Math.max(-180, Math.min(180, (swipeX / 300) * 180));
@@ -561,8 +586,8 @@ function LastDropPanel({ history }: { history: PullResult[] }) {
                 }}>
                   {RARITY_LABELS[latest.rarity]}
                 </span>
-              </div>
-            </div>
+      </div>
+      </div>
 
             {rest.length > 0 && (
               <>
@@ -630,9 +655,10 @@ function TicketCounter({ tickets, gems }: { tickets: number; gems: number }) {
 
 // ─── Pull Overlay ──────────────────────────────────────────────────────────
 
-export default function PullOverlay({ onClose, packCode = "LS", bias = null, tickets = 3, gems = 0, paymentMethod = "tickets", onPackOpened, onCardRevealed }: {
-  onClose: () => void; packCode?: string; bias?: string | null;
-  tickets?: number; gems?: number; paymentMethod?: "tickets" | "gems";
+export default function PullOverlay({ onClose, packCode = "LS", bias = null, tickets = 3, gems = 0, paymentMethod = "tickets", pullCount = 1, initialPityCount = 0, onPackOpened, onCardRevealed }: {
+  packCode?: string; bias?: string | null;
+  tickets?: number; gems?: number; paymentMethod?: "tickets" | "gems"; pullCount?: number; initialPityCount?: number;
+  onClose: () => void;
   onPackOpened?: () => void; onCardRevealed?: (idol: string, rarity: Rarity) => void;
 }) {
   const [phase, setPhase] = useState<"pack" | "cards" | "recap">("pack");
@@ -641,10 +667,16 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showZoom, setShowZoom] = useState(false);
   const [showRecap, setShowRecap] = useState(false);
+  const [recapMethod, setRecapMethod] = useState<"tickets" | "gems">(paymentMethod ?? "tickets");
+  const [pityCount, setPityCount] = useState(initialPityCount ?? 0);
   const [bestRarity, setBestRarity] = useState<Rarity | null>(null);
   const [history, setHistory] = useState<PullResult[]>([]);
+  const [cardPrices, setCardPrices] = useState<Record<string, number>>({});
 
   const [isMobile, setIsMobile] = useState(true);
+  const isMultiPull = (pullResults.length || pullCount) >= 10;
+  const gridCols = isMobile ? 2 : 5;
+
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 640);
     handler();
@@ -663,9 +695,12 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
     const method = paymentMethod === "gems" ? (canAffordGems ? "gems" : null) : (canAffordTickets ? "tickets" : null);
     if (!method) return;
     try {
-      const result = await openPack(packCode, bias, method);
+      const result = await openPack(packCode, bias, method, pullCount as 1 | 10);
       const newSet = new Set(result.newCardIds ?? []);
-      setPullResults(result.cards.map((c) => ({
+      // Best-last sort: commons first, legendary/secret last
+      const sorted = [...result.cards].sort((a, b) => RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity));
+      setPityCount(result.pityCount ?? 0);
+      setPullResults(sorted.map((c) => ({
         ...c,
         isNew: newSet.has(c.cardId),
         season: { label: "", ...SEASON_COLORS[c.rarity] },
@@ -680,7 +715,7 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
     } catch (err) {
       console.error(err);
     }
-  }, [tickets, gems, packCode, bias, paymentMethod, onPackOpened]);
+  }, [tickets, gems, packCode, bias, paymentMethod, pullCount, onPackOpened]);
 
   const handleSelectCard = useCallback((card: PullResult) => {
     const idx = pullResults.indexOf(card);
@@ -690,7 +725,10 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
 
   const handleCloseZoom = useCallback(() => {
     setShowZoom(false);
-  }, []);
+    if (revealedIds.size === pullResults.length) {
+      setShowRecap(true);
+    }
+  }, [revealedIds.size, pullResults.length, isMultiPull]);
 
   const handleCardRevealed = useCallback((id: string) => {
     setRevealedIds((prev) => new Set(prev).add(id));
@@ -702,6 +740,9 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
       });
       setHistory((prev) => [card, ...prev].slice(0, 8));
       onCardRevealed?.(card.meta.idol, card.rarity);
+      fetch(`/api/market/price?cardId=${card.cardId}&grade=${card.grade}`)
+        .then((r) => r.json())
+        .then((d) => setCardPrices((prev) => ({ ...prev, [id]: d.suggestedPrice })));
     }
   }, [pullResults, onCardRevealed]);
 
@@ -717,6 +758,11 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
   const handleRevealAll = useCallback(() => {
     const unrevealed = pullResults.filter((c) => !revealedIds.has(c.id));
     if (unrevealed.length === 0) return;
+    // Check if any legendary+ cards are unrevealed — warn the user
+    const hasLegendaryPlus = unrevealed.some((c) => ["legendary", "secret"].includes(c.rarity));
+    if (hasLegendaryPlus && !window.confirm("You have Legendary+ cards to reveal. Skip to end anyway?")) {
+      return;
+    }
     setRevealedIds((prev) => {
       const next = new Set(prev);
       unrevealed.forEach((c) => next.add(c.id));
@@ -747,7 +793,8 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
     setHistory([]);
   }, []);
 
-  const cardWidth = useResponsiveCardWidth();
+  const cardWidth = isMultiPull ? 0 : useResponsiveCardWidth();
+  const gridCardWidth = useGridCardWidth(gridCols);
   const zoomSize = useResponsiveZoomSize();
   const packed = getPackInfo(packCode);
   const canAffordTickets = packed.costTickets !== undefined && tickets >= packed.costTickets;
@@ -804,27 +851,87 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
 
       {/* Central content + inline controls */}
       <div style={{
-        position: "absolute", inset: 0, bottom: 30, zIndex: 1,
+        position: "absolute", inset: 0, zIndex: 1,
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16,
+        padding: "52px 16px 50px",
+        overflow: "auto",
       }}>
         {phase === "pack" && (
           <SystemWindow title={getPackInfo(packCode).name} onClose={onClose}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+              <PityMeter pityCount={pityCount} />
               <PackDisplay onOpen={handleOpen} disabled={disabledReason} coverImage={coverImage} />
             </div>
           </SystemWindow>
         )}
-        {/* Desktop: grid of 5 mini cards */}
+        {/* Desktop: card grid */}
         {!isMobile && phase === "cards" && (
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center" }}>
+          isMultiPull ? (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${gridCols}, ${gridCardWidth}px)`,
+              gap: 16,
+              justifyContent: "center",
+            }}>
+              {pullResults.map((card, i) => (
+                <MiniVersoCard key={card.id} card={card} index={i} isRevealed={revealedIds.has(card.id)} onClick={() => handleSelectCard(card)} coverImage={coverImage} cardWidth={gridCardWidth} priceGems={cardPrices[card.id]} />
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "center", maxWidth: "100%", overflow: "hidden" }}>
+              {pullResults.map((card, i) => (
+                <MiniVersoCard key={card.id} card={card} index={i} isRevealed={revealedIds.has(card.id)} onClick={() => handleSelectCard(card)} coverImage={coverImage} cardWidth={cardWidth} priceGems={cardPrices[card.id]} />
+              ))}
+            </div>
+          )
+        )}
+
+        {isMobile && isMultiPull && phase === "cards" && (
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: `repeat(${gridCols}, ${gridCardWidth}px)`,
+            gap: 12,
+            justifyContent: "center",
+            padding: "0 8px",
+          }}>
             {pullResults.map((card, i) => (
-              <MiniVersoCard key={card.id} card={card} index={i} isRevealed={revealedIds.has(card.id)} onClick={() => handleSelectCard(card)} coverImage={coverImage} cardWidth={cardWidth} />
+              <MiniVersoCard key={card.id} card={card} index={i} isRevealed={revealedIds.has(card.id)} onClick={() => handleSelectCard(card)} coverImage={coverImage} cardWidth={gridCardWidth} priceGems={cardPrices[card.id]} />
             ))}
           </div>
         )}
 
+        {/* Mobile multi-pull bottom controls */}
+        {isMobile && isMultiPull && phase === "cards" && (
+          <div style={{ display: "flex", justifyContent: "center", gap: 10, paddingBottom: 16 }}>
+            <button onClick={handlePullAgain} style={{
+              padding: "8px 18px", borderRadius: 10,
+              border: "2px solid rgba(var(--text-primary-rgb),0.15)",
+              background: "transparent", color: "var(--text-secondary)",
+              fontFamily: "var(--font-display)", fontSize: 12, fontWeight: 700, cursor: "pointer",
+            }}>
+              PULL AGAIN
+            </button>
+            <button onClick={() => setShowRecap(true)} style={{
+              padding: "8px 18px", borderRadius: 10,
+              border: "2px solid rgba(var(--text-primary-rgb),0.15)",
+              background: "transparent", color: "var(--text-secondary)",
+              fontFamily: "var(--font-display)", fontSize: 12, fontWeight: 700, cursor: "pointer",
+            }}>
+              VIEW RECAP
+            </button>
+            <button onClick={onClose} style={{
+              padding: "8px 18px", borderRadius: 10, border: "none",
+              background: "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))",
+              color: "var(--text-primary)", fontFamily: "var(--font-display)",
+              fontSize: 12, fontWeight: 700, cursor: "pointer",
+            }}>
+              BACK TO SHOP
+            </button>
+          </div>
+        )}
+
         {/* Mobile: single card at a time */}
-        {isMobile && (phase === "cards" || phase === "recap") && currentCard && (
+        {isMobile && !isMultiPull && (phase === "cards" || phase === "recap") && currentCard && (
           <div style={{ position: "relative", animation: "cardIn 0.3s ease" }}>
             {isCurrentRevealed || phase === "recap" ? (
               <>
@@ -843,9 +950,14 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
                     NEW
                   </div>
                 )}
+                {cardPrices[currentCard.id] !== undefined && (
+                  <div style={{ textAlign: "center", marginTop: 4 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(var(--text-primary-rgb),0.6)", fontFamily: "var(--font-display)" }}>💎 {cardPrices[currentCard.id]}</span>
+                  </div>
+                )}
               </>
             ) : (
-              <MiniVersoCard card={currentCard} index={0} isRevealed={false} onClick={() => handleSelectCard(currentCard)} coverImage={coverImage} cardWidth={cardWidth} />
+              <MiniVersoCard card={currentCard} index={0} isRevealed={false} onClick={() => handleSelectCard(currentCard)} coverImage={coverImage} cardWidth={cardWidth} priceGems={cardPrices[currentCard.id]} />
             )}
             {phase === "cards" && isCurrentRevealed && (
               <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
@@ -863,12 +975,12 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
           </div>
         )}
 
-        {phase === "cards" && isMobile && !isCurrentRevealed && !showZoom && (
+        {phase === "cards" && isMobile && !isMultiPull && !isCurrentRevealed && !showZoom && (
           <button onClick={handleRevealAll} style={{
             padding: "6px 16px", borderRadius: 10, border: "1.5px solid rgba(var(--text-primary-rgb),0.15)",
             background: "transparent", color: "var(--text-secondary)",
             fontFamily: "var(--font-sans, monospace)", fontSize: 11, fontWeight: 600,
-            letterSpacing: "0.5px", cursor: "pointer",
+            letterSpacing: "0.5px", cursor: "pointer", touchAction: "manipulation",
           }}>
             REVEAL ALL
           </button>
@@ -894,6 +1006,17 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
               }}>
                 PULL AGAIN
               </button>
+              {isMultiPull && (
+                <button onClick={() => setShowRecap(true)} style={{
+                  padding: "8px 18px", borderRadius: 10,
+                  border: "1.5px solid rgba(var(--text-primary-rgb),0.15)",
+                  background: "transparent", color: "var(--text-secondary)",
+                  fontFamily: "var(--font-sans, monospace)", fontSize: 12, fontWeight: 700,
+                  cursor: "pointer",
+                }}>
+                  VIEW RECAP
+                </button>
+              )}
               <button onClick={onClose} style={{
                 padding: "8px 18px", borderRadius: 10, border: "none",
                 background: "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))",
@@ -952,44 +1075,134 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
         </div>
       )}
 
-      {/* Recap modal showing all cards */}
-      {showRecap && (
+      {/* Recap table modal */}
+      {showRecap && (() => {
+        const packInfo = getPackInfo(packCode);
+        const totalValue = pullResults.reduce((sum, card) => sum + (cardPrices[card.id] ?? 0), 0);
+        const recapCost = recapMethod === "tickets" ? packInfo.costTickets : packInfo.costGems;
+        const recapBalance = recapMethod === "tickets" ? tickets : gems;
+        const recapCanAfford = recapCost !== undefined && recapBalance >= recapCost;
+
+        return (
         <div onClick={() => setShowRecap(false)} style={{
           position: "fixed", inset: 0, zIndex: 210,
           display: "flex", alignItems: "center", justifyContent: "center",
           background: "rgba(var(--text-primary-rgb),0.35)",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
+          backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
           cursor: "pointer",
         }}>
           <style>{`
             @keyframes zoomIn { from { opacity: 0; transform: scale(0.88); } to { opacity: 1; transform: scale(1); } }
           `}</style>
           <div onClick={(e) => e.stopPropagation()} style={{
-            display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center",
-            padding: 24, maxWidth: "90vw", animation: "zoomIn 0.3s ease",
+            animation: "zoomIn 0.3s ease",
+            maxWidth: 520, width: "calc(100vw - 32px)", maxHeight: "90vh", overflowY: "auto",
+            borderRadius: 16, border: "2px solid var(--text-primary)",
+            boxShadow: "6px 6px 0px rgba(var(--text-primary-rgb),0.9)",
+            background: "rgba(var(--surface-white-rgb),0.98)",
+            cursor: "default", display: "flex", flexDirection: "column", gap: 0,
           }}>
-            {pullResults.map((card) => (
-              <div key={card.id} style={{ position: "relative" }}>
-                <PhotoCard imageSrc={card.imageSrc} season={card.season} meta={card.meta} rarity={card.rarity} grade={card.grade} width={Math.min(140, (typeof window !== "undefined" ? window.innerWidth * 0.22 : 140))} />
-                {card.isNew && (
-                  <div style={{
-                    position: "absolute", top: -4, left: -4, zIndex: 2,
-                    padding: "1px 6px", borderRadius: 5,
-                    background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-pink))",
-                    color: "var(--surface-white)", fontSize: 8, fontWeight: 800,
-                    fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px",
-                    border: "1.5px solid var(--surface-white)",
-                    transform: "rotate(-6deg)",
-                  }}>
-                    NEW
-                  </div>
-                )}
+            <div style={{ padding: "20px 20px 16px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 800, color: "var(--text-primary)" }}>
+                  Pull recap
+                </span>
+                <button onClick={() => setShowRecap(false)} style={{
+                  background: "none", border: "none", cursor: "pointer", padding: 4,
+                  fontFamily: "var(--font-display)", fontSize: 13, fontWeight: 700, color: "var(--text-muted)",
+                }}>✕ Close</button>
               </div>
-            ))}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {pullResults.map((card) => (
+                  <div key={card.id} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 10,
+                    background: "rgba(var(--surface-white-rgb),0.5)", border: "2px solid rgba(var(--text-primary-rgb),0.08)",
+                  }}>
+                    <div style={{
+                      width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                      background: RARITY_COLORS[card.rarity],
+                    }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "var(--font-display)" }}>{card.meta.idol}</span>
+                      <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 6 }}>{card.reference}</span>
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", fontFamily: "var(--font-display)", minWidth: 80, textAlign: "center" }}>
+                      {RARITY_LABELS[card.rarity]}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", fontFamily: "var(--font-display)", minWidth: 60, textAlign: "center" }}>
+                      {card.grade.charAt(0).toUpperCase() + card.grade.slice(1)}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--text-primary)", minWidth: 70, textAlign: "right" }}>
+                      💎 {(cardPrices[card.id] ?? 0)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "10px 14px", borderRadius: 10,
+                background: "rgba(255,20,147,0.06)", border: "2px solid rgba(255,20,147,0.12)",
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", fontFamily: "var(--font-display)" }}>Total pack value</span>
+                <span style={{ fontSize: 16, fontWeight: 800, fontFamily: "var(--font-display)", color: "var(--text-primary)" }}>💎 {totalValue}</span>
+              </div>
+            </div>
+
+            <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
+              {packInfo.costTickets !== undefined && (
+                <button
+                  onClick={() => setRecapMethod("tickets")}
+                  style={{
+                    flex: 1, padding: "10px 0", borderRadius: 10, border: recapMethod === "tickets" ? "2px solid var(--text-primary)" : "2px solid rgba(var(--text-primary-rgb),0.12)",
+                    background: recapMethod === "tickets" ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "transparent",
+                    color: recapMethod === "tickets" ? "var(--text-primary)" : "var(--text-muted)",
+                    fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-display)",
+                  }}>
+                  🎟️ {packInfo.costTickets}
+                </button>
+              )}
+              {packInfo.costGems !== undefined && (
+                <button
+                  onClick={() => setRecapMethod("gems")}
+                  style={{
+                    flex: 1, padding: "10px 0", borderRadius: 10, border: recapMethod === "gems" ? "2px solid var(--text-primary)" : "2px solid rgba(var(--text-primary-rgb),0.12)",
+                    background: recapMethod === "gems" ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "transparent",
+                    color: recapMethod === "gems" ? "var(--text-primary)" : "var(--text-muted)",
+                    fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "var(--font-display)",
+                  }}>
+                  💎 {packInfo.costGems}
+                </button>
+              )}
+            </div>
+
+            <div style={{ padding: "0 20px 20px", display: "flex", gap: 10 }}>
+              <button
+                disabled={!recapCanAfford}
+                onClick={() => { setShowRecap(false); handleOpen(); }}
+                style={{
+                  flex: 1, padding: "12px 0", borderRadius: 10, border: "none",
+                  background: recapCanAfford ? "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))" : "rgba(var(--text-primary-rgb),0.08)",
+                  color: recapCanAfford ? "var(--surface-white)" : "var(--text-disabled)",
+                  fontWeight: 800, fontSize: 14, cursor: recapCanAfford ? "pointer" : "default", fontFamily: "var(--font-display)", letterSpacing: "1px",
+                }}>
+                {recapCanAfford ? "Pull again" : "Not enough"}
+              </button>
+              <button
+                onClick={() => { setShowRecap(false); onClose(); }}
+                style={{
+                  flex: 1, padding: "12px 0", borderRadius: 10,
+                  border: "2px solid rgba(var(--text-primary-rgb),0.12)", background: "transparent",
+                  color: "var(--text-secondary)", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "var(--font-display)",
+                }}>
+                Back to Shop
+              </button>
+            </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Zoom overlay for swipe-to-reveal */}
       {showZoom && currentCard && (
@@ -1010,10 +1223,25 @@ export default function PullOverlay({ onClose, packCode = "LS", bias = null, tic
             onPointerDown={(e) => e.stopPropagation()}
             style={{ animation: `zoomIn 0.45s cubic-bezier(0.23, 1, 0.32, 1)` }}
           >
-            <ZoomedSwipeCard card={currentCard} onReveal={() => handleCardRevealed(currentCard.id)} coverImage={coverImage} zoomW={zoomSize.w} zoomH={zoomSize.h} />
+            <ZoomedSwipeCard card={currentCard} onReveal={() => handleCardRevealed(currentCard.id)} coverImage={coverImage} zoomW={zoomSize.w} zoomH={zoomSize.h} priceGems={cardPrices[currentCard.id]} />
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PityMeter({ pityCount, threshold = HARD_PITY_THRESHOLD }: { pityCount: number; threshold?: number }) {
+  const pct = Math.min(100, (pityCount / threshold) * 100);
+  const remaining = threshold - pityCount;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, width: 200 }}>
+      <div style={{ height: 4, borderRadius: 2, background: "rgba(var(--text-primary-rgb),0.08)", overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple))", transition: "width 0.3s" }} />
+      </div>
+      <span style={{ fontSize: 10, fontFamily: "var(--font-sans, monospace)", color: "var(--text-muted)", textAlign: "center" }}>
+        {remaining} pulls until guaranteed Legendary+
+      </span>
     </div>
   );
 }

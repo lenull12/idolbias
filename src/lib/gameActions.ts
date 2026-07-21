@@ -13,6 +13,7 @@ export type ClaimDailyResult = {
 export type OpenPackResult = {
   cards: ServerCard[];
   wallet: { tickets: number; gems: number };
+  pityCount: number;
   newCardIds: string[];
 };
 
@@ -85,14 +86,20 @@ export async function claimLifetimeTier(missionId: string): Promise<ClaimLifetim
   return post<ClaimLifetimeResult>(`/api/lifetime/${missionId}/claim`);
 }
 
-export async function openPack(packCode: string, bias?: string | null, paymentMethod?: "tickets" | "gems"): Promise<OpenPackResult> {
-  return post<OpenPackResult>("/api/pack/open", { packCode, bias, paymentMethod });
+export async function openPack(packCode: string, bias?: string | null, paymentMethod?: "tickets" | "gems", pullCount: 1 | 10 = 1): Promise<OpenPackResult> {
+  return post<OpenPackResult>("/api/pack/open", { packCode, bias, paymentMethod, pullCount });
 }
 
 export async function disenchantCard(cardId: string, quantity = 1, grade?: string): Promise<{
   quantityDisenchanted: number; dustGained: number; wallet: { tickets: number; gems: number; dust: number };
 }> {
   return post("/api/cards/disenchant", { cardId, grade: grade ?? "standard", quantity });
+}
+
+export async function instantSellCard(cardId: string, grade: string, quantity: number): Promise<{
+  ok: true; payout: number;
+}> {
+  return post("/api/cards/instant-sell", { cardId, grade, quantity });
 }
 
 export async function createTradeOffer(offeredCardId: string, requestedCardId: string): Promise<{ ok: true }> {

@@ -4,7 +4,8 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { ownedCards, marketListings } from "@/db/schema";
 import { getCardById } from "@/data/cards";
-import { MARKET_MIN_PRICE_GEMS } from "@/lib/marketConfig";
+import { MARKET_COMMISSION_RATE } from "@/lib/marketConfig";
+import { getCurrentPriceWithHistory } from "@/lib/priceEngine";
 
 const COOKIE_NAME = "idolbias_player_id";
 
@@ -16,10 +17,16 @@ export async function POST(req: Request) {
   const db = getDb();
   const { cardId, grade, priceGems, confirmLastCopy } = await req.json();
 
-  if (!priceGems || priceGems < MARKET_MIN_PRICE_GEMS)
+  if (!cardId || !grade || !priceGems || priceGems < 1)
     return NextResponse.json({ error: "Invalid price" }, { status: 400 });
   if (!getCardById(cardId))
     return NextResponse.json({ error: "Unknown card" }, { status: 400 });
+
+  // Dynamic price floor: min 1 gem, max -90% from market price
+  const { suggestedPrice } = await getCurrentPriceWithHistory(cardId, grade);
+  const minAllowed = Math.max(1, Math.round(suggestedPrice * 0.1));
+  if (priceGems < minAllowed)
+    return NextResponse.json({ error: `Minimum price: ${minAllowed} gems` }, { status: 400 });
 
   // Vérifier si c'est le dernier exemplaire
   const [owned] = await db.select().from(ownedCards)

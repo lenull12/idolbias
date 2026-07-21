@@ -153,7 +153,7 @@ export default function ProfileView({
 
   return (
     <div
-      className="mx-auto max-w-[600px] lg:max-w-[900px]"
+      className="mx-auto max-w-[600px] lg:max-w-[1100px]"
       style={{ padding: "24px 16px 48px", display: "flex", flexDirection: "column", gap: 20 }}
     >
       {/* ─── Identity + Wallet ─── */}
@@ -177,7 +177,7 @@ export default function ProfileView({
               </h1>
           <span style={{
             padding: "2px 8px", borderRadius: 20,
-            background: "linear-gradient(135deg, #2E1F4D, #1A0F2E)",
+            background: "var(--surface-glass)",
             color: "var(--accent-hotpink)", fontSize: 10, fontWeight: 700,
             fontFamily: "var(--font-sans, monospace)", letterSpacing: "0.5px",
             display: user ? undefined : "none",
@@ -192,7 +192,7 @@ export default function ProfileView({
             </div>
             <div style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent-hotpink)", display: "inline-block" }} />
-              Bias: {bias || "None"}{bias ? ` · ${findGroupByMember(bias)?.name ?? "VICIOUS"}` : ""}
+              Favorite: {bias || "None"}{bias ? ` · ${findGroupByMember(bias)?.name ?? "VICIOUS"}` : ""}
             </div>
           </div>
         </div>
@@ -319,7 +319,7 @@ export default function ProfileView({
                 {isJackpot && isToday && (
                   <span style={{
                     position: "absolute", top: -6, right: -4, fontSize: 8, fontWeight: 800,
-                    background: "linear-gradient(135deg, #DAA520, #FFD700)", color: "var(--text-primary)",
+                    background: "linear-gradient(135deg, var(--rarity-legendary-badge), #e07640)", color: "var(--text-primary)",
                     padding: "1px 6px", borderRadius: 4, fontFamily: "var(--font-sans, monospace)",
                     letterSpacing: "0.5px",
                   }}>
@@ -404,7 +404,7 @@ export default function ProfileView({
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
                 {badge("💗", "Rookie Fan", fanLevel >= 5, "Reach Fan Lv.5")}
                 {badge("💜", "Devoted Fan", fanLevel >= 10, "Reach Fan Lv.10")}
-                {badge("👑", "Ultimate Bias", fanLevel >= 20, "Reach Fan Lv.20")}
+                {badge("\uD83D\uDC51", "Ultimate Favorite", fanLevel >= 20, "Reach Fan Lv.20")}
                 {badge("🐺", "Legend", fanLevel >= 30, "Reach Fan Lv.30")}
               </div>
             </div>
@@ -485,9 +485,9 @@ export default function ProfileView({
             )}
           </SystemWindow>
 
-          <SystemWindow title="Choose Your Bias" width="100%">
+          <SystemWindow title="Choose Your Favorite" width="100%">
             <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 12 }}>
-              Your bias gets better odds every time you pull. You can change once every {BIAS_COOLDOWN_DAYS} days.
+              Your favorite gets better odds every time you pull. You can change once every {BIAS_COOLDOWN_DAYS} days.
             </div>
             {biasCooldown !== null && biasCooldown !== undefined && biasCooldown > 0 && (
               <div style={{ fontSize: 11, color: "var(--accent-pink)", fontWeight: 600, marginBottom: 8 }}>

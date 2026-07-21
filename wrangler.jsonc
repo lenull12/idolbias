@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
+  "main": "worker-entry.js",
   "name": "idolbias",
   "compatibility_date": "2026-07-08",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -8,6 +8,12 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "idolbias-db", "database_id": "fb115d96-2a4d-47f7-bd08-784890b7fb7e" }
   ],
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+  "vars": {
+    "CRON_SECRET": "cron-price-tick-8fa3b1c2"
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,

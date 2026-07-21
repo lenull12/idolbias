@@ -88,7 +88,7 @@ export default function MissionsView({
 
   return (
     <div
-      className="mx-auto max-w-[600px] lg:max-w-[700px]"
+      className="mx-auto max-w-[600px] lg:max-w-[1100px]"
       style={{ padding: "20px 16px 32px", display: "flex", flexDirection: "column", gap: 16, paddingBottom: 48 }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>

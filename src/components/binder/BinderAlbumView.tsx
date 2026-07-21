@@ -148,7 +148,7 @@ export default function BinderAlbumView({ packCode, owned, onBack, onGoToShop, o
           </span>
           <span style={{
             marginLeft: "auto", fontSize: 12, fontWeight: 600,
-            color: totalPct === 100 ? "#DAA520" : "var(--text-muted)",
+            color: totalPct === 100 ? "var(--rarity-legendary-badge)" : "var(--text-muted)",
             fontFamily: "var(--font-display, cursive)",
           }}>
             {totalOwned}/{totalCards} · {totalPct}%
@@ -158,7 +158,7 @@ export default function BinderAlbumView({ packCode, owned, onBack, onGoToShop, o
           <div style={{
             width: `${totalPct}%`, height: "100%", borderRadius: 2,
             background: totalPct === 100
-              ? "linear-gradient(90deg, #DAA520, #FFD700)"
+              ? "linear-gradient(90deg, var(--rarity-legendary-badge), #e07640)"
               : "linear-gradient(90deg, var(--accent-pink), var(--accent-purple))",
             transition: "width 0.5s ease",
           }} />

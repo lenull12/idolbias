@@ -64,6 +64,15 @@ export const progression = sqliteTable("progression", {
     .$type<string[]>()
     .notNull()
     .default([]),
+  affinityXp: text("affinity_xp", { mode: "json" })
+    .$type<Record<string, number>>()
+    .notNull()
+    .default({}),
+  affinityCheckinDate: text("affinity_checkin_date"),
+  pityCounters: text("pity_counters", { mode: "json" })
+    .$type<Record<string, number>>()
+    .notNull()
+    .default({}),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
   dailyTemplates: text("daily_templates", { mode: "json" })
     .$type<{ id: string; label: string; target: number; reward: { tickets?: number; gems?: number; dust?: number } }[]>()

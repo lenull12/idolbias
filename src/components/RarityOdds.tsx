@@ -7,17 +7,17 @@ import type { Rarity } from "@/components/CardEffects";
 
 const BADGE_COLORS_DEFAULT: Record<Rarity, { bg: string; fg: string }> = {
   common: { bg: "rgba(var(--text-primary-rgb),0.03)", fg: "rgba(var(--text-primary-rgb),0.4)" },
-  rare: { bg: "rgba(255,158,196,0.06)", fg: "var(--accent-pink)" },
-  epic: { bg: "rgba(201,177,255,0.06)", fg: "var(--accent-purple)" },
-  legendary: { bg: "rgba(255,215,0,0.06)", fg: "var(--rarity-legendary-badge)" },
+  rare: { bg: "rgba(59,125,219,0.06)", fg: "var(--rarity-rare)" },
+  epic: { bg: "rgba(124,92,255,0.06)", fg: "var(--rarity-epic)" },
+  legendary: { bg: "rgba(232,182,90,0.06)", fg: "var(--rarity-legendary-badge)" },
   secret: { bg: "rgba(var(--text-primary-rgb),0.04)", fg: "var(--text-primary)" },
 };
 
 const BADGE_COLORS_BANNER: Record<Rarity, { bg: string; fg: string }> = {
   common: { bg: "rgba(var(--text-primary-rgb),0.55)", fg: "var(--surface-white)" },
-  rare: { bg: "rgba(255,158,196,0.92)", fg: "var(--text-primary)" },
-  epic: { bg: "rgba(201,177,255,0.92)", fg: "var(--text-primary)" },
-  legendary: { bg: "rgba(255,215,0,0.92)", fg: "var(--text-primary)" },
+  rare: { bg: "rgba(59,125,219,0.92)", fg: "var(--surface-white)" },
+  epic: { bg: "rgba(124,92,255,0.92)", fg: "var(--surface-white)" },
+  legendary: { bg: "rgba(232,182,90,0.92)", fg: "var(--surface-white)" },
   secret: { bg: "var(--surface-white)", fg: "var(--surface-white)" },
 };
 

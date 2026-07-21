@@ -4,16 +4,18 @@ import { eq, and, sql, gte } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { wallets, ownedCards, progression, type CardGrade } from "@/db/schema";
 import { getCardById, rarityFromReference } from "@/data/cards";
-import { DISENCHANT_VALUES } from "@/lib/gameConfig";
+import { getDisenchantValue } from "@/lib/gameConfig";
+import { getCurrentPriceWithHistory } from "@/lib/priceEngine";
 
 const COOKIE_NAME = "idolbias_player_id";
+const DISENCHANT_CONFIRM_THRESHOLD = 50;
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const playerId = cookieStore.get(COOKIE_NAME)?.value;
   if (!playerId) return NextResponse.json({ error: "No player" }, { status: 401 });
 
-  const { cardId, grade, quantity: rawQty }: { cardId?: string; grade?: string; quantity?: number } = await request.json();
+  const { cardId, grade, quantity: rawQty, confirmHighValue }: { cardId?: string; grade?: string; quantity?: number; confirmHighValue?: boolean } = await request.json();
   if (!cardId || !grade) return NextResponse.json({ error: "Missing cardId or grade" }, { status: 400 });
 
   const card = getCardById(cardId);
@@ -33,7 +35,19 @@ export async function POST(request: Request) {
 
   const quantity = Math.min(maxDisenchantable, Math.max(1, Math.floor(rawQty ?? 1)));
   const rarity = rarityFromReference(card.reference);
-  const dustGained = (DISENCHANT_VALUES[rarity] ?? 0) * quantity;
+  const dustGained = getDisenchantValue(rarity, grade as CardGrade) * quantity;
+
+  // Confirm before disenchanting high-value duplicates
+  if (!confirmHighValue) {
+    const { suggestedPrice } = await getCurrentPriceWithHistory(cardId, grade as CardGrade);
+    if (suggestedPrice > DISENCHANT_CONFIRM_THRESHOLD) {
+      return NextResponse.json({
+        error: `This card is worth ~${suggestedPrice} gems on the market. Disenchant anyway?`,
+        code: "HIGH_VALUE_CONFIRMATION_REQUIRED",
+      }, { status: 409 });
+    }
+  }
+
   const now = new Date();
 
   // Atomic decrement — grade-aware

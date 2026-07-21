@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import type { PackInfo } from "@/data/cards";
+import { getPullCost, PULL_COUNTS, type PullCount } from "@/lib/pullConfig";
 
 export type Method = "tickets" | "gems";
 type Size = "sm" | "md" | "lg";
@@ -65,6 +66,32 @@ export function CurrencyToggle({ pack, tickets, gems, size, selected, onSelect, 
   );
 }
 
+// ─── Toggle de quantité 1× / 10× ─────────────────────────────────────────────
+
+export function PullCountToggle({ selected, onSelect, size }: {
+  selected: PullCount; onSelect: (n: PullCount) => void; size: Size;
+}) {
+  const cfg = SIZE_CONFIG[size];
+  return (
+    <div onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", borderRadius: 8, overflow: "hidden", border: "2px solid var(--text-primary)" }}>
+      {PULL_COUNTS.map((n, i) => {
+        const active = selected === n;
+        return (
+          <button key={n} onClick={() => onSelect(n)} style={{
+            padding: cfg.chipPad, border: "none",
+            borderLeft: i > 0 ? "2px solid var(--text-primary)" : "none",
+            background: active ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "var(--surface-white)",
+            color: active ? "var(--text-primary)" : "var(--text-secondary)",
+            fontFamily: "var(--font-sans, monospace)", fontSize: cfg.chipFont, fontWeight: 700, cursor: "pointer",
+          }}>
+            {n}×
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Bouton PULL : tap = pull immédiat, prix affiché dessus ────────────────
 
 function PullButton({ cost, balance, size, icon, onPull }: {
@@ -78,15 +105,17 @@ function PullButton({ cost, balance, size, icon, onPull }: {
       disabled={!canAfford}
       style={{
         display: "flex", alignItems: "center", justifyContent: "center", gap: cfg.gap,
-        padding: cfg.btnPad, border: "none", borderRadius: 10,
+        padding: cfg.btnPad, border: "2px solid transparent", borderRadius: 10,
         cursor: canAfford ? "pointer" : "default",
-        background: canAfford ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "rgba(var(--text-primary-rgb),0.08)",
-        color: canAfford ? "var(--text-primary)" : "var(--text-disabled)",
+        background: canAfford ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "transparent",
+        borderColor: canAfford ? "transparent" : "var(--text-primary)",
+        color: canAfford ? "var(--text-primary)" : "var(--text-primary)",
         fontFamily: "var(--font-display, cursive)", fontSize: cfg.btnFont, fontWeight: 700, letterSpacing: "0.5px",
         whiteSpace: "nowrap",
+        opacity: canAfford ? 1 : 0.85,
       }}
     >
-      {canAfford ? `PULL · ${cost} ${icon}` : `Need ${cost - balance} more`}
+      {canAfford ? `PULL · ${cost} ${icon}` : `Need ${cost - balance} more ${icon}`}
     </button>
   );
 }
@@ -95,7 +124,7 @@ function PullButton({ cost, balance, size, icon, onPull }: {
 
 export default function PackPriceAction({ pack, tickets, gems, size = "md", align = "end", onPull }: {
   pack: PackInfo; tickets: number; gems: number; size?: Size; align?: "start" | "center" | "end";
-  onPull: (method: Method) => void;
+  onPull: (method: Method, pullCount: PullCount) => void;
 }) {
   const defaultMethod: Method | null =
     pack.costTickets !== undefined && tickets >= pack.costTickets ? "tickets"
@@ -105,17 +134,20 @@ export default function PackPriceAction({ pack, tickets, gems, size = "md", alig
     : null;
 
   const [selected, setSelected] = useState<Method | null>(defaultMethod);
+  const [pullCount, setPullCount] = useState<PullCount>(1);
 
   if (pack.locked || !selected) return null;
 
-  const cost = selected === "tickets" ? pack.costTickets! : pack.costGems!;
+  const unitCost = selected === "tickets" ? pack.costTickets! : pack.costGems!;
+  const cost = getPullCost(unitCost, pullCount);
   const balance = selected === "tickets" ? tickets : gems;
   const alignItems = align === "start" ? "flex-start" : align === "center" ? "center" : "flex-end";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems, gap: 6 }}>
+      <PullCountToggle selected={pullCount} onSelect={setPullCount} size={size} />
       <CurrencyToggle pack={pack} tickets={tickets} gems={gems} size={size} selected={selected} onSelect={setSelected} />
-      <PullButton cost={cost} balance={balance} size={size} icon={selected === "tickets" ? "🎟️" : "💎"} onPull={() => onPull(selected)} />
+      <PullButton cost={cost} balance={balance} size={size} icon={selected === "tickets" ? "🎟️" : "💎"} onPull={() => onPull(selected, pullCount)} />
     </div>
   );
 }

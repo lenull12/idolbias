@@ -1,74 +1,77 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #faf5f9;
-  --bg-end: #f0e8f5;
-  --surface: rgba(255,255,255,0.6);
-  --surface-border: rgba(26,10,30,0.14);
-  --text-primary: #1a0a1e;
-  --text-secondary: rgba(26,10,30,0.60);
-  --text-muted: rgba(26,10,30,0.45);
-  --text-disabled: rgba(26,10,30,0.25);
+  /* ─── Chrome : blanc cassé neutre, plus de dégradé pastel rose/lilas ─── */
+  --bg: #fafaf9;
+  --bg-end: #f2f1ee;
+  --surface: rgba(255,255,255,0.9);
+  --surface-border: rgba(17,17,17,0.10);
+  --text-primary: #111111;
+  --text-secondary: rgba(17,17,17,0.66);
+  --text-muted: rgba(17,17,17,0.48);
+  --text-disabled: rgba(17,17,17,0.30);
 
+  /* ─── Accent unique : réservé aux CTA/liens/moments clés ─── */
   --accent-hotpink: #FF1493;
-  --accent-pink: #FF9EC4;
-  --accent-purple: #C9B1FF;
+  --accent-pink: #FF4FA0;
+  --accent-purple: #7C5CFF;
   --rarity-legendary: #E8B65A;
   --parchment: #F5F0E1;
 
-  --holo-c: #9EE6FF;
-  --holo-d: #FFE9A8;
+  --holo-c: #4FA8FF;
+  --holo-d: #E8B65A;
 
-  /* Currency */
+  /* Currency : distinct visuellement mais toujours sobre */
   --currency-tickets: #FF1493;
-  --currency-gems: #1a90b8;
+  --currency-gems: #0F7BA5;
 
-  /* Rarity colors */
-  --rarity-common: rgba(26,10,30,0.3);
-  --rarity-rare: #FF9EC4;
-  --rarity-epic: #C9B1FF;
-  --rarity-secret: #ffffff;
-  --rarity-secret-ink: #1a0a1e;
-  --rarity-legendary-badge: #DAA520;
-  --rarity-common-graphic: #C4B5D6;
+  /* ─── Rareté : réservée aux bandeaux de carte, pas au chrome ─── */
+  --rarity-common: #9a9a92;
+  --rarity-rare: #FF6FB8;
+  --rarity-epic: #7C5CFF;
+  --rarity-secret: #111111;
+  --rarity-secret-ink: #ffffff;
+  --rarity-legendary-badge: #E8B65A;
+  --rarity-common-graphic: #c4c0b6;
 
-  /* Rarity banner colors */
-  --banner-common: #E8E0F0;
-  --banner-rare: #1a0a1e;
-  --banner-epic: #2E1F4D;
-  --banner-legendary: #F5F0E1;
-  --banner-secret-start: #FF9EC4;
-  --banner-secret-mid: #C9B1FF;
-  --banner-secret-end: #ffffff;
+  /* Banners : neutres, pas de fond coloré plein */
+  --banner-common: #f0efeb;
+  --banner-rare: #eaf1fb;
+  --banner-epic: #f0ecfe;
+  --banner-legendary: #fbeee7;
+  --banner-secret-start: #111111;
+  --banner-secret-mid: #2a2a2a;
+  --banner-secret-end: #444444;
 
-  --surface-glass: rgba(255,255,255,0.5);
+  --surface-glass: rgba(255,255,255,0.7);
   --surface-white: #ffffff;
 
-  --lilac-text-tint: #7A5FBF;
-  --lilac-text-bold: #8B5FBF;
-  --state-danger: #e0447a;
+  --lilac-text-tint: #6a4fd6;
+  --lilac-text-bold: #5b3fc9;
+  --state-danger: #d63d5f;
 
+  /* ─── Card stock : garde le charme doux ICI, isolé du reste ─── */
   --card-stock-start: #FAF6EF;
   --card-stock-end: #F3EDE2;
   --foil-1: #2A2A2A;
   --foil-2: #4A3A4A;
 
   --effect-glow-default: #FF1493;
-  --effect-leak-default: #FF9EC4;
+  --effect-leak-default: #FF4FA0;
 
-  --text-primary-rgb: 26, 10, 30;
+  --text-primary-rgb: 17, 17, 17;
   --surface-white-rgb: 255, 255, 255;
 
-  /* Glow / ambient */
-  --glow-lilac-06: rgba(201,177,255,0.06);
-  --glow-lilac-40: rgba(201,177,255,0.4);
-  --glow-lilac-45: rgba(201,177,255,0.45);
-  --glow-petal-10: rgba(255,158,196,0.10);
-  --glow-petal-40: rgba(255,158,196,0.4);
-  --glow-petal-50: rgba(255,158,196,0.5);
-  --glow-petal-80: rgba(255,158,196,0.8);
-  --glow-bloom-40: rgba(255,20,147,0.4);
-  --glow-bloom-60: rgba(255,20,147,0.6);
+  /* Glow / ambient : quasi neutralisé, réservé au reveal de pull */
+  --glow-lilac-06: rgba(124,92,255,0.03);
+  --glow-lilac-40: rgba(124,92,255,0.15);
+  --glow-lilac-45: rgba(124,92,255,0.18);
+  --glow-petal-10: rgba(255,79,160,0.04);
+  --glow-petal-40: rgba(255,79,160,0.18);
+  --glow-petal-50: rgba(255,79,160,0.22);
+  --glow-petal-80: rgba(255,79,160,0.35);
+  --glow-bloom-40: rgba(255,20,147,0.18);
+  --glow-bloom-60: rgba(255,20,147,0.28);
   --glow-white-60: rgba(255,255,255,0.6);
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
@@ -81,7 +84,7 @@
 html { -webkit-text-size-adjust: 100%; }
 
 body {
-  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-end) 50%, var(--bg) 100%);
+  background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-sans);
   min-height: 100vh;

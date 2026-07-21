@@ -58,9 +58,9 @@ export default function SetCard({ packCode, owned, onClick, onGoToShop, claimed 
       onClick={onClick}
       style={{
         borderRadius: 16, overflow: "hidden", cursor: "pointer",
-        border: completed ? "2px solid var(--rarity-legendary-badge, #DAA520)" : "2px solid var(--text-primary)",
+        border: completed ? "2px solid var(--rarity-legendary-badge)" : "2px solid var(--text-primary)",
         boxShadow: completed
-          ? "5px 5px 0px rgba(218,165,32,0.5)"
+          ? "5px 5px 0px rgba(194,84,46,0.5)"
           : "5px 5px 0px rgba(var(--text-primary-rgb),0.9)",
         background: "var(--surface-white)",
         transition: "transform 0.2s, box-shadow 0.2s",
@@ -68,7 +68,7 @@ export default function SetCard({ packCode, owned, onClick, onGoToShop, claimed 
       onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; }}
       onMouseLeave={(e) => { e.currentTarget.style.transform = ""; }}
     >
-      <style>{`@keyframes completedGlow { 0%, 100% { box-shadow: 0 0 6px rgba(218,165,32,0.3); } 50% { box-shadow: 0 0 14px rgba(218,165,32,0.6); } }`}</style>
+      <style>{`@keyframes completedGlow { 0%, 100% { box-shadow: 0 0 6px rgba(194,84,46,0.3); } 50% { box-shadow: 0 0 14px rgba(194,84,46,0.6); } }`}</style>
 
       {/* Cover */}
       <div style={{ position: "relative", width: "100%", aspectRatio: "896/576", overflow: "hidden", background: "linear-gradient(135deg, var(--accent-pink), var(--accent-purple), var(--holo-c))" }}>
@@ -84,7 +84,7 @@ export default function SetCard({ packCode, owned, onClick, onGoToShop, claimed 
             position: "absolute", top: 8, right: 8,
             padding: "3px 10px", borderRadius: 6,
             background: claimed
-              ? "linear-gradient(135deg, #DAA520, #FFD700)"
+              ? "linear-gradient(135deg, var(--rarity-legendary-badge), #e07640)"
               : "linear-gradient(135deg, var(--accent-hotpink), var(--accent-pink))",
             color: "var(--text-primary)", fontSize: 9, fontWeight: 800,
             fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px",
@@ -151,7 +151,7 @@ export default function SetCard({ packCode, owned, onClick, onGoToShop, claimed 
             </span>
             <span style={{
               fontSize: 11, fontWeight: 800, fontFamily: "var(--font-display, cursive)",
-              color: completed ? "var(--rarity-legendary-badge, #DAA520)" : "var(--text-primary)",
+              color: completed ? "var(--rarity-legendary-badge)" : "var(--text-primary)",
             }}>
               {pct}%
             </span>
@@ -160,7 +160,7 @@ export default function SetCard({ packCode, owned, onClick, onGoToShop, claimed 
             <div style={{
               width: `${pct}%`, height: "100%", borderRadius: 4,
               background: completed
-                ? "linear-gradient(90deg, #DAA520, #FFD700)"
+                ? "linear-gradient(90deg, var(--rarity-legendary-badge), #e07640)"
                 : "linear-gradient(90deg, var(--accent-pink), var(--accent-purple))",
               transition: "width 0.5s ease",
             }} />

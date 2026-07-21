@@ -74,7 +74,7 @@ export default function CardSlot(props: Props) {
   const boxShadow = props.rarity === "secret"
     ? "0 0 6px rgba(255,105,180,0.3), 0 0 10px rgba(139,92,246,0.2)"
     : props.rarity === "legendary"
-    ? "0 0 6px rgba(218,165,32,0.3)"
+    ? "0 0 6px rgba(194,84,46,0.3)"
     : "none";
 
   return (

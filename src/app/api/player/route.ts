@@ -7,7 +7,7 @@ import type { CardGrade } from "@/db/schema";
 
 const COOKIE_NAME = "idolbias_player_id";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 2;
-const WELCOME_TICKETS = 5;
+const WELCOME_TICKETS = 25;
 const WELCOME_GEMS = 500;
 
 export async function GET() {
@@ -38,8 +38,8 @@ export async function GET() {
       // Use raw SQL to avoid schema column mismatch (migrations may not have all columns)
       const today = new Date().toISOString().slice(0, 10);
       await db.run(sql`
-        INSERT INTO progression (player_id, streak, missions_date, mission_progress, missions_claimed, fan_xp, updated_at)
-        VALUES (${playerId}, 0, ${today}, '{}', '[]', '{}', ${now.getTime()})
+        INSERT INTO progression (player_id, streak, missions_date, mission_progress, missions_claimed, fan_xp, affinity_xp, pity_counters, updated_at)
+        VALUES (${playerId}, 0, ${today}, '{}', '[]', '{}', '{}', '{}', ${now.getTime()})
       `);
     }
 
@@ -54,8 +54,8 @@ export async function GET() {
     if (!prog) {
       const today = new Date().toISOString().slice(0, 10);
       await db.run(sql`
-        INSERT INTO progression (player_id, streak, missions_date, mission_progress, missions_claimed, fan_xp, updated_at)
-        VALUES (${playerId}, 0, ${today}, '{}', '[]', '{}', ${Date.now()})
+        INSERT INTO progression (player_id, streak, missions_date, mission_progress, missions_claimed, fan_xp, affinity_xp, pity_counters, updated_at)
+        VALUES (${playerId}, 0, ${today}, '{}', '[]', '{}', '{}', '{}', ${Date.now()})
       `);
       [prog] = await db.select().from(progression).where(eq(progression.playerId, playerId)).limit(1);
     }

@@ -22,6 +22,9 @@ type PlayerData = {
     weeklyMissionsClaimed: string[];
     lifetimeProgress: Record<string, number>;
     lifetimeClaimed: string[];
+    affinityXp: Record<string, number>;
+    affinityCheckinDate: string | null;
+    pityCounters: Record<string, number>;
   };
   collection: Record<string, number>;
   collectionGrades: Record<string, Partial<Record<CardGrade, number>>>;

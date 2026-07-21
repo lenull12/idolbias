@@ -29,7 +29,6 @@ function getMembers(cards: CardEntry[]): string[] {
   return [...new Set(cards.map((c) => c.idol))].sort();
 }
 
-const ROWS = 4;
 const PAGE_SIZE = 20;
 const GAP = 12;
 
@@ -224,7 +223,7 @@ export default function IndexCards({
         {totalPages > 1 && ` · page ${safePage + 1}/${totalPages}`}
       </div>
 
-      <div ref={gridRef} style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(75px, 1fr))`, gap: GAP }}>
+      <div ref={gridRef} className="grid grid-cols-5 lg:grid-cols-10" style={{ gap: GAP }}>
         {paginatedCards.map((card) => {
           const rarity = rarityFromReference(card.reference);
           const qty = owned[card.id] ?? 0;

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 
-type TabId = "home" | "feed" | "shop" | "cards" | "workshop" | "groups" | "profile" | "missions" | "faq";
+type TabId = "home" | "feed" | "shop" | "market" | "cards" | "characters" | "profile" | "missions" | "faq";
 
 export const ICONS: Record<TabId, React.ReactNode> = {
   home: (
@@ -14,17 +14,21 @@ export const ICONS: Record<TabId, React.ReactNode> = {
   shop: (
     <path d="M4 8.5 5.5 4h13L20 8.5M4 8.5v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-10M4 8.5h16M9 12.5a3 3 0 0 0 6 0" />
   ),
+  market: (
+    <path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6M14 7h4v4" />
+  ),
   cards: (
     <>
       <rect x="7.5" y="3.5" width="11" height="15" rx="1.6" transform="rotate(8 13 11)" opacity="0.35" />
       <rect x="5" y="5" width="14" height="15" rx="1.6" />
     </>
   ),
-  workshop: (
-    <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 13.5a7.5 7.5 0 0 0 0-3l1.9-1.5-2-3.4-2.2.9a7.4 7.4 0 0 0-1.7-1L15 3h-4l-.4 2.5a7.4 7.4 0 0 0-1.7 1l-2.2-.9-2 3.4L6.6 11a7.5 7.5 0 0 0 0 3l-1.9 1.5 2 3.4 2.2-.9c.5.4 1.1.75 1.7 1L11 22h4l.4-2.5c.6-.25 1.2-.6 1.7-1l2.2.9 2-3.4Z" />
-  ),
-  groups: (
-    <path d="M9 15.5c0 1.5-1.3 2.3-1.3 4M9 15.5c-2.7-.4-4.5-2.2-4.5-5 0-3 2.2-6.5 6.8-6.5S18 7.5 18 10.5c0 2.8-1.8 4.6-4.5 5M9 15.5c1.3.3 2.7.3 4 0M15 15.5c0 1.5 1.3 2.3 1.3 4" />
+  characters: (
+    <>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </>
   ),
   profile: (
     <path d="M12 12.5a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20c1.3-3.7 4.2-5.5 7.5-5.5s6.2 1.8 7.5 5.5" />
@@ -41,9 +45,9 @@ export const TABS: { id: TabId; label: string }[] = [
   { id: "home", label: "Home" },
   { id: "feed", label: "Feed" },
   { id: "shop", label: "Shop" },
+  { id: "market", label: "Market" },
   { id: "cards", label: "Cards" },
-  { id: "workshop", label: "Workshop" },
-  { id: "groups", label: "Artists" },
+  { id: "characters", label: "Characters" },
   { id: "profile", label: "Profile" },
   { id: "missions", label: "Missions" },
   { id: "faq", label: "FAQ" },

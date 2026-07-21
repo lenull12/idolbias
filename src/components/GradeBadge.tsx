@@ -41,17 +41,17 @@ const GRADE_VISUALS: Partial<Record<CardGrade, GradeVisual>> = {
   },
   mint: {
     background: "linear-gradient(135deg, #d8d8e2, #9a9aab)",
-    color: "#1a0a1e",
+    color: "var(--text-primary)",
   },
   pristine: {
     background: "linear-gradient(135deg, #f5d67a, #c99a2e)",
-    color: "#1a0a1e",
+    color: "var(--text-primary)",
     ring: "rgba(232,182,90,0.65)",
   },
   gem: {
     background:
       "linear-gradient(110deg, #ff2d78, #ff9a3c, #f5ff5c, #4dffb0, #4dd2ff, #7c6bff, #ff2d78)",
-    color: "#1a0a1e",
+    color: "var(--text-primary)",
     holo: true,
   },
 };

@@ -38,38 +38,38 @@ export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
     id: "collect_cards",
     label: "Collection Mastery",
     tiers: [
-      { threshold: 10, reward: { gems: 50 } },
-      { threshold: 25, reward: { gems: 100 } },
-      { threshold: 50, reward: { gems: 250 } },
-      { threshold: 100, reward: { gems: 500 } },
-      { threshold: 150, reward: { gems: 750 } },
-      { threshold: 250, reward: { gems: 1000 } },
+      { threshold: 10, reward: { gems: 10 } },
+      { threshold: 25, reward: { gems: 20 } },
+      { threshold: 50, reward: { gems: 50 } },
+      { threshold: 100, reward: { gems: 100 } },
+      { threshold: 150, reward: { gems: 150 } },
+      { threshold: 250, reward: { gems: 200 } },
     ],
   },
   {
     id: "complete_sets",
     label: "Set Completionist",
     tiers: [
-      { threshold: 1, reward: { dust: 200, gems: 100 } },
-      { threshold: 2, reward: { dust: 500, gems: 250 } },
-      { threshold: 4, reward: { dust: 1000, gems: 500 } },
+      { threshold: 1, reward: { dust: 40, gems: 20 } },
+      { threshold: 2, reward: { dust: 100, gems: 50 } },
+      { threshold: 4, reward: { dust: 200, gems: 100 } },
     ],
   },
   {
     id: "collect_legendary",
     label: "Legendary Hunter",
     tiers: [
-      { threshold: 5, reward: { gems: 100 } },
-      { threshold: 15, reward: { gems: 300 } },
-      { threshold: 30, reward: { gems: 750 } },
+      { threshold: 5, reward: { gems: 20 } },
+      { threshold: 15, reward: { gems: 60 } },
+      { threshold: 30, reward: { gems: 150 } },
     ],
   },
   {
     id: "collect_secret",
     label: "Secret Seeker",
     tiers: [
-      { threshold: 1, reward: { dust: 300, gems: 100 } },
-      { threshold: 3, reward: { dust: 800, gems: 300 } },
+      { threshold: 1, reward: { dust: 60, gems: 20 } },
+      { threshold: 3, reward: { dust: 160, gems: 60 } },
     ],
   },
   // ─── Social ─────────────────────────────────────────────
@@ -77,20 +77,20 @@ export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
     id: "follow_all_artists",
     label: "Devoted Fan",
     tiers: [
-      { threshold: 1, reward: { gems: 50 } },
-      { threshold: 2, reward: { gems: 100 } },
-      { threshold: 3, reward: { gems: 200 } },
-      { threshold: 4, reward: { tickets: 5, gems: 300 } },
+      { threshold: 1, reward: { gems: 10 } },
+      { threshold: 2, reward: { gems: 20 } },
+      { threshold: 3, reward: { gems: 40 } },
+      { threshold: 4, reward: { tickets: 5, gems: 60 } },
     ],
   },
   {
     id: "likes_given",
     label: "Feed Lover",
     tiers: [
-      { threshold: 50, reward: { gems: 50 } },
-      { threshold: 200, reward: { gems: 150 } },
-      { threshold: 500, reward: { gems: 400 } },
-      { threshold: 1000, reward: { tickets: 5, gems: 500 } },
+      { threshold: 50, reward: { gems: 10 } },
+      { threshold: 200, reward: { gems: 30 } },
+      { threshold: 500, reward: { gems: 80 } },
+      { threshold: 1000, reward: { tickets: 5, gems: 100 } },
     ],
   },
   // ─── Progression ─────────────────────────────────────────
@@ -99,30 +99,30 @@ export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
     label: "Fan Devotion",
     tiers: [
       { threshold: 5, reward: { tickets: 1, gems: 10 } },
-      { threshold: 10, reward: { tickets: 3, gems: 25 } },
-      { threshold: 20, reward: { tickets: 5, gems: 50 } },
-      { threshold: 30, reward: { tickets: 8, gems: 125 } },
-      { threshold: 50, reward: { tickets: 10, gems: 250 } },
-      { threshold: 75, reward: { tickets: 15, gems: 500 } },
+      { threshold: 10, reward: { tickets: 3, gems: 20 } },
+      { threshold: 20, reward: { tickets: 5, gems: 40 } },
+      { threshold: 30, reward: { tickets: 8, gems: 80 } },
+      { threshold: 50, reward: { tickets: 10, gems: 150 } },
+      { threshold: 75, reward: { tickets: 15, gems: 300 } },
     ],
   },
   {
     id: "login_dedication",
     label: "Login Dedication",
     tiers: [
-      { threshold: 7, reward: { gems: 50 } },
-      { threshold: 30, reward: { gems: 150, tickets: 5 } },
-      { threshold: 100, reward: { gems: 500, tickets: 10 } },
-      { threshold: 365, reward: { gems: 2000, tickets: 30 } },
+      { threshold: 7, reward: { gems: 10 } },
+      { threshold: 30, reward: { gems: 30, tickets: 5 } },
+      { threshold: 100, reward: { gems: 100, tickets: 10 } },
+      { threshold: 365, reward: { gems: 400, tickets: 30 } },
     ],
   },
   {
     id: "streak_record",
     label: "Unstoppable",
     tiers: [
-      { threshold: 7, reward: { gems: 100 } },
+      { threshold: 7, reward: { gems: 20 } },
       { threshold: 30, reward: { tickets: 10 } },
-      { threshold: 100, reward: { tickets: 30, gems: 500 } },
+      { threshold: 100, reward: { tickets: 30, gems: 100 } },
     ],
   },
   // ─── Économie / Workshop ────────────────────────────────
@@ -130,44 +130,44 @@ export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
     id: "packs_opened",
     label: "Pack Addict",
     tiers: [
-      { threshold: 10, reward: { gems: 50 } },
-      { threshold: 50, reward: { gems: 200 } },
-      { threshold: 200, reward: { tickets: 10, gems: 500 } },
-      { threshold: 1000, reward: { tickets: 30, gems: 2000 } },
+      { threshold: 10, reward: { gems: 10 } },
+      { threshold: 50, reward: { gems: 40 } },
+      { threshold: 200, reward: { tickets: 10, gems: 100 } },
+      { threshold: 1000, reward: { tickets: 30, gems: 400 } },
     ],
   },
   {
     id: "craft_master",
     label: "Craft Master",
     tiers: [
-      { threshold: 5, reward: { dust: 100 } },
-      { threshold: 25, reward: { dust: 300, gems: 100 } },
-      { threshold: 100, reward: { dust: 800, gems: 500 } },
+      { threshold: 5, reward: { dust: 20 } },
+      { threshold: 25, reward: { dust: 60, gems: 20 } },
+      { threshold: 100, reward: { dust: 160, gems: 100 } },
     ],
   },
   {
     id: "disenchant_veteran",
     label: "Disenchant Veteran",
     tiers: [
-      { threshold: 10, reward: { dust: 100 } },
-      { threshold: 50, reward: { dust: 300, gems: 100 } },
-      { threshold: 200, reward: { dust: 800, gems: 300 } },
+      { threshold: 10, reward: { dust: 20 } },
+      { threshold: 50, reward: { dust: 60, gems: 20 } },
+      { threshold: 200, reward: { dust: 160, gems: 60 } },
     ],
   },
   {
     id: "trades_completed",
     label: "Master Trader",
     tiers: [
-      { threshold: 1, reward: { gems: 50 } },
-      { threshold: 10, reward: { gems: 200 } },
-      { threshold: 50, reward: { tickets: 10, gems: 500 } },
+      { threshold: 1, reward: { gems: 10 } },
+      { threshold: 10, reward: { gems: 40 } },
+      { threshold: 50, reward: { tickets: 10, gems: 100 } },
     ],
   },
 ];
 
 // ─── Fixed daily/weekly (always present) ────────────────────────────────
 export const FIXED_DAILY: MissionDef[] = [
-  { id: "open_pack", label: "Open 1 pack", target: 1, reward: { gems: 20 } },
+  { id: "open_pack", label: "Open 1 pack", target: 1, reward: { gems: 10 } },
 ];
 export const FIXED_WEEKLY: MissionDef[] = [
   { id: "open_5_packs", label: "Open 5 packs", target: 5, reward: { gems: 100 } },
@@ -175,7 +175,7 @@ export const FIXED_WEEKLY: MissionDef[] = [
 ];
 export const ROTATING_DAILY_SLOT_COUNT = 3;
 
-export const STREAK_TICKETS = [0, 0, 0, 1, 1, 1, 3];
+export const STREAK_TICKETS = [0, 0, 0, 5, 5, 5, 15];
 export const STREAK_BONUS_GEMS = [15, 30, 50, 0, 30, 50, 0];
 
 export const XP_PER_LEVEL = 100;
@@ -183,15 +183,22 @@ export const XP_PER_RARITY: Record<string, number> = {
   common: 5, rare: 10, epic: 20, legendary: 40, secret: 100,
 };
 
-export const BIAS_WEIGHT_MULTIPLIER = 1.25;
+export const FAVORITE_WEIGHT_MULTIPLIER = 1.25;
 export const BIAS_COOLDOWN_DAYS = 7;
 
+import { GRADE_VALUE_MULTIPLIER } from "./gradeConfig";
+import type { CardGrade } from "@/db/schema";
+
 export const DISENCHANT_VALUES: Record<string, number> = {
-  common: 5, rare: 15, epic: 40, legendary: 100, secret: 300,
+  common: 1, rare: 3, epic: 8, legendary: 20, secret: 60,
 };
 
+export function getDisenchantValue(rarity: string, grade: CardGrade): number {
+  return Math.round((DISENCHANT_VALUES[rarity] ?? 0) * GRADE_VALUE_MULTIPLIER[grade]);
+}
+
 export const CRAFT_COSTS: Record<string, number> = {
-  common: 20, rare: 60, epic: 160, legendary: 400, secret: 1200,
+  common: 4, rare: 12, epic: 32, legendary: 80, secret: 240,
 };
 
 export function getFanLevel(xp: number): { level: number; xpIntoLevel: number; xpForNext: number } {

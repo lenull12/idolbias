@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, gte } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { marketSales, priceCheckpoints } from "@/db/schema";
 import type { CardGrade } from "@/db/schema";
@@ -52,7 +52,7 @@ function computeTick(
   return multiplier;
 }
 
-async function ensurePriceUpToDate(cardId: string, grade: CardGrade) {
+export async function ensurePriceUpToDate(cardId: string, grade: CardGrade) {
   const db = getDb();
   const now = currentHour();
   const card = getCardById(cardId);
@@ -62,18 +62,16 @@ async function ensurePriceUpToDate(cardId: string, grade: CardGrade) {
   const volatility = VOLATILITY_BY_RARITY[rarity] ?? 0.3;
 
   let [cp] = await db.select().from(priceCheckpoints)
-    .where(eq(priceCheckpoints.cardId, cardId));
+    .where(and(eq(priceCheckpoints.cardId, cardId), eq(priceCheckpoints.grade, grade)));
 
   const rng = seededRandom(fnv1a(cardId + grade + SALT));
 
   if (!cp) {
     const initMult = 0.8 + rng() * 0.4;
     const history = JSON.stringify([{ hour: now, mult: initMult }]);
-    await db.insert(priceCheckpoints).values({
-      cardId, grade, lastHour: now, volMultiplier: initMult, history,
-    });
+    await db.run(sql`INSERT OR IGNORE INTO price_checkpoints (card_id, grade, last_hour, vol_multiplier, history) VALUES (${cardId}, ${grade}, ${now}, ${initMult}, ${history})`);
     [cp] = await db.select().from(priceCheckpoints)
-      .where(eq(priceCheckpoints.cardId, cardId));
+      .where(and(eq(priceCheckpoints.cardId, cardId), eq(priceCheckpoints.grade, grade)));
   }
 
   const hoursGap = Math.max(0, Math.min(now - cp.lastHour, MAX_REPLAY_TICKS));
@@ -83,8 +81,17 @@ async function ensurePriceUpToDate(cardId: string, grade: CardGrade) {
   let currentMult = cp.volMultiplier;
   const historyArr: { hour: number; mult: number }[] = JSON.parse(cp.history);
 
+  // Sales volume since last checkpoint — one query, not per tick
+  const [saleCount] = await db.select({ n: sql<number>`count(*)` })
+    .from(marketSales)
+    .where(and(
+      eq(marketSales.cardId, cardId),
+      eq(marketSales.grade, grade),
+      gte(marketSales.soldAt, new Date(cp.lastHour * 3600_000)),
+    ));
+  const volumeBump = Math.min(1, saleCount.n * 0.1);
+
   for (let h = 0; h < hoursGap; h++) {
-    const volumeBump = 0;
     currentMult = computeTick(
       baseValue, volatility, rng,
       MEAN_REVERSION_RATE, CLUSTER_SENSITIVITY,
@@ -124,4 +131,15 @@ export async function getCurrentPriceWithHistory(cardId: string, grade: CardGrad
   const suggestedPrice = Math.round(baseValue * volMultiplier);
 
   return { suggestedPrice, baseValue, volMultiplier, recentSales };
+}
+
+export async function getPriceHistorySeries(
+  cardId: string, grade: CardGrade, hours: number,
+): Promise<{ hour: number; price: number }[]> {
+  const baseValue = getCardBaseValue(cardId, grade);
+  const cp = await ensurePriceUpToDate(cardId, grade);
+  if (!cp) return [];
+  const historyArr: { hour: number; mult: number }[] = JSON.parse(cp.history);
+  const slice = historyArr.slice(-hours);
+  return slice.map((h) => ({ hour: h.hour, price: Math.round(baseValue * h.mult) }));
 }

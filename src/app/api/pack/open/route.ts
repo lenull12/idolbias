@@ -8,6 +8,8 @@ import { wallets, progression, ownedCards, events, eventParticipation, type Card
 import { getPackInfo, getCardsByPack } from "@/data/cards";
 import { generatePull, type ServerCard } from "@/lib/gachaEngine";
 import { XP_PER_RARITY, getMondayStr } from "@/lib/gameConfig";
+import { PULL_NEW_XP, DUPLICATE_XP } from "@/lib/affinityConfig";
+import { getPullCost, type PullCount } from "@/lib/pullConfig";
 
 const COOKIE_NAME = "idolbias_player_id";
 
@@ -16,17 +18,19 @@ export async function POST(request: Request) {
   const playerId = cookieStore.get(COOKIE_NAME)?.value;
   if (!playerId) return NextResponse.json({ error: "No player" }, { status: 401 });
 
-  const { packCode, bias, paymentMethod: rawMethod }: {
-    packCode?: string; bias?: string | null; paymentMethod?: string;
+  const { packCode, bias, paymentMethod: rawMethod, pullCount: rawCount }: {
+    packCode?: string; bias?: string | null; paymentMethod?: string; pullCount?: number;
   } = await request.json();
   if (!packCode || !getPackInfo(packCode).name)
     return NextResponse.json({ error: "Invalid pack" }, { status: 400 });
 
+  const pullCount: PullCount = rawCount === 10 ? 10 : 1;
   const paymentMethod = rawMethod === "gems" ? "gems" : "tickets";
   const packInfo = getPackInfo(packCode);
-  const cost = paymentMethod === "gems" ? packInfo.costGems : packInfo.costTickets;
-  if (cost === undefined)
+  const unitCost = paymentMethod === "gems" ? packInfo.costGems : packInfo.costTickets;
+  if (unitCost === undefined)
     return NextResponse.json({ error: `Pack not purchasable with ${paymentMethod}` }, { status: 400 });
+  const cost = getPullCost(unitCost, pullCount);
 
   const db = getDb();
   const now = new Date();
@@ -63,7 +67,8 @@ export async function POST(request: Request) {
   const rateUpRarities = rateUp?.rateUpRarities ?? undefined;
 
   // ─── Generate cards ───────────────────────────────────────────────────
-  const cards: ServerCard[] = generatePull(5, packCode, bias ?? null, rateUpMultiplier, rateUpRarities);
+  const pityCountIn = (prog.pityCounters as Record<string, number>)?.[packCode] ?? 0;
+  const { cards, pityCountOut } = generatePull(pullCount, packCode, bias ?? null, rateUpMultiplier, rateUpRarities, pityCountIn);
 
   // ─── Grade-aware "isNew" detection ───────────────────────────────────
   const pulledKeys = [...new Set(cards.map((c) => `${c.cardId}:${c.grade}`))];
@@ -134,6 +139,17 @@ export async function POST(request: Request) {
       })
   );
 
+  const affinityGains: Record<string, number> = {};
+  for (const card of cards) {
+    const characterId = card.idol.toLowerCase();
+    const isNew = newCardIds.includes(card.cardId);
+    affinityGains[characterId] = (affinityGains[characterId] ?? 0) + (isNew ? PULL_NEW_XP : DUPLICATE_XP);
+  }
+  const updatedAffinityXp = { ...((prog.affinityXp as Record<string, number>) ?? {}) };
+  for (const [cid, gain] of Object.entries(affinityGains)) {
+    updatedAffinityXp[cid] = (updatedAffinityXp[cid] ?? 0) + gain;
+  }
+
   await db.batch([
     db.update(progression).set({
       missionProgress: {
@@ -146,6 +162,8 @@ export async function POST(request: Request) {
       weeklyMissionProgress: weeklyProgress,
       weeklyMissionsDate: monday,
       fanXp,
+      affinityXp: updatedAffinityXp,
+      pityCounters: { ...((prog.pityCounters as Record<string, number>) ?? {}), [packCode]: pityCountOut },
       updatedAt: now,
     }).where(eq(progression.playerId, playerId)),
     ...ownedUpserts,
@@ -184,6 +202,7 @@ export async function POST(request: Request) {
       isNew: newCardGradeKeySet.has(`${c.cardId}:${c.grade}`),
     })),
     wallet: { tickets: updatedWallet.tickets, gems: updatedWallet.gems },
+    pityCount: pityCountOut,
     newCardIds,
   });
 }

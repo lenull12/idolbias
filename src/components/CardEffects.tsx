@@ -6,8 +6,6 @@ const abs = (s: React.CSSProperties): React.CSSProperties => ({
   position: "absolute",
   inset: 0,
   pointerEvents: "none",
-  borderRadius: "inherit",
-  overflow: "hidden",
   ...s,
 });
 
@@ -86,15 +84,13 @@ export function HoloShiftEffect({
   tiltY = 0,
   maxTilt = 20,
 }: EffectBaseProps & { maxTilt?: number }) {
-  const px = 50 + (tiltY / maxTilt) * 50;
-  const py = 50 - (tiltX / maxTilt) * 50;
-  const angle = 115 + tiltX * 1.2;
+  const px = 50 + (tiltY / maxTilt) * 40;
+  const py = 50 - (tiltX / maxTilt) * 40;
   const tiltFactor = Math.min((Math.abs(tiltX) + Math.abs(tiltY)) / maxTilt, 1);
 
-  const gradient = `linear-gradient(${angle}deg,
-    transparent 0%, #ff2d78 4%, #ff69b4 8%, #ff9a3c 14%, #f5c85c 21%, #f5ff5c 28%,
-    #a6ff8a 33%, #4dffb0 38%, #4de8ff 43%, #4dd2ff 48%, #6a9eff 53%, #7c6bff 58%,
-    #bf5cff 63%, #ff4de0 68%, transparent 76%, transparent 100%)`;
+  const gradient = `linear-gradient(90deg,
+    #ff2d78 0%, #ff69b4 10%, #ff9a3c 20%, #f5c85c 30%, #a6ff8a 40%,
+    #4de8ff 50%, #6a9eff 60%, #7c6bff 70%, #bf5cff 80%, #ff4de0 90%, #ff2d78 100%)`;
 
   return (
     <div style={abs({})}>
@@ -103,10 +99,10 @@ export function HoloShiftEffect({
           position: "absolute",
           inset: 0,
           background: gradient,
-          backgroundSize: "400% 400%",
-          backgroundPosition: `${px}% ${py}%`,
+          backgroundSize: "300% 100%",
+          backgroundPosition: `${50 + (tiltY / maxTilt) * 20}% 50%`,
           mixBlendMode: "screen",
-          opacity: 0.06 + tiltFactor * 0.08,
+          opacity: 0.12 + tiltFactor * 0.18,
           transition: "background-position 0.08s linear, opacity 0.15s ease",
           willChange: "background-position, opacity",
         }}
@@ -116,10 +112,10 @@ export function HoloShiftEffect({
           position: "absolute",
           inset: 0,
           background: gradient,
-          backgroundSize: "400% 400%",
-          backgroundPosition: `${px}% ${py}%`,
+          backgroundSize: "300% 100%",
+          backgroundPosition: `${50 - (tiltY / maxTilt) * 12}% 50%`,
           mixBlendMode: "overlay",
-          opacity: 0.05 + tiltFactor * 0.07,
+          opacity: 0.08 + tiltFactor * 0.14,
           transition: "background-position 0.08s linear, opacity 0.15s ease",
           willChange: "background-position, opacity",
         }}
@@ -174,8 +170,8 @@ export function NeonGlowBorder({
     : 0.35;
 
   const gradient = colors
-    ? `linear-gradient(90deg, transparent 0%, ${colors.map((c, i) => `${c}88 ${(i + 1) * 25}%`).join(", ")}, transparent 100%)`
-    : `linear-gradient(90deg, transparent 0%, ${color}22 25%, ${color}55 50%, ${color}22 75%, transparent 100%)`;
+    ? `linear-gradient(90deg, ${colors.map((c, i) => `${c}88 ${(i) * (100 / (colors.length - 1))}%`).join(", ")})`
+    : `linear-gradient(90deg, ${color}22 0%, ${color}55 50%, ${color}22 100%)`;
 
   return (
     <>

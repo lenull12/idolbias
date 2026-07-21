@@ -5,12 +5,15 @@ import Link from "next/link";
 import TabBar, { type TabId } from "@/components/TabBar";
 import SideNav from "@/components/SideNav";
 import PullOverlay from "@/views/PullOverlay";
+import FutPullOverlay from "@/views/FutPullOverlay";
 import HomeView from "@/views/HomeView";
 import ShopView from "@/views/ShopView";
 import CardsView from "@/views/CardsView";
 import ArtistsView from "@/views/ArtistsView";
+import CharactersView from "@/views/CharactersView";
+import CharacterView from "@/views/CharacterView";
 import ProfileView from "@/views/ProfileView";
-import WorkshopView from "@/views/WorkshopView";
+import MarketView from "@/views/MarketView";
 import MissionsView from "@/views/MissionsView";
 import FAQPage from "@/app/faq/page";
 import FeedView from "@/components/feed/FeedView";
@@ -45,12 +48,14 @@ export default function AppShell() {
   const [biasCooldown, setBiasCooldown] = useState<number | null>(null);
   const [activePack, setActivePack] = useState("LS");
   const [paymentMethod, setPaymentMethod] = useState<"tickets" | "gems">("tickets");
+  const [pullCount, setPullCount] = useState<1 | 10>(1);
   const [error, setError] = useState<string | null>(null);
   const [cosmoMemberId, setCosmoMemberId] = useState<string | null>(null);
   const [profileMemberId, setProfileMemberId] = useState<string | null>(null);
   const [profileGroupId, setProfileGroupId] = useState<string | null>(null);
   const [showStreak, setShowStreak] = useState(false);
   const [gemsTabPending, setGemsTabPending] = useState(false);
+  const [characterViewId, setCharacterViewId] = useState<string | null>(null);
   const [toastReward, setToastReward] = useState<Reward | null>(null);
 
   const handleGemShopNav = () => {
@@ -293,9 +298,10 @@ export default function AppShell() {
     }
   }, [bias, refresh]);
 
-  const openPull = (packCode: string, method: "tickets" | "gems" = "tickets") => {
+  const openPull = (packCode: string, method: "tickets" | "gems" = "tickets", pullCount: 1 | 10 = 1) => {
     setActivePack(packCode);
     setPaymentMethod(method);
+    setPullCount(pullCount);
     setPullOpen(true);
   };
 
@@ -332,6 +338,27 @@ export default function AppShell() {
     );
   }
 
+  if (characterViewId) {
+    return (
+      <CharacterView
+        characterId={characterViewId}
+        affinityXp={(prog?.affinityXp as Record<string, number>)?.[characterViewId] ?? 0}
+        affinityCheckinDate={prog?.affinityCheckinDate ?? null}
+        ownedCards={player?.collection ?? {}}
+        onCheckin={async (characterId) => {
+          const res = await fetch("/api/affinity/checkin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ characterId }),
+          });
+          if (res.ok) refresh();
+          return res.ok ? res.json() : null;
+        }}
+        onBack={() => setCharacterViewId(null)}
+      />
+    );
+  }
+
   const renderView = () => {
     switch (view) {
       case "feed":
@@ -365,36 +392,43 @@ export default function AppShell() {
             onGemsTabConsumed={() => setGemsTabPending(false)}
           />
         );
+      case "market":
+        return (
+          <MarketView
+            gems={player?.wallet.gems ?? 0}
+            onChanged={refresh}
+          />
+        );
       case "cards":
         return (
           <CardsView
-            onView={() => {}}
-            owned={player?.collection ?? {}}
-            ownedGrades={player?.collectionGrades ?? {}}
-            onGoToShop={(packCode: string) => { setActivePack(packCode); setView("shop"); }}
-            onClaimed={refresh}
-          />
-        );
-      case "workshop":
-        return (
-          <WorkshopView
             owned={player?.collection ?? {}}
             ownedGrades={player?.collectionGrades ?? {}}
             dust={player?.wallet.dust ?? 0}
-            gems={gems}
+            gems={player?.wallet.gems ?? 0}
+            onView={() => {}}
+            onGoToShop={(packCode: string) => { setActivePack(packCode); setView("shop"); }}
+            onClaimed={refresh}
             onChanged={refresh}
             onBumpMission={handleBumpMission}
           />
         );
-      case "groups":
+      case "characters":
         return (
-          <ArtistsView
-            bias={bias}
-            onSetBias={handleSetBias}
-            onVisitMember={() => {}}
-            getFanXp={(idol: string) => prog?.fanXp[idol] ?? 0}
-            biasCooldown={biasCooldown}
-            onOpenCosmo={(memberId: string) => setCosmoMemberId(memberId)}
+          <CharactersView
+            affinityXp={(prog?.affinityXp as Record<string, number>) ?? {}}
+            affinityCheckinDate={prog?.affinityCheckinDate ?? null}
+            selectedCharacterId={characterViewId}
+            onSelect={(id) => setCharacterViewId(id)}
+            onCheckin={async (characterId) => {
+              const res = await fetch("/api/affinity/checkin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ characterId }),
+              });
+              if (res.ok) refresh();
+              return res.ok ? res.json() : null;
+            }}
           />
         );
       case "profile":
@@ -454,16 +488,7 @@ export default function AppShell() {
 
   if (pullOpen) {
     return (
-      <PullOverlay
-        packCode={activePack}
-        bias={bias}
-        tickets={tickets}
-        gems={gems}
-        paymentMethod={paymentMethod}
-        onClose={() => setPullOpen(false)}
-        onPackOpened={() => { refresh(); }}
-        onCardRevealed={() => {}}
-      />
+      <FutPullOverlay onClose={() => setPullOpen(false)} />
     );
   }
 

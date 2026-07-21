@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import PillBar from "@/components/PillBar";
+import type { CardGrade } from "@/db/schema";
+import CardHub from "./CardHub";
 import IndexCards from "./indexcards";
 import BinderView from "@/components/binder/BinderView";
 import BinderAlbumView from "@/components/binder/BinderAlbumView";
-import MyCardsView from "@/components/binder/MyCardsView";
 import SetCompletionModal from "@/components/binder/SetCompletionModal";
-import type { CardGrade } from "@/db/schema";
 import { getAllPacks, getCardsByPack, getPackInfo } from "@/data/cards";
 
 function wereAllCardsOwned(collection: Record<string, number>, packCode: string): boolean {
@@ -16,14 +16,28 @@ function wereAllCardsOwned(collection: Record<string, number>, packCode: string)
   return cards.every((c) => (collection[c.id] ?? 0) > 0);
 }
 
-export default function CardsView({ owned, ownedGrades, onView, onGoToShop, onClaimed }: {
-  owned: Record<string, number>;
+export default function CardsView({
+  owned = {},
+  ownedGrades = {},
+  dust = 0,
+  gems = 0,
+  onView,
+  onGoToShop,
+  onClaimed,
+  onChanged,
+  onBumpMission,
+}: {
+  owned?: Record<string, number>;
   ownedGrades?: Record<string, Partial<Record<CardGrade, number>>>;
+  dust?: number;
+  gems?: number;
   onView?: () => void;
   onGoToShop?: (packCode: string) => void;
   onClaimed?: () => void;
+  onChanged?: () => void;
+  onBumpMission?: (id: string) => void;
 }) {
-  const [mode, setMode] = useState<"binder" | "mycards" | "catalogue">("binder");
+  const [mode, setMode] = useState<"mycards" | "sets" | "catalogue">("mycards");
   const [selectedPack, setSelectedPack] = useState<string | null>(null);
   const [localOverride, setLocalOverride] = useState<Record<string, number> | null>(null);
   const [completionModal, setCompletionModal] = useState<{
@@ -35,7 +49,7 @@ export default function CardsView({ owned, ownedGrades, onView, onGoToShop, onCl
 
   const effectiveOwned = localOverride ?? owned;
 
-  // Détection de complétion
+  // Completion detection
   const prevOwned = useRef(effectiveOwned);
   useEffect(() => {
     if (Object.keys(prevOwned.current).length === 0) {
@@ -101,9 +115,21 @@ export default function CardsView({ owned, ownedGrades, onView, onGoToShop, onCl
     setLocalOverride(next);
   };
 
+  // ── Sets tab → BinderAlbumView drill-down ─────────────────────────────
+  if (selectedPack) {
+    return (
+      <BinderAlbumView
+        packCode={selectedPack}
+        owned={effectiveOwned}
+        onBack={() => setSelectedPack(null)}
+        onGoToShop={onGoToShop}
+        onDevComplete={handleDevComplete}
+      />
+    );
+  }
+
   return (
     <>
-      {/* Completion modal — floats above everything */}
       {completionModal && (
         <SetCompletionModal
           packCode={completionModal.packCode}
@@ -111,7 +137,7 @@ export default function CardsView({ owned, ownedGrades, onView, onGoToShop, onCl
           edition={completionModal.edition}
           coverImage={completionModal.coverImage}
           totalCards={completionModal.totalCards}
-          reward={{ dust: 200, gems: 100 }}
+          reward={{ dust: 40, gems: 20 }}
           onClaim={() => handleClaimReward(completionModal.packCode, typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.search.includes("dev=1")) ? true : undefined)}
           onDismiss={() => setCompletionModal(null)}
           claiming={claiming}
@@ -119,63 +145,56 @@ export default function CardsView({ owned, ownedGrades, onView, onGoToShop, onCl
         />
       )}
 
-      {selectedPack ? (
-        <BinderAlbumView
-          packCode={selectedPack}
-          owned={effectiveOwned}
-          onBack={() => setSelectedPack(null)}
-          onGoToShop={onGoToShop}
-          onDevComplete={handleDevComplete}
-        />
-      ) : (
-        <>
-          {/* Header */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, padding: "0 16px", marginBottom: 12 }}
-            className="mx-auto max-w-[600px] lg:max-w-[1100px]"
-          >
-            <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
-              ✦ Cards
-            </span>
-            <h1 style={{
-              fontFamily: "var(--font-display, cursive)", fontSize: 28, letterSpacing: "-0.3px",
-              margin: 0, lineHeight: 1.1,
-              background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple), var(--holo-c))",
-              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-            }}>
-              your collection
-            </h1>
-            <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
-              Browse, organize, and complete your photocard sets
-            </span>
-          </div>
+      <div className="mx-auto max-w-[600px] lg:max-w-[1100px]" style={{ padding: "24px 16px 48px" }}>
 
-          {/* Mode toggle */}
-          <div style={{
-            position: "sticky", top: 0, zIndex: 10,
-            padding: "12px 16px 8px",
-          }}
-            className="mx-auto max-w-[600px] lg:max-w-[1100px]"
-          >
-            <PillBar
-              tabs={[
-                { key: "binder" as const, label: "Binder" },
-                { key: "mycards" as const, label: "My Cards" },
-                { key: "catalogue" as const, label: "Catalogue" },
-              ]}
-              activeTab={mode}
-              onTabChange={setMode}
-            />
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 16 }}>
+          <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
+            ✦ Cards
+          </span>
+          <h1 style={{
+            fontFamily: "var(--font-display, cursive)", fontSize: 28, letterSpacing: "-0.3px",
+            margin: 0, lineHeight: 1.1,
+            background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple), var(--holo-c))",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+          }}>
+            your collection
+          </h1>
+          <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
+            Browse your collection, complete sets, and explore the full catalogue
+          </span>
+        </div>
 
-          {mode === "binder" ? (
-            <BinderView owned={effectiveOwned} onSelectPack={setSelectedPack} onGoToShop={onGoToShop} claimedPacks={claimedPacks} />
-          ) : mode === "mycards" ? (
-            <MyCardsView owned={effectiveOwned} ownedGrades={ownedGrades ?? {}} />
-          ) : (
-            <IndexCards owned={effectiveOwned} onView={onView} onGoToShop={onGoToShop} />
-          )}
-        </>
-      )}
+        <div style={{ position: "sticky", top: 0, zIndex: 10, padding: "4px 0 16px" }}>
+          <PillBar
+            tabs={[
+              { key: "mycards" as const, label: "My Cards" },
+              { key: "sets" as const, label: "Sets" },
+              { key: "catalogue" as const, label: "Catalogue" },
+            ]}
+            activeTab={mode}
+            onTabChange={setMode}
+          />
+        </div>
+
+        {mode === "mycards" && (
+          <CardHub
+            owned={owned}
+            ownedGrades={ownedGrades}
+            dust={dust}
+            gems={gems}
+            onChanged={() => onChanged?.()}
+            onBumpMission={onBumpMission}
+          />
+        )}
+
+        {mode === "sets" && (
+          <BinderView owned={effectiveOwned} onSelectPack={setSelectedPack} onGoToShop={onGoToShop} claimedPacks={claimedPacks} />
+        )}
+
+        {mode === "catalogue" && (
+          <IndexCards owned={effectiveOwned} onView={onView} onGoToShop={onGoToShop} />
+        )}
+      </div>
     </>
   );
 }

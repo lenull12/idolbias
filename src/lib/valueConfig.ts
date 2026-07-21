@@ -12,11 +12,11 @@ export const RARITY_MULTIPLIER: Record<Rarity, number> = {
 };
 
 export const PACK_BASE_VALUE: Record<string, number> = {
-  NR: 10,
-  LS: 10,
-  BF: 10,
+  NR: 2,
+  LS: 2,
+  BF: 2,
 };
-const DEFAULT_PACK_BASE_VALUE = 10;
+const DEFAULT_PACK_BASE_VALUE = 2;
 
 export function getPackBaseValue(packCode: string): number {
   return PACK_BASE_VALUE[packCode] ?? DEFAULT_PACK_BASE_VALUE;

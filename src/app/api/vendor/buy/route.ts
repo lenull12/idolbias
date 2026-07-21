@@ -14,10 +14,11 @@ export async function POST(req: Request) {
   const db = getDb();
   const { offerId } = await req.json();
 
-  // 1) Claim atomique de l'offre
+  // 1) Claim atomique de l'offre — must be today's offer and unclaimed
+  const today = new Date().toISOString().slice(0, 10);
   const claimed = await db.update(vendorOffers)
     .set({ claimedByPlayerId: playerId, claimedAt: new Date() })
-    .where(and(eq(vendorOffers.id, offerId), isNull(vendorOffers.claimedByPlayerId)))
+    .where(and(eq(vendorOffers.id, offerId), isNull(vendorOffers.claimedByPlayerId), eq(vendorOffers.dateStr, today)))
     .returning();
   if (claimed.length === 0) {
     return NextResponse.json({ error: "This offer is no longer available" }, { status: 400 });

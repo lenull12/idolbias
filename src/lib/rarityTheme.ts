@@ -5,11 +5,11 @@ export const RARITY_LETTER: Record<Rarity, string> = {
 };
 
 export const RARITY_BG: Record<Rarity, string> = {
-  common: "rgba(26,10,30,0.03)",
-  rare: "rgba(255,158,196,0.06)",
-  epic: "rgba(201,177,255,0.06)",
-  legendary: "rgba(255,215,0,0.06)",
-  secret: "rgba(26,10,30,0.04)",
+  common: "rgba(154,154,146,0.06)",
+  rare: "rgba(255,111,184,0.06)",
+  epic: "rgba(124,92,255,0.06)",
+  legendary: "rgba(232,182,90,0.06)",
+  secret: "rgba(17,17,17,0.04)",
 };
 
 export const RARITY_FG: Record<Rarity, string> = {
@@ -41,7 +41,7 @@ export const RARITY_COLORS: Record<Rarity, string> = {
   rare: "var(--rarity-rare)",
   epic: "var(--rarity-epic)",
   legendary: "var(--rarity-legendary)",
-  secret: "var(--rarity-secret-ink)",
+  secret: "var(--rarity-secret)",
 };
 
 export const RARITY_STARS: Record<Rarity, string> = {

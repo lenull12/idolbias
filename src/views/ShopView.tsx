@@ -279,7 +279,7 @@ function PackAbout({ pack, cards }: { pack: PackInfo; cards: CardEntry[] }) {
 
 function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose, onGoToGemShop }: {
   code: string; pack: PackInfo; tickets: number; gems: number; bias: string | null;
-  onPull: (method: "tickets" | "gems") => void; onClose: () => void;
+  onPull: (method: "tickets" | "gems", pullCount?: 1 | 10) => void; onClose: () => void;
   onGoToGemShop?: () => void;
 }) {
   const cards = getCardsByPack(code);
@@ -538,7 +538,7 @@ function PackDetailModal({ code, pack, tickets, gems, bias, onPull, onClose, onG
 
 function FeaturedPackCard({ featuredPacks, tickets, gems, bias, onPull, onPreview }: {
   featuredPacks: Array<[string, PackInfo]>; tickets: number; gems: number; bias: string | null;
-  onPull: (code: string, method: "tickets" | "gems") => void; onPreview: (code: string) => void;
+  onPull: (code: string, method: "tickets" | "gems", pullCount: 1 | 10) => void; onPreview: (code: string) => void;
 }) {
   const [current, setCurrent] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -581,7 +581,7 @@ function FeaturedPackCard({ featuredPacks, tickets, gems, bias, onPull, onPrevie
     if (!selectedMethod) { onPreview(code); return; }
     const cost = selectedMethod === "tickets" ? pack.costTickets! : pack.costGems!;
     const balance = selectedMethod === "tickets" ? tickets : gems;
-    if (balance >= cost) onPull(code, selectedMethod);
+    if (balance >= cost) onPull(code, selectedMethod, 1);
     else onPreview(code);
   };
 
@@ -808,7 +808,7 @@ function CarouselPackCard({ code, pack, bias, onPreview }: {
 function PackListRow({ code, pack, bias, tickets, gems, onPull, onPreview }: {
   code: string; pack: PackInfo; bias: string | null;
   tickets: number; gems: number;
-  onPull: (code: string, method: "tickets" | "gems") => void;
+  onPull: (code: string, method: "tickets" | "gems", pullCount: 1 | 10) => void;
   onPreview: (code: string) => void;
 }) {
   const locked = pack.locked;
@@ -860,7 +860,7 @@ function PackListRow({ code, pack, bias, tickets, gems, onPull, onPreview }: {
           </span>
         ) : (
           <div style={{ alignSelf: "center", flexShrink: 0 }}>
-            <PackPriceAction pack={pack} tickets={tickets} gems={gems} size="sm" align="end" onPull={(m) => onPull(code, m)} />
+            <PackPriceAction pack={pack} tickets={tickets} gems={gems} size="sm" align="end" onPull={(m, pc) => onPull(code, m, pc)} />
           </div>
         )}
       </div>
@@ -874,7 +874,7 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
   tickets: number;
   gems: number;
   bias: string | null;
-  onOpenPull?: (packCode: string, method: "tickets" | "gems") => void;
+  onOpenPull?: (packCode: string, method: "tickets" | "gems", pullCount: 1 | 10) => void;
   onPurchaseComplete?: () => void;
   initialGemsTab?: boolean;
   onGemsTabConsumed?: () => void;
@@ -954,8 +954,8 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
     });
   }, [packs, packGenderFilter, packGroupFilter, packGroups]);
 
-  const handlePull = (code: string, method: "tickets" | "gems") => {
-    onOpenPull?.(code, method);
+  const handlePull = (code: string, method: "tickets" | "gems", pullCount: 1 | 10) => {
+    onOpenPull?.(code, method, pullCount);
   };
 
   return (
@@ -1127,7 +1127,7 @@ export default function ShopView({ tickets, gems, bias, onOpenPull, onPurchaseCo
           tickets={tickets}
           gems={gems}
           bias={bias}
-          onPull={(method) => { handlePull(previewCode, method); setPreviewCode(null); }}
+          onPull={(method, pullCount) => { handlePull(previewCode, method, pullCount ?? 1); setPreviewCode(null); }}
           onClose={() => setPreviewCode(null)}
           onGoToGemShop={() => setShopTab("gems")}
         />

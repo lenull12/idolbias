@@ -52,7 +52,7 @@ export default function SetCompletionModal({
           position: "fixed", top: -10, left: `${5 + Math.random() * 90}%`, zIndex: 1000,
           width: 6 + Math.random() * 6, height: 6 + Math.random() * 6,
           borderRadius: Math.random() > 0.5 ? "50%" : 2,
-          background: ["var(--accent-hotpink)", "var(--accent-pink)", "var(--accent-purple)", "var(--holo-c)", "#DAA520", "var(--holo-d)"][i % 6],
+          background: ["var(--accent-hotpink)", "var(--accent-pink)", "var(--accent-purple)", "var(--holo-c)", "var(--rarity-legendary-badge)", "var(--holo-d)"][i % 6],
           animation: `confettiFall ${1.5 + Math.random() * 2}s ease-out ${i * 0.08}s forwards`,
           pointerEvents: "none",
         }} />
@@ -133,11 +133,11 @@ export default function SetCompletionModal({
           {claimed ? (
             <div style={{
               padding: "10px 0", borderRadius: 10,
-              background: "linear-gradient(135deg, rgba(218,165,32,0.08), rgba(255,215,0,0.06))",
-              border: "2px solid #DAA520",
+              background: "linear-gradient(135deg, rgba(194,84,46,0.08), rgba(224,118,64,0.06))",
+              border: "2px solid var(--rarity-legendary-badge)",
               textAlign: "center", fontSize: 13, fontWeight: 800,
               fontFamily: "var(--font-sans, monospace)", letterSpacing: "1px",
-              color: "#DAA520",
+              color: "var(--rarity-legendary-badge)",
             }}>
               ✓ CLAIMED
             </div>
