@@ -1,48 +1,71 @@
 "use client";
 
-import { useMemo } from "react";
-import { getAllPacks, getCardsByPack } from "@/data/cards";
+import { useState } from "react";
 import SetCard from "./SetCard";
+import BinderAlbumView from "./BinderAlbumView";
+import SetCompletionModal from "./SetCompletionModal";
+import { getAllPacks, getCharacters, getPrintsByCharacter } from "@/data/footballCards";
 
-export default function BinderView({ owned, onSelectPack, onGoToShop, claimedPacks = {} }: {
-  owned: Record<string, number>;
-  onSelectPack?: (packCode: string) => void;
+export default function BinderView({
+  owned = {},
+  onView,
+  onGoToShop,
+}: {
+  owned?: Record<string, number>;
+  onView?: () => void;
   onGoToShop?: (packCode: string) => void;
-  claimedPacks?: Record<string, boolean>;
 }) {
-  const packs = useMemo(() => getAllPacks().filter(([, p]) => !p.locked), []);
+  const [selectedPack, setSelectedPack] = useState<string | null>(null);
+  const [showCompletion, setShowCompletion] = useState(false);
 
-  const completedSets = useMemo(() =>
-    packs.filter(([code]) => {
-      const cards = getCardsByPack(code);
-      return cards.length > 0 && cards.every((c) => (owned[c.id] ?? 0) > 0);
-    }).length,
-  [packs, owned]);
+  const packs = getAllPacks();
+  const allCharacters = getCharacters();
+
+  if (selectedPack) {
+    const pack = packs.find(([code]) => code === selectedPack)?.[1];
+    if (!pack) return null;
+
+    const chars = allCharacters;
+    const completed = chars.every((ch) => {
+      const prints = getPrintsByCharacter(ch.id);
+      return prints.some((p) => owned[p.refCode] && owned[p.refCode] > 0);
+    });
+
+    return (
+      <BinderAlbumView
+        pack={pack}
+        characters={chars}
+        owned={owned}
+        onBack={() => setSelectedPack(null)}
+        onView={onView}
+      />
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-[600px] lg:max-w-[1100px]" style={{ padding: "24px 16px 48px" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        <h1 style={{ fontFamily: "var(--font-display, cursive)", fontSize: 23, letterSpacing: "-0.3px", margin: 0, color: "var(--accent-hotpink)" }}>
-          Binder
-        </h1>
-        <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500 }}>
-          {completedSets}/{packs.length} sets completed
-        </span>
-      </div>
-
-      {/* Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 20 }}>
-        {packs.map(([code]) => (
-          <SetCard key={code} packCode={code} owned={owned} onClick={() => onSelectPack?.(code)} onGoToShop={onGoToShop} claimed={claimedPacks[code] ?? false} />
-        ))}
-      </div>
-
-      {packs.length === 0 && (
-        <div style={{ textAlign: "center", padding: 48, color: "var(--text-disabled)", fontSize: 15 }}>
-          No sets available yet.
-        </div>
+    <div>
+      {showCompletion && (
+        <SetCompletionModal
+          packName="S1"
+          onClose={() => setShowCompletion(false)}
+        />
       )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
+        {packs.map(([code, pack]) => {
+          const chars = allCharacters;
+          const collected = chars.filter((ch) => {
+            const prints = getPrintsByCharacter(ch.id);
+            return prints.some((p) => owned[p.refCode] && owned[p.refCode] > 0);
+          }).length;
+
+          return (
+            <div key={code} onClick={() => setSelectedPack(code)}>
+              <SetCard pack={pack} characters={chars} collected={collected} />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

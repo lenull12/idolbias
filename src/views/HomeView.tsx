@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import CARDS, { getAllPacks, getPackDropRates, getCardsByPack, getPackInfo } from "@/data/cards";
-import { GROUPS } from "@/data/artists";
-import RarityOdds from "@/components/RarityOdds";
+import { getAllPacks, getCharacters } from "@/data/footballCards";
 import ArrowButton from "@/components/ArrowButton";
 
 const FEATURED_PACKS = getAllPacks()
-  .filter(([, p]) => p.tag === "featured");
+  .filter(([, p]) => !p.locked);
 
 export default function HomeView({ onGoToShop, streak, owned, bias }: {
   onGoToShop?: () => void;
@@ -15,11 +13,10 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
   owned?: Record<string, number>;
   bias?: string | null;
 }) {
-  const unlocked = owned ? CARDS.filter((c) => (owned[c.id] ?? 0) > 0).length : 0;
-  const total = CARDS.length;
+  const characters = getCharacters();
+  const unlocked = owned ? characters.filter((c) => (owned[c.id] ?? 0) > 0).length : 0;
+  const total = characters.length;
   const completionPct = total > 0 ? (unlocked / total) * 100 : 0;
-
-  // ─── Featured pack carousel ───────────────────────────────────────────────
 
   const [carouselIdx, setCarouselIdx] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -43,9 +40,6 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
   }, [resetTimer]);
 
   const [fcCode, fcPack] = FEATURED_PACKS[carouselIdx] ?? [];
-  const fcCards = fcCode ? getCardsByPack(fcCode) : [];
-  const fcGroup = fcCards[0]?.group;
-
 
   const onTouchStart = (e: React.TouchEvent) => { touchStart.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -58,7 +52,6 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
       className="mx-auto max-w-[600px] lg:max-w-[1100px]"
       style={{ padding: "24px 16px 0", display: "flex", flexDirection: "column", gap: 24 }}
     >
-      {/* ─── Header ─── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500, letterSpacing: "4px", textTransform: "uppercase" }}>
           ✦ IdolBias
@@ -69,66 +62,28 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
           WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
           margin: 0, lineHeight: 1.1,
         }}>
-          your next bias
+          your next favorite
         </h1>
         <span style={{ fontSize: 15, color: "var(--text-muted)", marginTop: 2 }}>
-          Collect your favorite virtual K-pop idol photocards. Every pull is a surprise ✨
+          Collect football cards. Every pull is a surprise ✨
         </span>
       </div>
 
-      {/* ─── Featured pack carousel (même layout que ShopView) ─── */}
       {fcPack && (
         <div style={{ position: "relative" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           <div style={{
             borderRadius: 20, overflow: "hidden", position: "relative",
             border: "2px solid var(--text-primary)", boxShadow: "5px 5px 0px rgba(var(--text-primary-rgb),0.9)", height: "min(280px, 50vw)",
+            background: "linear-gradient(135deg, var(--accent-pink) 0%, var(--accent-purple) 35%, var(--holo-c) 70%, var(--holo-d) 100%)",
           }}>
-            <img src={fcPack.bannerImage ?? ""} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(var(--text-primary-rgb),0.05) 0%, rgba(var(--text-primary-rgb),0.78) 100%)" }} />
 
-            {/* Top badge — same as ShopView */}
-            <div style={{ position: "absolute", top: 10, left: 10, display: "flex", gap: 4, alignItems: "center", zIndex: 2, pointerEvents: "none" }}>
-              {fcPack.tag && (
-                <span style={{
-                  display: "inline-block", padding: "3px 8px", borderRadius: 6,
-                  background: fcPack.tag === "featured" ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))"
-                    : fcPack.tag === "limited" ? "var(--text-primary)"
-                    : fcPack.tag === "discount" ? "var(--accent-hotpink)"
-                    : "var(--holo-c)",
-                  color: fcPack.tag === "featured" ? "var(--text-primary)"
-                    : "var(--surface-white)",
-                  fontSize: 9, fontWeight: 800, letterSpacing: "0.5px",
-                  fontFamily: "var(--font-sans, monospace)",
-                  border: "2px solid var(--text-primary)",
-                  boxShadow: "2px 2px 0px rgba(var(--text-primary-rgb),0.9)",
-                  transform: "rotate(-3deg)",
-                  whiteSpace: "nowrap",
-                }}>
-                  {fcPack.tag === "featured" ? "★ FEATURED"
-                    : fcPack.tag === "limited" ? "LIMITED EDITION"
-                    : fcPack.tag === "discount" ? `-${fcPack.discountPercent ?? 50}%`
-                    : "✦ NEW"}
-                </span>
-              )}
-            </div>
-
-            {/* Bottom content row — same layout as ShopView */}
             <div style={{
               position: "absolute", bottom: 10, left: 10, right: 10,
               display: "flex", alignItems: "flex-end", gap: 8,
               pointerEvents: "none", zIndex: 4,
             }}>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, minWidth: 0, pointerEvents: "none" }}>
-                {fcGroup && (
-                  <span style={{
-                    fontWeight: 800, letterSpacing: "1px",
-                    color: GROUPS.find(g => g.name === fcGroup)?.gender === "male" ? "#4A90D9" : "var(--accent-pink)",
-                    textTransform: "uppercase", fontFamily: "var(--font-sans, monospace)",
-                    fontSize: "clamp(14px, 3.5vw, 20px)",
-                  }}>
-                    {fcGroup}
-                  </span>
-                )}
                 <span style={{
                   fontFamily: "var(--font-display, cursive)", fontWeight: 700,
                   color: "var(--surface-white)", textShadow: "1px 1px 0 rgba(var(--text-primary-rgb),0.4)",
@@ -141,16 +96,13 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
                   fontFamily: "var(--font-sans, monospace)", fontWeight: 600,
                   fontSize: "clamp(10px, 2.5vw, 12px)",
                 }}>
-                  {fcPack.edition.toUpperCase()} · {fcCards.length} CARDS
+                  {fcPack.edition.toUpperCase()} · {characters.length} PLAYERS
                 </span>
-                <RarityOdds dropRates={fcPack.dropRates} variant="banner" />
               </div>
             </div>
 
-            {/* Click overlay on top of everything → shop view */}
             <div onClick={() => onGoToShop?.()} style={{ position: "absolute", inset: 0, zIndex: 2, cursor: "pointer" }} />
 
-            {/* Dots inside banner (same as ShopView) */}
             {FEATURED_PACKS.length > 1 && (
               <div style={{
                 position: "absolute", bottom: 4, left: "50%", translate: "-50% 0", zIndex: 3,
@@ -166,7 +118,6 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
             )}
           </div>
 
-          {/* Arrows — outside overflow:hidden */}
           {FEATURED_PACKS.length > 1 && (
             <>
               <div onClick={(e) => e.stopPropagation()} style={{ position: "absolute", top: "50%", left: 4, translate: "0 -50%", zIndex: 5 }}>
@@ -180,7 +131,6 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
         </div>
       )}
 
-      {/* ─── Collection progress ─── */}
       <div style={{
         padding: "14px 18px", borderRadius: 14, background: "rgba(var(--surface-white-rgb),0.5)",
         backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
@@ -191,7 +141,7 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
             Collection
           </span>
           <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-muted)", fontFamily: "var(--font-sans, monospace)" }}>
-            {owned ? `${unlocked}/${total}` : `${total} cards`}
+            {owned ? `${unlocked}/${total}` : `${total} players`}
           </span>
         </div>
         <div style={{ width: "100%", height: 8, borderRadius: 4, background: "rgba(var(--text-primary-rgb),0.06)", overflow: "hidden" }}>
@@ -199,7 +149,7 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
           <span style={{ fontSize: 10, color: "var(--text-disabled)", fontWeight: 500 }}>
-            {owned ? (bias ? `Bias: ${bias}` : "") : `${GROUPS.length} groups`}
+            {owned ? (bias ? `Favorite: ${bias}` : "") : `${total} players in game`}
           </span>
           <span style={{ fontSize: 10, color: "var(--text-disabled)", fontWeight: 500 }}>
             {completionPct.toFixed(0)}% complete
@@ -207,34 +157,19 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
         </div>
       </div>
 
-      {/* ─── Updates ─── */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "2px", color: "var(--text-disabled)", textTransform: "uppercase" }}>
           ✦ Updates
         </span>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {(() => {
-            const featured = getAllPacks().filter(([, p]) => p.tag === "featured" || p.tag === "new");
-            const oddsPack = getAllPacks().find(([, p]) => !p.locked);
+            const packs = getAllPacks().filter(([, p]) => !p.locked);
             const items: Array<{ title: string; desc: string; tag: string }> = [];
-            for (const [code, pack] of featured) {
-              const c = getCardsByPack(code);
-              const cardCount = c.length;
+            for (const [code, pack] of packs) {
               items.push({
                 title: `${pack.name} is live!`,
-                desc: `${cardCount} cards across ${new Set(c.map((x) => x.idol)).size} idols. Collect them all!`,
+                desc: `${characters.length} players across ${characters.length} nations. Collect them all!`,
                 tag: "new",
-              });
-            }
-            if (oddsPack) {
-              const [, p] = oddsPack;
-              const d = p.dropRates;
-              const total = d.common + d.rare + d.epic + d.legendary + d.secret;
-              const pct = (v: number) => `${Math.round((v / total) * 100)}%`;
-              items.push({
-                title: `Standard odds: Common ${pct(d.common)} · Rare ${pct(d.rare)} · Epic ${pct(d.epic)} · Legendary ${pct(d.legendary)} · Secret ${pct(d.secret)}`,
-                desc: `Legendary at ${pct(d.legendary)}, Secret at ${pct(d.secret)}. Good luck!`,
-                tag: "odds",
               });
             }
             return items;
@@ -247,8 +182,8 @@ export default function HomeView({ onGoToShop, streak, owned, bias }: {
                 <span style={{
                   flexShrink: 0, padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 700,
                   letterSpacing: "1px", textTransform: "uppercase",
-                  background: news.tag === "new" ? "rgba(255,158,196,0.08)" : "rgba(201,177,255,0.06)",
-                  color: news.tag === "new" ? "var(--accent-pink)" : "var(--accent-purple)",
+                  background: "rgba(255,158,196,0.08)",
+                  color: "var(--accent-pink)",
                 }}>
                   {news.tag}
                 </span>

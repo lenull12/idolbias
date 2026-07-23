@@ -1,7 +1,6 @@
 "use client";
 
 import type { ServerCard } from "./gachaEngine";
-import type { Rarity } from "@/components/CardEffects";
 
 export type ClaimDailyResult = {
   tickets: number;
@@ -15,15 +14,6 @@ export type OpenPackResult = {
   wallet: { tickets: number; gems: number };
   pityCount: number;
   newCardIds: string[];
-};
-
-export type TradeOffer = {
-  id: number;
-  offererId: string;
-  offeredCardId: string;
-  requestedCardId: string;
-  status: string;
-  createdAt: string;
 };
 
 export type ClaimMissionResult = {
@@ -86,46 +76,6 @@ export async function claimLifetimeTier(missionId: string): Promise<ClaimLifetim
   return post<ClaimLifetimeResult>(`/api/lifetime/${missionId}/claim`);
 }
 
-export async function openPack(packCode: string, bias?: string | null, paymentMethod?: "tickets" | "gems", pullCount: 1 | 10 = 1): Promise<OpenPackResult> {
-  return post<OpenPackResult>("/api/pack/open", { packCode, bias, paymentMethod, pullCount });
-}
-
-export async function disenchantCard(cardId: string, quantity = 1, grade?: string): Promise<{
-  quantityDisenchanted: number; dustGained: number; wallet: { tickets: number; gems: number; dust: number };
-}> {
-  return post("/api/cards/disenchant", { cardId, grade: grade ?? "standard", quantity });
-}
-
-export async function instantSellCard(cardId: string, grade: string, quantity: number): Promise<{
-  ok: true; payout: number;
-}> {
-  return post("/api/cards/instant-sell", { cardId, grade, quantity });
-}
-
-export async function createTradeOffer(offeredCardId: string, requestedCardId: string): Promise<{ ok: true }> {
-  return post("/api/trade", { offeredCardId, requestedCardId });
-}
-
-export async function acceptTradeOffer(tradeId: number): Promise<{ ok: true }> {
-  return post(`/api/trade/${tradeId}/accept`);
-}
-
-export async function cancelTradeOffer(tradeId: number): Promise<{ ok: true }> {
-  return post(`/api/trade/${tradeId}/cancel`);
-}
-
-export async function listTradeOffers(): Promise<{ offers: TradeOffer[]; myOffers: TradeOffer[] }> {
-  return get("/api/trade");
-}
-
-export async function changeBias(idol: string): Promise<{ bias: string; biasChangedAt: string; cooldownDays: number }> {
-  return post("/api/player/bias", { idol });
-}
-
-export async function craftCard(rarity: Rarity): Promise<{
-  card: { id: string; idol: string; group: string; pack: string; edition: string; reference: string; imageSrc: string };
-  dustSpent: number;
-  wallet: { tickets: number; gems: number; dust: number };
-}> {
-  return post("/api/cards/craft", { rarity });
+export async function openPack(packCode: string, paymentMethod?: "tickets" | "gems", pullCount: 1 | 5 = 1): Promise<OpenPackResult> {
+  return post<OpenPackResult>("/api/pack/open", { packCode, paymentMethod, pullCount });
 }

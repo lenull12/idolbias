@@ -13,17 +13,12 @@ type PlayerData = {
     lastClaim: string | null;
     missionProgress: Record<string, number>;
     missionsClaimed: string[];
-    fanXp: Record<string, number>;
-    bias: string | null;
-    biasChangedAt: string | null;
     totalLogins: number;
     weeklyMissionsDate: string | null;
     weeklyMissionProgress: Record<string, number>;
     weeklyMissionsClaimed: string[];
     lifetimeProgress: Record<string, number>;
     lifetimeClaimed: string[];
-    affinityXp: Record<string, number>;
-    affinityCheckinDate: string | null;
     pityCounters: Record<string, number>;
   };
   collection: Record<string, number>;

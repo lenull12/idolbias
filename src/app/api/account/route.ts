@@ -1,9 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { players, wallets, progression, ownedCards, tradeOffers, feedPosts, feedLikes, feedComments, feedSubscriptions, cosmoPosts, cosmoReplies, cosmoFeaturedResponses, gemPurchases, setCompletions, eventParticipation, user, session, account, verification, vendorOffers, marketListings, portfolioSnapshots } from "@/db/schema";
+import { players, wallets, progression, ownedCards, tradeOffers, gemPurchases, eventParticipation, user, session, account, verification } from "@/db/schema";
+import { cardInstances, transferListings, skillCardInventory } from "@/db/footballSchema";
+import { lineups } from "@/db/lineupSchema";
 import { getAuth } from "@/lib/auth";
 
 export async function DELETE() {
@@ -34,19 +36,24 @@ export async function DELETE() {
 
     // Wipe player data FIRST (if this fails, OAuth session remains intact → user can retry)
     if (playerId) {
-      await db.delete(setCompletions).where(eq(setCompletions.playerId, playerId));
+      // Clean up new football tables
+      await db.delete(cardInstances).where(eq(cardInstances.ownerId, playerId));
+      await db.delete(ownedCards).where(eq(ownedCards.playerId, playerId));
+      await db.delete(lineups).where(eq(lineups.playerId, playerId));
+      await db.delete(transferListings).where(eq(transferListings.sellerId, playerId));
+      await db.delete(skillCardInventory).where(eq(skillCardInventory.playerId, playerId));
       await db.delete(eventParticipation).where(eq(eventParticipation.playerId, playerId));
-      await db.delete(feedSubscriptions).where(eq(feedSubscriptions.playerId, playerId));
       await db.delete(tradeOffers).where(eq(tradeOffers.offererId, playerId));
       await db.delete(tradeOffers).where(eq(tradeOffers.resolvedBy, playerId));
-      await db.delete(ownedCards).where(eq(ownedCards.playerId, playerId));
       await db.delete(gemPurchases).where(eq(gemPurchases.playerId, playerId));
       await db.delete(wallets).where(eq(wallets.playerId, playerId));
       await db.delete(progression).where(eq(progression.playerId, playerId));
-      await db.delete(vendorOffers).where(eq(vendorOffers.claimedByPlayerId, playerId));
-      await db.delete(marketListings).where(eq(marketListings.sellerId, playerId));
-      await db.delete(marketListings).where(eq(marketListings.buyerId, playerId));
-      await db.delete(portfolioSnapshots).where(eq(portfolioSnapshots.playerId, playerId));
+      // Legacy tables that may still exist in D1
+      await db.run(sql`DELETE FROM vendor_offers WHERE claimed_by_player_id = ${playerId}`);
+      await db.run(sql`DELETE FROM set_completions WHERE player_id = ${playerId}`);
+      await db.run(sql`DELETE FROM portfolio_snapshots WHERE player_id = ${playerId}`);
+      await db.run(sql`DELETE FROM market_listings WHERE seller_id = ${playerId}`);
+      await db.run(sql`DELETE FROM feed_subscriptions WHERE player_id = ${playerId}`);
       await db.delete(players).where(eq(players.id, playerId));
     }
 

@@ -2,23 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import TabBar, { type TabId } from "@/components/TabBar";
+import TabBar from "@/components/TabBar";
 import SideNav from "@/components/SideNav";
-import PullOverlay from "@/views/PullOverlay";
 import FutPullOverlay from "@/views/FutPullOverlay";
 import HomeView from "@/views/HomeView";
 import ShopView from "@/views/ShopView";
 import CardsView from "@/views/CardsView";
-import ArtistsView from "@/views/ArtistsView";
 import CharactersView from "@/views/CharactersView";
 import CharacterView from "@/views/CharacterView";
 import ProfileView from "@/views/ProfileView";
-import MarketView from "@/views/MarketView";
-import MissionsView from "@/views/MissionsView";
 import FAQPage from "@/app/faq/page";
-import FeedView from "@/components/feed/FeedView";
-import CosmoRoomView from "@/components/cosmo/CosmoRoomView";
-import IdolProfileView from "@/components/feed/IdolProfileView";
 import StreakModal from "@/components/StreakModal";
 import RewardToast from "@/components/RewardToast";
 import type { Reward } from "@/components/RewardToast";
@@ -26,37 +19,40 @@ import AuthStatus from "@/components/AuthStatus";
 import WalletPill from "@/components/WalletPill";
 import { authClient } from "@/lib/auth/client";
 import { IconX } from "@/components/Icons";
-import type { CardGrade } from "@/db/schema";
 import { usePlayer } from "@/lib/usePlayer";
-import {
-  claimDailyReward, bumpMissionProgress, claimMissionReward,
-  bumpWeeklyMissionProgress, claimWeeklyMissionReward, claimLifetimeTier,
-  changeBias,
-} from "@/lib/gameActions";
-import { LIFETIME_MISSIONS, todayStr, daysBetween } from "@/lib/gameConfig";
-import type { MissionDef, MissionState, LifetimeMissionDef, LifetimeTier } from "@/lib/gameConfig";
-import type { LifetimeMissionState } from "@/views/MissionsView";
-import CARDS, { getCardsByPack } from "@/data/cards";
+import { claimDailyReward } from "@/lib/gameActions";
+import { todayStr, daysBetween } from "@/lib/gameConfig";
+import { getCharacters } from "@/data/footballCards";
+import type { OwnedCard } from "@/types/ownedCard";
+
+export type TabId = "home" | "shop" | "cards" | "squad" | "transfer" | "characters" | "profile";
 
 export default function AppShell() {
   const { player, loading, refresh } = usePlayer();
-  const [view, setView] = useState<TabId>("home");
+  const [view, setView] = useState<TabId | "faq">("home");
   const [pullOpen, setPullOpen] = useState(false);
   const [tickets, setTickets] = useState(0);
   const [gems, setGems] = useState(0);
-  const [bias, setBias] = useState<string | null>(() => player?.progression?.bias ?? null);
-  const [biasCooldown, setBiasCooldown] = useState<number | null>(null);
-  const [activePack, setActivePack] = useState("LS");
+  const [activePack, setActivePack] = useState("STANDARD");
   const [paymentMethod, setPaymentMethod] = useState<"tickets" | "gems">("tickets");
-  const [pullCount, setPullCount] = useState<1 | 10>(1);
+  const [pullCount, setPullCount] = useState<1 | 5>(1);
+  const [selectedCharacter, setSelectedCharacter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cosmoMemberId, setCosmoMemberId] = useState<string | null>(null);
-  const [profileMemberId, setProfileMemberId] = useState<string | null>(null);
-  const [profileGroupId, setProfileGroupId] = useState<string | null>(null);
   const [showStreak, setShowStreak] = useState(false);
   const [gemsTabPending, setGemsTabPending] = useState(false);
-  const [characterViewId, setCharacterViewId] = useState<string | null>(null);
   const [toastReward, setToastReward] = useState<Reward | null>(null);
+  const [ownedCards, setOwnedCards] = useState<OwnedCard[]>([]);
+
+  const fetchOwnedCards = useCallback(async () => {
+    try {
+      const res = await fetch("/api/cards/owned");
+      if (!res.ok) return;
+      const data = await res.json();
+      setOwnedCards(data.cards ?? []);
+    } catch {}
+  }, []);
+
+  useEffect(() => { fetchOwnedCards(); }, [fetchOwnedCards, player]);
 
   const handleGemShopNav = () => {
     setGemsTabPending(true);
@@ -67,7 +63,6 @@ export default function AppShell() {
     if (player) {
       setTickets(player.wallet.tickets);
       setGems(player.wallet.gems);
-      setBias(player.progression.bias);
     }
   }, [player]);
 
@@ -96,119 +91,7 @@ export default function AppShell() {
   const gap = prog?.lastClaim ? daysBetween(prog.lastClaim, todayStr()) : null;
   const isBroken = gap !== null && gap > 1 && streak > 0;
 
-  const [dailyTemplates, setDailyTemplates] = useState<MissionDef[]>([]);
-  const [weeklyTemplates, setWeeklyTemplates] = useState<MissionDef[]>([]);
-  const [eventTemplates, setEventTemplates] = useState<any[]>([]);
-  const [dailyResetAt, setDailyResetAt] = useState<number | null>(null);
-  const [weeklyResetAt, setWeeklyResetAt] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!player) return;
-    fetch("/api/missions/templates", { credentials: "include" })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.daily) setDailyTemplates(data.daily);
-        if (data.weekly) setWeeklyTemplates(data.weekly);
-        if (data.event) setEventTemplates(data.event);
-        if (data.dailyResetAt) setDailyResetAt(data.dailyResetAt);
-        if (data.weeklyResetAt) setWeeklyResetAt(data.weeklyResetAt);
-      })
-      .catch(() => {});
-  }, [player]);
-
   const profileBadge = canClaimDaily ? 1 : undefined;
-
-  // ─── Daily missions ──────────────────────────────────────────────────
-  const dailyMissions: MissionState[] = prog && dailyTemplates.length > 0
-    ? dailyTemplates.map((m) => {
-        const progress = Math.min(prog.missionProgress[m.id] ?? 0, m.target);
-        return { ...m, progress, complete: progress >= m.target, claimed: prog.missionsClaimed.includes(m.id) };
-      })
-    : [];
-
-  // ─── Weekly missions ─────────────────────────────────────────────────
-  const weeklyMissions: MissionState[] = prog && weeklyTemplates.length > 0
-    ? weeklyTemplates.map((m) => {
-        const progress = Math.min(prog.weeklyMissionProgress[m.id] ?? 0, m.target);
-        return { ...m, progress, complete: progress >= m.target, claimed: prog.weeklyMissionsClaimed.includes(m.id) };
-      })
-    : [];
-
-  // ─── Lifetime missions ────────────────────────────────────────────────
-  const lifetimeMissions: LifetimeMissionState[] = prog
-    ? LIFETIME_MISSIONS.map((def) => {
-        let currentValue = 0;
-        switch (def.id) {
-          case "collect_cards":
-            currentValue = Object.keys(player?.collection ?? {}).length;
-            break;
-          case "complete_sets": {
-            const owned = Object.keys(player?.collection ?? {});
-            const ownedSet = new Set(owned);
-            const packCodes = [...new Set(CARDS.map(c => c.packCode))];
-            let completed = 0;
-            for (const code of packCodes) {
-              const packCards = getCardsByPack(code);
-              if (packCards.length > 0 && packCards.every(c => ownedSet.has(c.id))) completed++;
-            }
-            currentValue = completed;
-            break;
-          }
-          case "collect_legendary":
-            currentValue = Object.keys(player?.collection ?? {}).filter(id => id.endsWith("l1") || id.endsWith("l2") || id.endsWith("l3") || id.endsWith("l4") || id.endsWith("l5")).length;
-            break;
-          case "collect_secret":
-            currentValue = Object.keys(player?.collection ?? {}).filter(id => id.endsWith("s1") || id.endsWith("s2") || id.endsWith("s3")).length;
-            break;
-          case "follow_all_artists":
-          case "likes_given":
-            currentValue = 0;
-            break;
-          case "fan_level": {
-            const allXp = Object.values(prog.fanXp);
-            const totalXp = allXp.reduce((a, b) => a + b, 0);
-            currentValue = Math.floor(totalXp / 100) + 1;
-            break;
-          }
-          case "login_dedication":
-            currentValue = prog.totalLogins ?? 0;
-            break;
-          case "streak_record":
-            currentValue = prog.streak ?? 0;
-            break;
-          case "packs_opened":
-            currentValue = (prog.missionProgress as any)?.["open_pack"] ?? 0;
-            break;
-          case "craft_master":
-            currentValue = (prog.missionProgress as any)?.["craft_card"] ?? 0;
-            break;
-          case "disenchant_veteran":
-            currentValue = (prog.missionProgress as any)?.["disenchant_card"] ?? 0;
-            break;
-          case "trades_completed":
-            currentValue = 0;
-            break;
-        }
-        const claimedTierKeys: string[] = [];
-        let nextTier: LifetimeTier | null = null;
-        let nextTierIndex: number | null = null;
-        for (let i = 0; i < def.tiers.length; i++) {
-          const key = `${def.id}_${i}`;
-          if (prog.lifetimeClaimed.includes(key)) {
-            claimedTierKeys.push(key);
-          } else if (nextTier === null) {
-            nextTier = def.tiers[i];
-            nextTierIndex = i;
-          }
-        }
-        return { def, currentValue, nextTier, nextTierIndex, claimedTierKeys };
-      })
-    : [];
-
-  const missionsClaimableCount =
-    dailyMissions.filter((m) => m.complete && !m.claimed).length +
-    weeklyMissions.filter((m) => m.complete && !m.claimed).length +
-    lifetimeMissions.filter((lm) => lm.nextTier !== null && lm.currentValue >= lm.nextTier.threshold).length;
 
   // ─── Handlers ─────────────────────────────────────────────────────────
 
@@ -226,158 +109,21 @@ export default function AppShell() {
     }
   }, [refresh]);
 
-  const handleClaimMission = useCallback(async (id: string) => {
-    try {
-      const result = await claimMissionReward(id);
-      setTickets(result.wallet.tickets);
-      setGems(result.wallet.gems);
-      refresh();
-      const r = (result as any).reward || result;
-      setToastReward({ tickets: r.tickets, gems: r.gems, dust: r.dust });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to claim mission reward");
-    }
-  }, [refresh]);
-
-  const handleClaimWeekly = useCallback(async (id: string) => {
-    try {
-      const result = await claimWeeklyMissionReward(id);
-      setTickets(result.wallet.tickets);
-      setGems(result.wallet.gems);
-      refresh();
-      const r = (result as any).reward || result;
-      setToastReward({ tickets: r.tickets, gems: r.gems, dust: r.dust });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to claim weekly mission");
-    }
-  }, [refresh]);
-
-  const handleClaimLifetime = useCallback(async (id: string) => {
-    try {
-      const result = await claimLifetimeTier(id);
-      setTickets(result.wallet.tickets);
-      setGems(result.wallet.gems);
-      refresh();
-      const r = (result as any).reward || result;
-      setToastReward({ tickets: r.tickets, gems: r.gems, dust: r.dust });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to claim achievement");
-    }
-  }, [refresh]);
-
-  const handleBumpMission = useCallback(async (id: string) => {
-    try {
-      await bumpMissionProgress(id);
-      refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update mission");
-    }
-  }, [refresh]);
-
-  const handleBumpWeekly = useCallback(async (id: string) => {
-    try {
-      await bumpWeeklyMissionProgress(id);
-      refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update weekly mission");
-    }
-  }, [refresh]);
-
-  const handleSetBias = useCallback(async (idol: string) => {
-    if (idol === bias) return;
-    try {
-      const result = await changeBias(idol);
-      setBias(result.bias);
-      setBiasCooldown(null);
-      refresh();
-    } catch (e) {
-      const msg = (e as Error).message;
-      const match = msg.match(/(\d+) day/);
-      if (match) setBiasCooldown(parseInt(match[1]));
-      setError(msg);
-    }
-  }, [bias, refresh]);
-
-  const openPull = (packCode: string, method: "tickets" | "gems" = "tickets", pullCount: 1 | 10 = 1) => {
+  const openPull = (packCode: string, method: "tickets" | "gems" = "tickets", count: 1 | 5 = 1) => {
     setActivePack(packCode);
     setPaymentMethod(method);
-    setPullCount(pullCount);
+    setPullCount(count);
     setPullOpen(true);
   };
 
-  if (profileMemberId && profileGroupId) {
-    return (
-      <IdolProfileView
-        memberId={profileMemberId}
-        groupId={profileGroupId}
-        playerName={bias ?? "Fan"}
-        onBack={() => { setProfileMemberId(null); setProfileGroupId(null); }}
-        onBumpMission={handleBumpMission}
-        onBumpWeekly={handleBumpWeekly}
-      />
-    );
-  }
-
-  if (cosmoMemberId) {
-    return (
-      <div style={{ position: "relative" }}>
-        <button
-          onClick={() => setCosmoMemberId(null)}
-          style={{
-            position: "absolute", top: 12, left: 14, zIndex: 10,
-            padding: "6px 12px", borderRadius: 8, border: "1.5px solid rgba(var(--text-primary-rgb),0.12)",
-            background: "rgba(var(--surface-white-rgb),0.7)", cursor: "pointer",
-            fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: 600,
-            color: "var(--text-primary)",
-          }}
-        >
-          ← Back
-        </button>
-        <CosmoRoomView playerName={bias ?? "Fan"} />
-      </div>
-    );
-  }
-
-  if (characterViewId) {
-    return (
-      <CharacterView
-        characterId={characterViewId}
-        affinityXp={(prog?.affinityXp as Record<string, number>)?.[characterViewId] ?? 0}
-        affinityCheckinDate={prog?.affinityCheckinDate ?? null}
-        ownedCards={player?.collection ?? {}}
-        onCheckin={async (characterId) => {
-          const res = await fetch("/api/affinity/checkin", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ characterId }),
-          });
-          if (res.ok) refresh();
-          return res.ok ? res.json() : null;
-        }}
-        onBack={() => setCharacterViewId(null)}
-      />
-    );
-  }
-
   const renderView = () => {
     switch (view) {
-      case "feed":
-        return (
-          <FeedView
-            playerName={bias ?? "Fan"}
-            playerId={player?.playerId}
-            onViewProfile={(memberId, groupId) => { setProfileMemberId(memberId); setProfileGroupId(groupId); }}
-            onBumpMission={handleBumpMission}
-            onBumpWeekly={handleBumpWeekly}
-          />
-        );
       case "home":
         return (
           <HomeView
             onGoToShop={() => setView("shop")}
             streak={streak}
             owned={player?.collection}
-            bias={bias}
           />
         );
       case "shop":
@@ -385,57 +131,56 @@ export default function AppShell() {
           <ShopView
             tickets={tickets}
             gems={gems}
-            bias={bias}
             onOpenPull={openPull}
             onPurchaseComplete={refresh}
             initialGemsTab={gemsTabPending}
             onGemsTabConsumed={() => setGemsTabPending(false)}
           />
         );
-      case "market":
-        return (
-          <MarketView
-            gems={player?.wallet.gems ?? 0}
-            onChanged={refresh}
-          />
-        );
       case "cards":
         return (
           <CardsView
             owned={player?.collection ?? {}}
-            ownedGrades={player?.collectionGrades ?? {}}
+            ownedCards={ownedCards}
+            ownedGrades={{}}
             dust={player?.wallet.dust ?? 0}
-            gems={player?.wallet.gems ?? 0}
-            onView={() => {}}
-            onGoToShop={(packCode: string) => { setActivePack(packCode); setView("shop"); }}
-            onClaimed={refresh}
+            gems={gems}
+            onGoToShop={(code) => openPull(code, "tickets", 1)}
             onChanged={refresh}
-            onBumpMission={handleBumpMission}
           />
         );
+      case "squad":
+        return (
+          <div style={{ padding: 48, textAlign: "center", color: "var(--text-muted)", fontSize: 15 }}>
+            Squad view coming soon
+          </div>
+        );
+      case "transfer":
+        return (
+          <div style={{ padding: 48, textAlign: "center", color: "var(--text-muted)", fontSize: 15 }}>
+            Transfer market coming soon
+          </div>
+        );
       case "characters":
+        if (selectedCharacter) {
+          return (
+            <CharacterView
+              characterId={selectedCharacter}
+              affinityXp={0}
+              ownedCards={player?.collection ?? {}}
+              onBack={() => setSelectedCharacter(null)}
+            />
+          );
+        }
         return (
           <CharactersView
-            affinityXp={(prog?.affinityXp as Record<string, number>) ?? {}}
-            affinityCheckinDate={prog?.affinityCheckinDate ?? null}
-            selectedCharacterId={characterViewId}
-            onSelect={(id) => setCharacterViewId(id)}
-            onCheckin={async (characterId) => {
-              const res = await fetch("/api/affinity/checkin", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ characterId }),
-              });
-              if (res.ok) refresh();
-              return res.ok ? res.json() : null;
-            }}
+            affinityXp={{}}
+            onSelect={(id) => setSelectedCharacter(id)}
           />
         );
       case "profile":
         return (
           <ProfileView
-            bias={bias}
-            onSetBias={handleSetBias}
             tickets={tickets}
             gems={gems}
             dust={player?.wallet.dust ?? 0}
@@ -445,22 +190,7 @@ export default function AppShell() {
             onClaimDaily={handleClaimDaily}
             collectionCount={Object.values(player?.collection ?? {}).reduce((a, b) => a + b, 0)}
             uniqueCards={Object.keys(player?.collection ?? {}).length}
-            biasCooldown={biasCooldown}
             createdAt={(player as any)?.createdAt ?? null}
-          />
-        );
-      case "missions":
-        return (
-          <MissionsView
-            dailyMissions={dailyMissions}
-            weeklyMissions={weeklyMissions}
-            lifetimeMissions={lifetimeMissions}
-            eventMissions={eventTemplates}
-            onClaimDaily={handleClaimMission}
-            onClaimWeekly={handleClaimWeekly}
-            onClaimLifetime={handleClaimLifetime}
-            dailyResetAt={dailyResetAt}
-            weeklyResetAt={weeklyResetAt}
           />
         );
       case "faq":
@@ -488,7 +218,15 @@ export default function AppShell() {
 
   if (pullOpen) {
     return (
-      <FutPullOverlay onClose={() => setPullOpen(false)} />
+      <FutPullOverlay
+        packCode={activePack}
+        paymentMethod={paymentMethod}
+        pullCount={pullCount}
+        tickets={tickets}
+        gems={gems}
+        onClose={() => setPullOpen(false)}
+        refresh={refresh}
+      />
     );
   }
 
@@ -505,10 +243,10 @@ export default function AppShell() {
       }}
     >
       <div className="lg:hidden">
-        <TabBar active={view} onChange={setView} missionsBadge={missionsClaimableCount} profileBadge={profileBadge} />
+        <TabBar active={view as TabId} onChange={(id) => setView(id)} profileBadge={profileBadge} />
       </div>
 
-      <SideNav active={view} onChange={setView} missionsBadge={missionsClaimableCount} profileBadge={profileBadge} />
+      <SideNav active={view as TabId} onChange={(id) => setView(id)} profileBadge={profileBadge} />
 
       {error && (
         <div style={{

@@ -3,13 +3,13 @@
 import { useRef, useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Rarity } from "./CardEffects";
-import { GROUPS } from "@/data/artists";
 import { GradeBadge } from "./GradeBadge";
 import type { CardGrade } from "@/db/schema";
 
-function groupLogoPath(groupName: string): string {
-  const g = GROUPS.find((g) => g.name === groupName);
-  return g?.logoPath ?? "/vicious_logo.png";
+const GROUPS: { name: string; logoPath: string }[] = [];
+
+function groupLogoPath(_groupName: string): string {
+  return "/vicious_logo.png";
 }
 import { RarityEffects, NeonGlowBorder } from "./CardEffects";
 

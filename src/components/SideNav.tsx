@@ -6,12 +6,10 @@ import { TABS, ICONS, type TabId } from "@/components/TabBar";
 export default function SideNav({
   active,
   onChange,
-  missionsBadge,
   profileBadge,
 }: {
   active: TabId;
   onChange: (id: TabId) => void;
-  missionsBadge?: number;
   profileBadge?: number;
 }) {
   return (
@@ -75,7 +73,7 @@ export default function SideNav({
             gap: 5,
           }}
         >
-          <span>✦</span> collect your bias <span>✦</span>
+          <span>✦</span> build your squad <span>✦</span>
         </span>
       </div>
 
@@ -119,16 +117,6 @@ export default function SideNav({
               >
                 {ICONS[tab.id]}
               </svg>
-              {tab.id === "missions" && typeof missionsBadge === 'number' && missionsBadge > 0 && (
-                <span style={{
-                  position: "absolute", top: -4, right: -6,
-                  padding: "1px 5px", borderRadius: 8, fontSize: 9, fontWeight: 700,
-                  background: "var(--accent-hotpink)", color: "var(--surface-white)",
-                  lineHeight: 1.3, pointerEvents: "none",
-                }}>
-                  {missionsBadge > 99 ? "99+" : missionsBadge}
-                </span>
-              )}
               {tab.id === "profile" && typeof profileBadge === 'number' && profileBadge > 0 && (
                 <span style={{
                   position: "absolute", top: -4, right: -6,

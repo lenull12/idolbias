@@ -33,7 +33,6 @@ export type LifetimeMissionDef = {
 };
 
 export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
-  // ─── Collection ──────────────────────────────────────────
   {
     id: "collect_cards",
     label: "Collection Mastery",
@@ -72,40 +71,6 @@ export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
       { threshold: 3, reward: { dust: 160, gems: 60 } },
     ],
   },
-  // ─── Social ─────────────────────────────────────────────
-  {
-    id: "follow_all_artists",
-    label: "Devoted Fan",
-    tiers: [
-      { threshold: 1, reward: { gems: 10 } },
-      { threshold: 2, reward: { gems: 20 } },
-      { threshold: 3, reward: { gems: 40 } },
-      { threshold: 4, reward: { tickets: 5, gems: 60 } },
-    ],
-  },
-  {
-    id: "likes_given",
-    label: "Feed Lover",
-    tiers: [
-      { threshold: 50, reward: { gems: 10 } },
-      { threshold: 200, reward: { gems: 30 } },
-      { threshold: 500, reward: { gems: 80 } },
-      { threshold: 1000, reward: { tickets: 5, gems: 100 } },
-    ],
-  },
-  // ─── Progression ─────────────────────────────────────────
-  {
-    id: "fan_level",
-    label: "Fan Devotion",
-    tiers: [
-      { threshold: 5, reward: { tickets: 1, gems: 10 } },
-      { threshold: 10, reward: { tickets: 3, gems: 20 } },
-      { threshold: 20, reward: { tickets: 5, gems: 40 } },
-      { threshold: 30, reward: { tickets: 8, gems: 80 } },
-      { threshold: 50, reward: { tickets: 10, gems: 150 } },
-      { threshold: 75, reward: { tickets: 15, gems: 300 } },
-    ],
-  },
   {
     id: "login_dedication",
     label: "Login Dedication",
@@ -125,7 +90,6 @@ export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
       { threshold: 100, reward: { tickets: 30, gems: 100 } },
     ],
   },
-  // ─── Économie / Workshop ────────────────────────────────
   {
     id: "packs_opened",
     label: "Pack Addict",
@@ -165,7 +129,6 @@ export const LIFETIME_MISSIONS: LifetimeMissionDef[] = [
   },
 ];
 
-// ─── Fixed daily/weekly (always present) ────────────────────────────────
 export const FIXED_DAILY: MissionDef[] = [
   { id: "open_pack", label: "Open 1 pack", target: 1, reward: { gems: 10 } },
 ];
@@ -175,16 +138,9 @@ export const FIXED_WEEKLY: MissionDef[] = [
 ];
 export const ROTATING_DAILY_SLOT_COUNT = 3;
 
-export const STREAK_TICKETS = [0, 0, 0, 5, 5, 5, 15];
 export const STREAK_BONUS_GEMS = [15, 30, 50, 0, 30, 50, 0];
 
 export const XP_PER_LEVEL = 100;
-export const XP_PER_RARITY: Record<string, number> = {
-  common: 5, rare: 10, epic: 20, legendary: 40, secret: 100,
-};
-
-export const FAVORITE_WEIGHT_MULTIPLIER = 1.25;
-export const BIAS_COOLDOWN_DAYS = 7;
 
 import { GRADE_VALUE_MULTIPLIER } from "./gradeConfig";
 import type { CardGrade } from "@/db/schema";
@@ -227,8 +183,6 @@ export function getMondayStr(date = new Date()): string {
   return todayStr(getMondayOf(date));
 }
 
-// ─── Pool missions ─────────────────────────────────────────────────────
-
 export type MissionDifficulty = "easy" | "normal" | "hard";
 
 export interface PoolMissionDef extends MissionDef {
@@ -237,25 +191,14 @@ export interface PoolMissionDef extends MissionDef {
 }
 
 export const DAILY_POOL: PoolMissionDef[] = [
-  // open_pack is already in FIXED_DAILY — don't duplicate it here
-  { id: "like_posts", label: "Like 3 posts", target: 3, reward: { gems: 15 }, difficulty: "normal", weight: 3 },
-  { id: "comment_posts", label: "Comment 1 time", target: 1, reward: { gems: 15 }, difficulty: "normal", weight: 3 },
-  { id: "collect_rare_plus", label: "Collect 2 Rare+ cards or better", target: 2, reward: { dust: 20 }, difficulty: "normal", weight: 2 },
   { id: "open_3_packs", label: "Open 3 packs", target: 3, reward: { gems: 50 }, difficulty: "normal", weight: 2 },
-  { id: "like_10_posts", label: "Like 10 posts", target: 10, reward: { tickets: 1 }, difficulty: "hard", weight: 1 },
   { id: "collect_5_new", label: "Collect 5 cards", target: 5, reward: { dust: 50 }, difficulty: "hard", weight: 1 },
   { id: "craft_card", label: "Craft 1 card", target: 1, reward: { gems: 40 }, difficulty: "hard", weight: 1 },
-  // removed: view_feed (unverifiable server-side)
 ];
 
 export const WEEKLY_POOL: PoolMissionDef[] = [
   { id: "open_5_packs", label: "Open 5 packs", target: 5, reward: { gems: 100 }, difficulty: "normal", weight: 3 },
   { id: "collect_3_new", label: "Collect 3 cards", target: 3, reward: { gems: 60 }, difficulty: "normal", weight: 3 },
-  // removed: visit_3_artists (unverifiable server-side)
-  // removed: daily_streak_5 (moved to FIXED_WEEKLY)
-  { id: "like_20_posts", label: "Like 20 posts", target: 20, reward: { gems: 150 }, difficulty: "normal", weight: 2 },
-  { id: "comment_10_posts", label: "Comment 10 times", target: 10, reward: { gems: 60 }, difficulty: "normal", weight: 2 },
-  // removed: follow_5_artists (not enough artists at launch)
   { id: "craft_3_cards", label: "Craft 3 cards", target: 3, reward: { dust: 100, gems: 50 }, difficulty: "hard", weight: 1 },
 ];
 

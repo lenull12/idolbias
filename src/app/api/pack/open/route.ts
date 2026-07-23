@@ -2,207 +2,223 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { eq, and, or, inArray, sql, gte, lte } from "drizzle-orm";
+import { eq, and, gte, sql, or, isNull, inArray } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { wallets, progression, ownedCards, events, eventParticipation, type CardGrade } from "@/db/schema";
-import { getPackInfo, getCardsByPack } from "@/data/cards";
+import { wallets, progression, cardInstances, cardPrints, type CardGrade } from "@/db/schema";
+import { getPackInfo } from "@/data/footballCards";
 import { generatePull, type ServerCard } from "@/lib/gachaEngine";
-import { XP_PER_RARITY, getMondayStr } from "@/lib/gameConfig";
-import { PULL_NEW_XP, DUPLICATE_XP } from "@/lib/affinityConfig";
-import { getPullCost, type PullCount } from "@/lib/pullConfig";
+import { getPullCost, CARDS_PER_PACK, type PullCount } from "@/lib/pullConfig";
+import { getMondayStr } from "@/lib/gameConfig";
+import type { Position } from "@/db/footballSchema";
+
+const POSITION_GROUP: Record<string, Position> = {
+  ST: "ATT", LW: "ATT", RW: "ATT", LM: "ATT", RM: "ATT", CAM: "ATT",
+  RB: "DEF", LB: "DEF", CB: "DEF",
+  CDM: "MIL", CM: "MIL",
+  GK: "GB",
+};
+const toGroup = (pos: string): Position => POSITION_GROUP[pos] ?? "ATT";
 
 const COOKIE_NAME = "idolbias_player_id";
+const MAX_RETRIES = 3;
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const playerId = cookieStore.get(COOKIE_NAME)?.value;
   if (!playerId) return NextResponse.json({ error: "No player" }, { status: 401 });
 
-  const { packCode, bias, paymentMethod: rawMethod, pullCount: rawCount }: {
-    packCode?: string; bias?: string | null; paymentMethod?: string; pullCount?: number;
+  const { packCode, paymentMethod: rawMethod, pullCount: rawCount }: {
+    packCode?: string; paymentMethod?: string; pullCount?: number;
   } = await request.json();
   if (!packCode || !getPackInfo(packCode).name)
     return NextResponse.json({ error: "Invalid pack" }, { status: 400 });
 
-  const pullCount: PullCount = rawCount === 10 ? 10 : 1;
+  const numPacks: PullCount = rawCount === 5 ? 5 : 1;
   const paymentMethod = rawMethod === "gems" ? "gems" : "tickets";
   const packInfo = getPackInfo(packCode);
   const unitCost = paymentMethod === "gems" ? packInfo.costGems : packInfo.costTickets;
   if (unitCost === undefined)
     return NextResponse.json({ error: `Pack not purchasable with ${paymentMethod}` }, { status: 400 });
-  const cost = getPullCost(unitCost, pullCount);
+  const cost = getPullCost(unitCost, numPacks);
 
   const db = getDb();
   const now = new Date();
 
-  const [prog] = await db.select().from(progression).where(eq(progression.playerId, playerId)).limit(1);
-  if (!prog) return NextResponse.json({ error: "Player not found" }, { status: 404 });
-
-  // ─── Atomic conditional debit ─────────────────────────────────────────
-  const costColumn = paymentMethod === "gems" ? wallets.gems : wallets.tickets;
-  const balanceColumn = paymentMethod === "gems" ? "gems" : "tickets";
-  const setData = paymentMethod === "gems"
-    ? { gems: sql`gems - ${cost}`, updatedAt: now }
-    : { tickets: sql`tickets - ${cost}`, updatedAt: now };
-
-  const debitResult = await db.update(wallets)
-    .set(setData)
-    .where(and(eq(wallets.playerId, playerId), gte(costColumn, cost)))
-    .returning({ [balanceColumn]: costColumn });
-
-  if (debitResult.length === 0) {
-    return NextResponse.json({ error: `Not enough ${paymentMethod}` }, { status: 400 });
+  let [prog] = await db.select().from(progression).where(eq(progression.playerId, playerId)).limit(1);
+  if (!prog) {
+    const today = new Date().toISOString().slice(0, 10);
+    await db.run(sql`
+      INSERT INTO progression (player_id, streak, missions_date, mission_progress, missions_claimed, pity_counters, updated_at)
+      VALUES (${playerId}, 0, ${today}, '{}', '[]', '{}', ${now.getTime()})
+    `);
+    [prog] = await db.select().from(progression).where(eq(progression.playerId, playerId)).limit(1);
+    if (!prog) return NextResponse.json({ error: "Player not found" }, { status: 404 });
   }
 
-  // ─── Check active rate-ups ────────────────────────────────────────────
-  const activeRateUps = await db.select().from(events)
-    .where(and(
-      eq(events.targetPackCode, packCode),
-      lte(events.startsAt, now),
-      gte(events.endsAt, now),
-      or(eq(events.type, "rate_up"), eq(events.type, "hybrid")),
-    )).limit(1);
-  const rateUp = activeRateUps[0];
-  const rateUpMultiplier = rateUp?.rateUpMultiplier ?? undefined;
-  const rateUpRarities = rateUp?.rateUpRarities ?? undefined;
+  const costColumn = paymentMethod === "gems" ? wallets.gems : wallets.tickets;
 
-  // ─── Generate cards ───────────────────────────────────────────────────
-  const pityCountIn = (prog.pityCounters as Record<string, number>)?.[packCode] ?? 0;
-  const { cards, pityCountOut } = generatePull(pullCount, packCode, bias ?? null, rateUpMultiplier, rateUpRarities, pityCountIn);
-
-  // ─── Grade-aware "isNew" detection ───────────────────────────────────
-  const pulledKeys = [...new Set(cards.map((c) => `${c.cardId}:${c.grade}`))];
-  const existingRows = pulledKeys.length > 0
-    ? await db.select({ cardId: ownedCards.cardId, grade: ownedCards.grade })
-        .from(ownedCards)
-        .where(and(
-          eq(ownedCards.playerId, playerId),
-          or(...pulledKeys.map((k) => {
-            const [cardId, grade] = k.split(":");
-            return and(eq(ownedCards.cardId, cardId), eq(ownedCards.grade, grade));
-          })),
-        ))
-    : [];
-  const existingGradeKeySet = new Set(existingRows.map((r) => `${r.cardId}:${r.grade}`));
-  const newCardGradeKeySet = new Set(
-    pulledKeys.filter((k) => !existingGradeKeySet.has(k))
+  const { cards, pityCountOut } = generatePull(
+    numPacks * CARDS_PER_PACK,
+    packCode,
+    prog.missionProgress,
+    (prog.pityCounters as Record<string, number>)?.[packCode] ?? 0,
   );
 
-  // ─── Grade-agnostic pour les missions ────────────────────────────────
-  const pulledCardIds = [...new Set(cards.map((c) => c.cardId))];
-  const existingCardIdRows = pulledCardIds.length > 0
-    ? await db.select({ cardId: ownedCards.cardId }).from(ownedCards)
-        .where(and(eq(ownedCards.playerId, playerId), inArray(ownedCards.cardId, pulledCardIds)))
-    : [];
-  const existingCardIdSet = new Set(existingCardIdRows.map((r) => r.cardId));
-  const newCardIds = pulledCardIds.filter((id) => !existingCardIdSet.has(id));
-
-  const fanXp = { ...prog.fanXp };
-  for (const card of cards) {
-    const gain = XP_PER_RARITY[card.rarity] ?? 5;
-    fanXp[card.idol] = (fanXp[card.idol] ?? 0) + gain;
-  }
-
-  const currentProgress = prog.missionProgress["open_pack"] ?? 0;
-  const openPackProgress = Math.min(currentProgress + 1, 1);
-
-  // Pool missions tracking
+  const openPackProgress = Math.min((prog.missionProgress["open_pack"] ?? 0) + 1, 1);
   const rarePlusCount = cards.filter((c) => c.rarity !== "common").length;
   const open3packsProg = Math.min((prog.missionProgress["open_3_packs"] ?? 0) + 1, 3);
   const collectRareProg = Math.min((prog.missionProgress["collect_rare_plus"] ?? 0) + rarePlusCount, 2);
-  const collect5newProg = Math.min((prog.missionProgress["collect_5_new"] ?? 0) + newCardIds.length, 5);
+  const collect5newProg = Math.min((prog.missionProgress["collect_5_new"] ?? 0) + cards.length, 5);
 
   const monday = getMondayStr();
   const isSameWeek = prog.weeklyMissionsDate === monday;
   const weeklyProgress = { ...(isSameWeek ? prog.weeklyMissionProgress : {}) };
 
   weeklyProgress["open_5_packs"] = Math.min((weeklyProgress["open_5_packs"] ?? 0) + 1, 5);
+  weeklyProgress["collect_3_new"] = Math.min((weeklyProgress["collect_3_new"] ?? 0) + cards.length, 3);
 
-  {
-    const prev = weeklyProgress["collect_3_new"] ?? 0;
-    weeklyProgress["collect_3_new"] = Math.min(prev + newCardIds.length, 3);
+  // Group cards by printId so we (a) increment minted once per print and
+  // (b) assign distinct serials when a pack yields several cards of the same print.
+  const printOrder: string[] = [];
+  const printCount = new Map<string, number>();
+  for (const c of cards) {
+    if (!printCount.has(c.printId)) {
+      printCount.set(c.printId, 0);
+      printOrder.push(c.printId);
+    }
+    printCount.set(c.printId, printCount.get(c.printId)! + 1);
   }
 
-  const cardCounts = new Map<string, { cardId: string; grade: string; qty: number }>();
-  for (const card of cards) {
-    const key = `${card.cardId}|${card.grade}`;
-    const existing = cardCounts.get(key);
-    if (existing) existing.qty++;
-    else cardCounts.set(key, { cardId: card.cardId, grade: card.grade, qty: 1 });
-  }
-  const ownedUpserts = Array.from(cardCounts.values()).map(({ cardId, grade, qty }) =>
-    db.insert(ownedCards)
-      .values({ playerId, cardId, grade, quantity: qty, firstObtainedAt: now, lastObtainedAt: now })
-      .onConflictDoUpdate({
-        target: [ownedCards.playerId, ownedCards.cardId, ownedCards.grade],
-        set: { quantity: sql`${ownedCards.quantity} + ${qty}`, lastObtainedAt: now },
-      })
-  );
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    // --- Fresh optimistic read of prints + wallet (re-read every retry) ---
+    const printRows = await db
+      .select({ id: cardPrints.id, minted: cardPrints.minted, mintCap: cardPrints.mintCap })
+      .from(cardPrints)
+      .where(inArray(cardPrints.id, printOrder));
+    const printMap = new Map(printRows.map((p) => [p.id, p]));
 
-  const affinityGains: Record<string, number> = {};
-  for (const card of cards) {
-    const characterId = card.idol.toLowerCase();
-    const isNew = newCardIds.includes(card.cardId);
-    affinityGains[characterId] = (affinityGains[characterId] ?? 0) + (isNew ? PULL_NEW_XP : DUPLICATE_XP);
-  }
-  const updatedAffinityXp = { ...((prog.affinityXp as Record<string, number>) ?? {}) };
-  for (const [cid, gain] of Object.entries(affinityGains)) {
-    updatedAffinityXp[cid] = (updatedAffinityXp[cid] ?? 0) + gain;
-  }
+    // Assign serials: within the cap => numbered (1-based), beyond => unnumbered (null).
+    const serials: Record<string, number | null> = {};
+    const idx = new Map<string, number>();
+    for (const c of cards) {
+      const p = printMap.get(c.printId)!;
+      const base = p.minted;
+      const k = idx.get(c.printId) ?? 0;
+      const m = base + k + 1;
+      serials[c.id] = p.mintCap == null || m <= p.mintCap ? m : null;
+      idx.set(c.printId, k + 1);
+    }
 
-  await db.batch([
-    db.update(progression).set({
-      missionProgress: {
-        ...prog.missionProgress,
-        open_pack: openPackProgress,
-        open_3_packs: open3packsProg,
-        collect_rare_plus: collectRareProg,
-        collect_5_new: collect5newProg,
-      },
-      weeklyMissionProgress: weeklyProgress,
-      weeklyMissionsDate: monday,
-      fanXp,
-      affinityXp: updatedAffinityXp,
-      pityCounters: { ...((prog.pityCounters as Record<string, number>) ?? {}), [packCode]: pityCountOut },
-      updatedAt: now,
-    }).where(eq(progression.playerId, playerId)),
-    ...ownedUpserts,
-  ]);
+    const [walletRow] = await db
+      .select({ gems: wallets.gems, tickets: wallets.tickets })
+      .from(wallets)
+      .where(eq(wallets.playerId, playerId))
+      .limit(1);
+    const balance = walletRow ? (paymentMethod === "gems" ? walletRow.gems : walletRow.tickets) : 0;
+    if (!walletRow || balance < cost)
+      return NextResponse.json({ error: `Not enough ${paymentMethod}` }, { status: 400 });
 
-  // ─── Event participation (collection events) ─────────────────────────
-  const activeCollectionEvents = await db.select().from(events)
-    .where(and(
-      eq(events.targetPackCode, packCode),
-      lte(events.startsAt, now),
-      gte(events.endsAt, now),
-      eq(events.type, "collection"),
-    ));
+    // --- Build ONE atomic batch (D1 batch == transaction, all-or-nothing on error) ---
+    const stmts: any[] = [];
 
-  for (const ev of activeCollectionEvents) {
-    const cardIdsInPack = getCardsByPack(ev.targetPackCode!).map((c) => c.id);
-    const ownedInPack = await db.select({ count: sql`COUNT(*)` }).from(ownedCards)
-      .where(and(
-        eq(ownedCards.playerId, playerId),
-        inArray(ownedCards.cardId, cardIdsInPack),
-      ));
-    const count = Number(ownedInPack[0]?.count ?? 0);
-    await db.insert(eventParticipation)
-      .values({ eventId: ev.id, playerId, progress: count, claimed: count >= (ev.targetCount ?? 1), createdAt: now })
-      .onConflictDoUpdate({
-        target: [eventParticipation.eventId, eventParticipation.playerId],
-        set: { progress: count, claimed: count >= (ev.targetCount ?? 1) },
+    // (a) Increment minted per print, guarded so a concurrent pull loses the race
+    //     (0 rows returned) instead of double-minting.
+    for (const pid of printOrder) {
+      const p = printMap.get(pid)!;
+      const cnt = printCount.get(pid)!;
+      stmts.push(
+        db.update(cardPrints)
+          .set({ minted: sql`minted + ${cnt}` })
+          .where(
+            and(
+              eq(cardPrints.id, pid),
+              eq(cardPrints.minted, p.minted),
+            ),
+          )
+          .returning({ id: cardPrints.id, minted: cardPrints.minted }),
+      );
+    }
+
+    // (b) Debit wallet, guarded by balance.
+    stmts.push(
+      db.update(wallets)
+        .set(
+          paymentMethod === "gems"
+            ? { gems: sql`gems - ${cost}`, updatedAt: now }
+            : { tickets: sql`tickets - ${cost}`, updatedAt: now },
+        )
+        .where(and(eq(wallets.playerId, playerId), gte(costColumn, cost)))
+        .returning({ gems: wallets.gems, tickets: wallets.tickets }),
+    );
+
+    // (c) Insert instances with their resolved serials.
+    for (const c of cards) {
+      stmts.push(
+        db.insert(cardInstances).values({
+          id: c.id,
+          printId: c.printId,
+          ownerId: playerId,
+          serial: serials[c.id],
+          tecStats: c.tecStats,
+          phyStats: c.phyStats,
+          menStats: c.menStats,
+          position: toGroup(c.position),
+          ovr: c.ovr,
+          grade: c.grade as any,
+          affinityLastActiveAt: now,
+          pityTriggered: c.pityTriggered ?? false,
+          obtainedAt: now,
+        }),
+      );
+    }
+
+    // (d) Progression.
+    stmts.push(
+      db.update(progression).set({
+        missionProgress: {
+          ...prog.missionProgress,
+          open_pack: openPackProgress,
+          open_3_packs: open3packsProg,
+          collect_rare_plus: collectRareProg,
+          collect_5_new: collect5newProg,
+        },
+        weeklyMissionProgress: weeklyProgress,
+        weeklyMissionsDate: monday,
+        pityCounters: { ...((prog.pityCounters as Record<string, number>) ?? {}), [packCode]: pityCountOut },
+        updatedAt: now,
+      }).where(eq(progression.playerId, playerId)),
+    );
+
+    let results: any;
+    try {
+      results = await db.batch(stmts as any);
+    } catch (e: any) {
+      // Hard error (e.g. UNIQUE(serial) collision backstop) => retry with fresh state.
+      if (attempt === MAX_RETRIES - 1) throw e;
+      continue;
+    }
+
+    // --- Verify every guarded statement actually touched a row ---
+    const nPrints = printOrder.length;
+    const printResults = results.slice(0, nPrints);
+    const walletResult = results[nPrints];
+    const printsOk = printResults.every((r: any) => Array.isArray(r) && r.length === 1);
+    const walletOk = Array.isArray(walletResult) && walletResult.length === 1;
+
+    if (printsOk && walletOk) {
+      const committed = walletResult[0];
+      return NextResponse.json({
+        cards: cards.map((c) => ({ ...c, serial: serials[c.id], isNew: true })),
+        wallet: { tickets: committed.tickets, gems: committed.gems },
+        pityCount: pityCountOut,
+        newCardIds: [],
       });
+    }
+    // A guard lost the race (e.g. another pull took the last serial) => retry.
   }
 
-  const [updatedWallet] = await db.select().from(wallets).where(eq(wallets.playerId, playerId)).limit(1);
-
-  return NextResponse.json({
-    cards: cards.map((c) => ({
-      ...c,
-      isNew: newCardGradeKeySet.has(`${c.cardId}:${c.grade}`),
-    })),
-    wallet: { tickets: updatedWallet.tickets, gems: updatedWallet.gems },
-    pityCount: pityCountOut,
-    newCardIds,
-  });
+  return NextResponse.json(
+    { error: "Pull could not be completed due to concurrent activity. Please retry." },
+    { status: 409 },
+  );
 }

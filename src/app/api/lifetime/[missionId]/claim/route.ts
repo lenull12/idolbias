@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { wallets, progression, ownedCards, feedSubscriptions, feedLikes, tradeOffers } from "@/db/schema";
-import { LIFETIME_MISSIONS, getFanLevel } from "@/lib/gameConfig";
-import CARDS, { getCardsByPack } from "@/data/cards";
+import { wallets, progression, tradeOffers } from "@/db/schema";
+import { cardInstances } from "@/db/footballSchema";
+import { LIFETIME_MISSIONS } from "@/lib/gameConfig";
 
 const COOKIE_NAME = "idolbias_player_id";
 
@@ -27,55 +27,24 @@ export async function POST(
   let currentValue: number;
   switch (missionId) {
     case "collect_cards": {
-      const rows = await db.select().from(ownedCards).where(eq(ownedCards.playerId, playerId));
+      const rows = await db.select().from(cardInstances).where(eq(cardInstances.ownerId, playerId));
       currentValue = rows.length;
       break;
     }
-    case "complete_sets": {
-      const allCards = await db.select({ cardId: ownedCards.cardId }).from(ownedCards)
-        .where(eq(ownedCards.playerId, playerId));
-      const ownedSet = new Set(allCards.map(r => r.cardId));
-      const packCodes = [...new Set(CARDS.map(c => c.packCode))];
-      let completed = 0;
-      for (const code of packCodes) {
-        const packCards = getCardsByPack(code);
-        if (packCards.length > 0 && packCards.every(c => ownedSet.has(c.id))) completed++;
-      }
-      currentValue = completed;
-      break;
-    }
     case "collect_legendary": {
-      const rows = await db.select().from(ownedCards).where(and(
-        eq(ownedCards.playerId, playerId),
-        sql`substr(card_id, -2, 1) = 'l'`,
+      const rows = await db.select().from(cardInstances).where(and(
+        eq(cardInstances.ownerId, playerId),
+        eq(cardInstances.position, "MIL"),
       ));
       currentValue = rows.length;
       break;
     }
     case "collect_secret": {
-      const rows = await db.select().from(ownedCards).where(and(
-        eq(ownedCards.playerId, playerId),
-        sql`substr(card_id, -2, 1) = 's'`,
+      const rows = await db.select().from(cardInstances).where(and(
+        eq(cardInstances.ownerId, playerId),
+        eq(cardInstances.position, "ATT"),
       ));
       currentValue = rows.length;
-      break;
-    }
-    case "follow_all_artists": {
-      const subs = await db.select().from(feedSubscriptions)
-        .where(eq(feedSubscriptions.playerId, playerId));
-      currentValue = new Set(subs.map(s => s.memberId)).size;
-      break;
-    }
-    case "likes_given": {
-      const rows = await db.select().from(feedLikes)
-        .where(eq(feedLikes.userId, playerId));
-      currentValue = rows.length;
-      break;
-    }
-    case "fan_level": {
-      const allXp = Object.values(prog.fanXp);
-      const totalXp = allXp.reduce((a, b) => a + b, 0);
-      currentValue = getFanLevel(totalXp).level;
       break;
     }
     case "login_dedication":

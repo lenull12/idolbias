@@ -1,25 +1,42 @@
-import type { Rarity } from "@/components/CardEffects";
+import type { Rarity, TecStats, PhyStats, MenStats } from "@/db/footballSchema";
 import type { CardGrade } from "@/db/schema";
 import { rollGrade } from "./gradeConfig";
-import { RARITY_ORDER, FAVORITE_WEIGHT_MULTIPLIER } from "./gameConfig";
-import { rarityFromReference, getCardsByPack, getPackDropRates } from "@/data/cards";
-import { TEN_PULL_MIN_RARITY, HARD_PITY_THRESHOLD, HARD_PITY_MIN_RARITY } from "./pullConfig";
+import { RARITY_ORDER } from "./gameConfig";
+import {
+  rarityFromReference,
+  getCharacters,
+  getPrintsByCharacter,
+  getPackDropRates,
+  getPackInfo,
+  getCharacterById,
+} from "@/data/footballCards";
+import { generateStatsForRarity } from "./statGenerator";
+import { CHARACTER_STATS } from "@/data/characterStats";
+import { HARD_PITY_THRESHOLD, HARD_PITY_MIN_RARITY } from "./pullConfig";
 
 export type ServerCard = {
   id: string;
+  printId: string;
   cardId: string;
   imageSrc: string;
   rarity: Rarity;
   grade: CardGrade;
-  idol: string;
-  group: string;
+  name: string;
+  nickname?: string;
+  serial?: number; // numéro de série de l'instance (assigné au mint)
+  nation: string;
+  position: string;
   pack: string;
   edition: string;
   reference: string;
   pityTriggered?: boolean;
+  ovr: number;
+  tecStats: TecStats;
+  phyStats: PhyStats;
+  menStats: MenStats;
 };
 
-function rollRarity(weights: Record<Rarity, number>): Rarity {
+function rollRarity(weights: Record<string, number>): Rarity {
   const total = RARITY_ORDER.reduce((s, r) => s + weights[r], 0);
   let roll = Math.random() * total;
   for (const r of RARITY_ORDER) {
@@ -29,106 +46,73 @@ function rollRarity(weights: Record<Rarity, number>): Rarity {
   return "common";
 }
 
-function pickBiasedIndex(candidates: { idol: string }[], bias?: string | null): number {
-  if (!bias) return Math.floor(Math.random() * candidates.length);
-  const weights = candidates.map((c) => (c.idol === bias ? FAVORITE_WEIGHT_MULTIPLIER : 1));
-  const total = weights.reduce((s, w) => s + w, 0);
-  let roll = Math.random() * total;
-  for (let i = 0; i < candidates.length; i++) {
-    roll -= weights[i];
-    if (roll <= 0) return i;
-  }
-  return candidates.length - 1;
-}
-
 function rarityAtLeast(r: Rarity, floor: Rarity): boolean {
   return RARITY_ORDER.indexOf(r) >= RARITY_ORDER.indexOf(floor);
-}
-
-function drawOne(
-  pool: any[],
-  weights: Record<Rarity, number>,
-  bias: string | null | undefined,
-  minRarity?: Rarity,
-) {
-  const w = minRarity
-    ? (Object.fromEntries(
-        RARITY_ORDER.map((r) => [r, rarityAtLeast(r, minRarity) ? weights[r] : 0]),
-      ) as Record<Rarity, number>)
-    : weights;
-
-  let attempts = 0;
-  let targetRarity: Rarity;
-  let candidates: any[];
-  do {
-    targetRarity = rollRarity(w);
-    candidates = pool.filter((c) => rarityFromReference(c.reference) === targetRarity);
-    attempts++;
-  } while (candidates.length === 0 && attempts < 50);
-
-  if (candidates.length === 0) return null;
-  const card = candidates[pickBiasedIndex(candidates, bias)];
-  return { card, rarity: targetRarity };
 }
 
 export function generatePull(
   count: number,
   packCode: string,
-  bias?: string | null,
-  rateUpMultiplier?: number,
-  rateUpRarities?: string[],
+  _progress?: Record<string, number>,
   pityCountIn = 0,
 ): { cards: ServerCard[]; pityCountOut: number } {
-  const weights = { ...getPackDropRates(packCode) };
-  if (rateUpMultiplier && rateUpRarities && rateUpMultiplier > 1) {
-    for (const r of rateUpRarities) {
-      if (r in weights) (weights as any)[r] *= rateUpMultiplier;
-    }
-  }
-
-  const pool = getCardsByPack(packCode); // reshuffle chaque pull — pas de splice
+  const batchSeed = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const weights = getPackDropRates(packCode);
+  const edition = getPackInfo(packCode).edition;
+  const characters = getCharacters();
   const results: ServerCard[] = [];
   let pityCount = pityCountIn;
 
-  for (let i = 0; i < count && pool.length > 0; i++) {
+  for (let i = 0; i < count; i++) {
     const mustHitHardPity = pityCount + 1 >= HARD_PITY_THRESHOLD;
-    const draw =
-      drawOne(pool, weights, bias, mustHitHardPity ? HARD_PITY_MIN_RARITY : undefined) ??
-      drawOne(pool, weights, bias);
+    const minRarity = mustHitHardPity ? HARD_PITY_MIN_RARITY : undefined;
 
-    if (!draw) break;
-    results.push({
-      id: `${draw.card.id}-${i}`,
-      cardId: draw.card.id,
-      imageSrc: draw.card.imageSrc,
-      rarity: draw.rarity,
-      grade: rollGrade(),
-      idol: draw.card.idol,
-      group: draw.card.group,
-      pack: draw.card.pack,
-      edition: draw.card.edition,
-      reference: draw.card.reference,
-      pityTriggered: mustHitHardPity,
-    });
-    pityCount = rarityAtLeast(draw.rarity, HARD_PITY_MIN_RARITY) ? 0 : pityCount + 1;
-  }
-
-  // Soft pity: garanti au moins un rare+ sur un 10x
-  if (count >= 10 && !results.some((c) => rarityAtLeast(c.rarity, TEN_PULL_MIN_RARITY))) {
-    const idx = results.length - 1;
-    const draw = drawOne(getCardsByPack(packCode), weights, bias, TEN_PULL_MIN_RARITY);
-    if (draw && idx >= 0) {
-      results[idx] = {
-        ...results[idx],
-        cardId: draw.card.id,
-        imageSrc: draw.card.imageSrc,
-        rarity: draw.rarity,
-        idol: draw.card.idol,
-        group: draw.card.group,
-        reference: draw.card.reference,
-        pityTriggered: true,
-      };
+    let targetRarity = minRarity ?? rollRarity(weights);
+    if (minRarity && !rarityAtLeast(targetRarity, minRarity)) {
+      targetRarity = minRarity;
     }
+
+    const charIndex = Math.floor(Math.random() * characters.length);
+    const character = characters[charIndex];
+    const characterPrints = getPrintsByCharacter(character.id);
+
+    const print = characterPrints.find(
+      (p) => p.editionCode === edition && p.rarity === targetRarity,
+    );
+    if (!print) {
+      const fallback = characterPrints.find((p) => p.editionCode === edition);
+      if (!fallback) continue;
+      targetRarity = fallback.rarity as Rarity;
+    }
+
+    const usedPrint = print ?? characterPrints.find((p) => p.editionCode === edition)!;
+
+    const seed = `${usedPrint.id}-${batchSeed}-${i}`;
+    const position = CHARACTER_STATS[character.id]?.position ?? character.defaultPosition;
+    const { tec, phy, men, ovr } = generateStatsForRarity(character.id, targetRarity, seed);
+
+    results.push({
+      id: `${usedPrint.id}-${batchSeed}-${i}`,
+      printId: usedPrint.id,
+      cardId: usedPrint.id,
+      imageSrc: character.photoVariants.standard,
+      rarity: targetRarity,
+      grade: rollGrade(),
+      name: character.name,
+      nickname: CHARACTER_STATS[character.id]?.nickname ?? "",
+      nation: character.nation,
+      position,
+      pack: packCode,
+      edition,
+      reference: usedPrint.refCode,
+      pityTriggered: mustHitHardPity,
+      ovr,
+      tecStats: tec,
+      phyStats: phy,
+      menStats: men,
+    });
+
+    pityCount = rarityAtLeast(targetRarity, HARD_PITY_MIN_RARITY) ? 0 : pityCount + 1;
   }
 
   return { cards: results, pityCountOut: pityCount };

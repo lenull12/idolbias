@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
-import { players, wallets, progression, ownedCards } from "@/db/schema";
-import type { CardGrade } from "@/db/schema";
+import { players, wallets, progression } from "@/db/schema";
+import { cardInstances } from "@/db/footballSchema";
 
 const COOKIE_NAME = "idolbias_player_id";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 365 * 2;
@@ -38,8 +38,8 @@ export async function GET() {
       // Use raw SQL to avoid schema column mismatch (migrations may not have all columns)
       const today = new Date().toISOString().slice(0, 10);
       await db.run(sql`
-        INSERT INTO progression (player_id, streak, missions_date, mission_progress, missions_claimed, fan_xp, affinity_xp, pity_counters, updated_at)
-        VALUES (${playerId}, 0, ${today}, '{}', '[]', '{}', '{}', '{}', ${now.getTime()})
+        INSERT INTO progression (player_id, streak, missions_date, mission_progress, missions_claimed, pity_counters, updated_at)
+        VALUES (${playerId}, 0, ${today}, '{}', '[]', '{}', ${now.getTime()})
       `);
     }
 
@@ -54,19 +54,17 @@ export async function GET() {
     if (!prog) {
       const today = new Date().toISOString().slice(0, 10);
       await db.run(sql`
-        INSERT INTO progression (player_id, streak, missions_date, mission_progress, missions_claimed, fan_xp, affinity_xp, pity_counters, updated_at)
-        VALUES (${playerId}, 0, ${today}, '{}', '[]', '{}', '{}', '{}', ${Date.now()})
+        INSERT INTO progression (player_id, streak, missions_date, mission_progress, missions_claimed, pity_counters, updated_at)
+        VALUES (${playerId}, 0, ${today}, '{}', '[]', '{}', ${Date.now()})
       `);
       [prog] = await db.select().from(progression).where(eq(progression.playerId, playerId)).limit(1);
     }
 
-    const ownedRows = await db.select().from(ownedCards).where(eq(ownedCards.playerId, playerId));
-    const collection: Record<string, number> = {};
-    const collectionGrades: Record<string, Partial<Record<CardGrade, number>>> = {};
-    for (const row of ownedRows) {
-      collection[row.cardId] = (collection[row.cardId] ?? 0) + row.quantity;
-      if (!collectionGrades[row.cardId]) collectionGrades[row.cardId] = {};
-      collectionGrades[row.cardId][row.grade as CardGrade] = row.quantity;
+    const instanceRows = await db.select().from(cardInstances).where(eq(cardInstances.ownerId, playerId));
+    const collection = instanceRows.length;
+    const collectionGrades: Record<string, number> = {};
+    for (const row of instanceRows) {
+      collectionGrades[row.grade] = (collectionGrades[row.grade] ?? 0) + 1;
     }
 
     const [playerRow] = await db.select().from(players).where(eq(players.id, playerId)).limit(1);

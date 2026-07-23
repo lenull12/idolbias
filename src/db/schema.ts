@@ -1,4 +1,19 @@
-import { sqliteTable, text, integer, real, uniqueIndex, index, primaryKey } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex, index } from "drizzle-orm/sqlite-core";
+export type CardGrade = "standard" | "fine" | "mint" | "pristine" | "gem";
+
+// ─── owned_cards (legacy — en cours de migration vers card_instances) ─────
+export const ownedCards = sqliteTable("owned_cards", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  playerId: text("player_id").notNull().references(() => players.id),
+  cardId: text("card_id").notNull(),
+  grade: text("grade").notNull().default("standard"),
+  quantity: integer("quantity").notNull().default(0),
+  firstObtainedAt: integer("first_obtained_at", { mode: "timestamp" }).notNull(),
+  lastObtainedAt: integer("last_obtained_at", { mode: "timestamp" }).notNull(),
+}, (table) => ({
+  playerCardGradeIdx: uniqueIndex("owned_cards_player_card_grade_idx")
+    .on(table.playerId, table.cardId, table.grade),
+}));
 
 // ─── players ─────────────────────────────────────────────────────────────
 // id = UUID generated server-side, stored client-side in httpOnly cookie.
@@ -19,6 +34,7 @@ export const wallets = sqliteTable("wallets", {
   tickets: integer("tickets").notNull().default(0),
   gems: integer("gems").notNull().default(0),
   dust: integer("dust").notNull().default(0),
+  dollars: integer("dollars").notNull().default(0),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
@@ -40,12 +56,6 @@ export const progression = sqliteTable("progression", {
     .$type<string[]>()
     .notNull()
     .default([]),
-  fanXp: text("fan_xp", { mode: "json" })
-    .$type<Record<string, number>>()
-    .notNull()
-    .default({}),
-  bias: text("bias"),
-  biasChangedAt: integer("bias_changed_at", { mode: "timestamp" }),
   totalLogins: integer("total_logins").notNull().default(0),
   weeklyMissionsDate: text("weekly_missions_date"),
   weeklyMissionProgress: text("weekly_mission_progress", { mode: "json" })
@@ -64,24 +74,11 @@ export const progression = sqliteTable("progression", {
     .$type<string[]>()
     .notNull()
     .default([]),
-  affinityXp: text("affinity_xp", { mode: "json" })
-    .$type<Record<string, number>>()
-    .notNull()
-    .default({}),
-  affinityCheckinDate: text("affinity_checkin_date"),
   pityCounters: text("pity_counters", { mode: "json" })
     .$type<Record<string, number>>()
     .notNull()
     .default({}),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-  dailyTemplates: text("daily_templates", { mode: "json" })
-    .$type<{ id: string; label: string; target: number; reward: { tickets?: number; gems?: number; dust?: number } }[]>()
-    .notNull()
-    .default([]),
-  weeklyTemplates: text("weekly_templates", { mode: "json" })
-    .$type<{ id: string; label: string; target: number; reward: { tickets?: number; gems?: number; dust?: number } }[]>()
-    .notNull()
-    .default([]),
 });
 
 // ─── trade_offers ──────────────────────────────────────────────────────────
@@ -99,83 +96,6 @@ export const tradeOffers = sqliteTable("trade_offers", {
   statusIdx: index("trade_offers_status_idx").on(table.status),
   offererIdx: index("trade_offers_offerer_idx").on(table.offererId),
 }));
-
-// ─── owned_cards ───────────────────────────────────────────────────────────
-export const CARD_GRADES = ["standard", "fine", "mint", "pristine", "gem"] as const;
-export type CardGrade = (typeof CARD_GRADES)[number];
-
-export const ownedCards = sqliteTable("owned_cards", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  playerId: text("player_id").notNull().references(() => players.id),
-  cardId: text("card_id").notNull(),
-  grade: text("grade").notNull().default("standard"),
-  quantity: integer("quantity").notNull().default(0),
-  firstObtainedAt: integer("first_obtained_at", { mode: "timestamp" }).notNull(),
-  lastObtainedAt: integer("last_obtained_at", { mode: "timestamp" }).notNull(),
-}, (table) => ({
-  playerCardGradeIdx: uniqueIndex("owned_cards_player_card_grade_idx")
-    .on(table.playerId, table.cardId, table.grade),
-}));
-
-// ─── feed_subscriptions ─────────────────────────────────────────────────────
-export const feedSubscriptions = sqliteTable("feed_subscriptions", {
-  playerId: text("player_id").notNull().references(() => players.id),
-  groupId: text("group_id").notNull(),
-  memberId: text("member_id").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-}, (t) => ({
-  subPk: primaryKey({ columns: [t.playerId, t.memberId] }),
-}));
-
-// ─── feed_posts ────────────────────────────────────────────────────────────
-export const feedPosts = sqliteTable("feed_posts", {
-  id: text("id").primaryKey(),
-  memberId: text("member_id").notNull(),
-  groupId: text("group_id").notNull(),
-  imageUrl: text("image_url").notNull(),
-  caption: text("caption"),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
-
-// ─── feed_likes ────────────────────────────────────────────────────────────
-export const feedLikes = sqliteTable("feed_likes", {
-  id: text("id").primaryKey(),
-  postId: text("post_id").notNull().references(() => feedPosts.id),
-  userId: text("user_id").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-}, (t) => ({
-  uniqueLike: uniqueIndex("feed_unique_like").on(t.postId, t.userId),
-}));
-
-// ─── feed_comments ─────────────────────────────────────────────────────────
-export const feedComments = sqliteTable("feed_comments", {
-  id: text("id").primaryKey(),
-  postId: text("post_id").notNull().references(() => feedPosts.id),
-  userId: text("user_id"),
-  authorName: text("author_name").notNull(),
-  content: text("content").notNull(),
-  isOfficial: integer("is_official", { mode: "boolean" }).notNull().default(false),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
-
-// ─── cosmo_posts ───────────────────────────────────────────────────────────
-export const cosmoPosts = sqliteTable("cosmo_posts", {
-  id: text("id").primaryKey(),
-  memberId: text("member_id").notNull(),
-  content: text("content").notNull(),
-  imageUrl: text("image_url"),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
-
-// ─── cosmo_replies ─────────────────────────────────────────────────────────
-export const cosmoReplies = sqliteTable("cosmo_replies", {
-  id: text("id").primaryKey(),
-  postId: text("post_id").notNull().references(() => cosmoPosts.id),
-  userId: text("user_id").notNull(),
-  authorName: text("author_name").notNull(),
-  content: text("content").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
 
 // ─── gem_purchases ────────────────────────────────────────────────────────────
 export const gemPurchases = sqliteTable("gem_purchases", {
@@ -202,19 +122,6 @@ export const user = sqliteTable("user", {
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
-
-// ─── set_completions ─────────────────────────────────────────────────────
-export const setCompletions = sqliteTable("set_completions", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  playerId: text("player_id").notNull().references(() => players.id),
-  packCode: text("pack_code").notNull(),
-  edition: text("edition").notNull(),
-  completedAt: integer("completed_at", { mode: "timestamp" }).notNull(),
-  rewardedAt: integer("rewarded_at", { mode: "timestamp" }),
-  claimed: integer("claimed", { mode: "boolean" }).notNull().default(false),
-}, (table) => ({
-  uniqueCompletion: uniqueIndex("set_completions_player_pack_idx").on(table.playerId, table.packCode),
-}));
 
 // ─── events ──────────────────────────────────────────────────────────────
 export const events = sqliteTable("events", {
@@ -283,81 +190,12 @@ export const verification = sqliteTable("verification", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
 });
 
-// ─── cosmo_featured_responses ──────────────────────────────────────────────
-export const cosmoFeaturedResponses = sqliteTable("cosmo_featured_responses", {
-  id: text("id").primaryKey(),
-  postId: text("post_id").notNull().references(() => cosmoPosts.id),
-  replyId: text("reply_id").notNull().references(() => cosmoReplies.id),
-  responseContent: text("response_content").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
-
-// ─── vendor_offers ─────────────────────────────────────────────────────────
-export const vendorOffers = sqliteTable("vendor_offers", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  dateStr: text("date_str").notNull(),
-  slotIndex: integer("slot_index").notNull(),
-  cardId: text("card_id").notNull(),
-  grade: text("grade").notNull(),
-  priceGems: integer("price_gems").notNull(),
-  claimedByPlayerId: text("claimed_by_player_id"),
-  claimedAt: integer("claimed_at", { mode: "timestamp" }),
-}, (table) => ({
-  dateSlotIdx: uniqueIndex("vendor_offers_date_slot_idx").on(table.dateStr, table.slotIndex),
-}));
-
-// ─── market_listings ───────────────────────────────────────────────────────
-export const marketListings = sqliteTable("market_listings", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  sellerId: text("seller_id").notNull().references(() => players.id),
-  cardId: text("card_id").notNull(),
-  grade: text("grade").notNull(),
-  priceGems: integer("price_gems").notNull(),
-  status: text("status").notNull().default("open"),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  resolvedAt: integer("resolved_at", { mode: "timestamp" }),
-  buyerId: text("buyer_id"),
-}, (table) => ({
-  cardGradeStatusIdx: index("market_listings_card_grade_status_idx")
-    .on(table.cardId, table.grade, table.status),
-  sellerIdx: index("market_listings_seller_idx").on(table.sellerId),
-}));
-
-export const marketSales = sqliteTable("market_sales", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  cardId: text("card_id").notNull(),
-  grade: text("grade").notNull(),
-  priceGems: integer("price_gems").notNull(),
-  soldAt: integer("sold_at", { mode: "timestamp" }).notNull(),
-}, (table) => ({
-  cardGradeIdx: index("market_sales_card_grade_idx").on(table.cardId, table.grade),
-}));
-
 // ─── leaderboard_meta ──────────────────────────────────────────────────────
 export const leaderboardMeta = sqliteTable("leaderboard_meta", {
   id: integer("id").primaryKey(),
   lastComputedDate: text("last_computed_date").notNull().default(""),
 });
 
-// ─── portfolio_snapshots ───────────────────────────────────────────────────
-export const portfolioSnapshots = sqliteTable("portfolio_snapshots", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  dateStr: text("date_str").notNull(),
-  playerId: text("player_id").notNull(),
-  portfolioValue: integer("portfolio_value").notNull(),
-}, (table) => ({
-  snapshotDatePlayerIdx: uniqueIndex("portfolio_snapshots_date_player_idx")
-    .on(table.dateStr, table.playerId),
-}));
-
-// ─── price_checkpoints ────────────────────────────────────────────────────
-export const priceCheckpoints = sqliteTable("price_checkpoints", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  cardId: text("card_id").notNull(),
-  grade: text("grade").notNull(),
-  lastHour: integer("last_hour").notNull(),
-  volMultiplier: real("vol_multiplier").notNull().default(1),
-  history: text("history").notNull(),
-}, (table) => ({
-  cardGradeIdx: uniqueIndex("price_checkpoints_card_grade_idx").on(table.cardId, table.grade),
-}));
+// ─── Football mode tables ────────────────────────────────────────────────
+export * from "./footballSchema";
+export * from "./lineupSchema";

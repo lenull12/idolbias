@@ -1,0 +1,39 @@
+export const dynamic = "force-dynamic";
+
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { eq } from "drizzle-orm";
+import { getDb } from "@/db/client";
+import { cardInstances, cardPrints, characters } from "@/db/footballSchema";
+
+export async function GET() {
+  const pid = (await cookies()).get("idolbias_player_id")?.value;
+  if (!pid) return NextResponse.json({ error: "No player" }, { status: 401 });
+
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: cardInstances.id,
+      characterId: cardPrints.characterId,
+      printId: cardInstances.printId,
+      ovr: cardInstances.ovr,
+      serial: cardInstances.serial,
+      grade: cardInstances.grade,
+      position: cardInstances.position,
+      tecStats: cardInstances.tecStats,
+      phyStats: cardInstances.phyStats,
+      menStats: cardInstances.menStats,
+      obtainedAt: cardInstances.obtainedAt,
+      rarity: cardPrints.rarity,
+      refCode: cardPrints.refCode,
+      name: characters.name,
+      nation: characters.nation,
+      photo: characters.photoVariants,
+    })
+    .from(cardInstances)
+    .innerJoin(cardPrints, eq(cardInstances.printId, cardPrints.id))
+    .innerJoin(characters, eq(cardPrints.characterId, characters.id))
+    .where(eq(cardInstances.ownerId, pid));
+
+  return NextResponse.json({ cards: rows });
+}

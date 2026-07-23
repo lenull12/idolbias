@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { eq, and, lte, gte } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { progression, events } from "@/db/schema";
-import { FIXED_DAILY, FIXED_WEEKLY, DAILY_POOL, WEEKLY_POOL, DAILY_SLOT_COUNT, WEEKLY_SLOT_COUNT, ROTATING_DAILY_SLOT_COUNT, pickWeightedMissions, todayStr, getMondayStr, getDailyResetTime, getWeeklyResetTime } from "@/lib/gameConfig";
+import { FIXED_DAILY, FIXED_WEEKLY, DAILY_POOL, WEEKLY_POOL, ROTATING_DAILY_SLOT_COUNT, WEEKLY_SLOT_COUNT, pickWeightedMissions, todayStr, getMondayStr, getDailyResetTime, getWeeklyResetTime } from "@/lib/gameConfig";
 import type { MissionDef } from "@/lib/gameConfig";
 
 const COOKIE_NAME = "idolbias_player_id";
@@ -19,29 +19,12 @@ export async function GET() {
 
   const today = todayStr();
   const monday = getMondayStr();
-  let dailyTemplates: MissionDef[] = (prog.dailyTemplates ?? []) as MissionDef[];
-  let weeklyTemplates: MissionDef[] = (prog.weeklyTemplates ?? []) as MissionDef[];
-
-  // Repick immediately if templates are empty (e.g. after migration)
-  if (dailyTemplates.length === 0) {
-    dailyTemplates = [...FIXED_DAILY, ...pickWeightedMissions(DAILY_POOL, ROTATING_DAILY_SLOT_COUNT)];
-    await db.update(progression).set({
-      dailyTemplates, missionsDate: today,
-      missionProgress: {}, missionsClaimed: [], updatedAt: new Date(),
-    }).where(eq(progression.playerId, playerId));
-  }
-  if (weeklyTemplates.length === 0) {
-    weeklyTemplates = [...FIXED_WEEKLY, ...pickWeightedMissions(WEEKLY_POOL, WEEKLY_SLOT_COUNT)];
-    await db.update(progression).set({
-      weeklyTemplates, weeklyMissionsDate: monday,
-      weeklyMissionProgress: {}, weeklyMissionsClaimed: [], updatedAt: new Date(),
-    }).where(eq(progression.playerId, playerId));
-  }
+  let dailyTemplates: MissionDef[] = [...FIXED_DAILY, ...pickWeightedMissions(DAILY_POOL, ROTATING_DAILY_SLOT_COUNT)];
+  let weeklyTemplates: MissionDef[] = [...FIXED_WEEKLY, ...pickWeightedMissions(WEEKLY_POOL, WEEKLY_SLOT_COUNT)];
 
   if (prog.missionsDate !== today) {
     dailyTemplates = [...FIXED_DAILY, ...pickWeightedMissions(DAILY_POOL, ROTATING_DAILY_SLOT_COUNT)];
     await db.update(progression).set({
-      dailyTemplates,
       missionsDate: today,
       missionProgress: {},
       missionsClaimed: [],
@@ -52,7 +35,6 @@ export async function GET() {
   if (prog.weeklyMissionsDate !== monday) {
     weeklyTemplates = [...FIXED_WEEKLY, ...pickWeightedMissions(WEEKLY_POOL, WEEKLY_SLOT_COUNT)];
     await db.update(progression).set({
-      weeklyTemplates,
       weeklyMissionsDate: monday,
       weeklyMissionProgress: {},
       weeklyMissionsClaimed: [],

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `card_instances_print_serial_idx` ON `card_instances` (`print_id`,`serial`);

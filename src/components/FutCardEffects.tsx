@@ -88,15 +88,17 @@ function Particles({ rarity }: { rarity: Rarity }) {
   );
 }
 
-function HoloSweep() {
+function HoloSweep({ speed = 2.2 }: { speed?: number }) {
   return (
     <>
-      <style>{`@keyframes futHoloSweep { 0% { transform:translateX(-150%) skewX(-22deg); opacity:0; } 15%{opacity:0.55;} 85%{opacity:0.45;} 100%{transform:translateX(250%) skewX(-22deg); opacity:0;} }`}</style>
-      <div style={{ position: "absolute", zIndex: 5, pointerEvents: "none", inset: 0, overflow: "hidden" }}>
+      <style>{`@keyframes futHoloSweep { 0%,100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }`}</style>
+      <div style={{ position: "absolute", inset: 0, zIndex: 5, pointerEvents: "none", overflow: "hidden" }}>
         <div style={{
-          position: "absolute", top: "-10%", left: "-50%", width: "30%", height: "120%",
-          background: "linear-gradient(105deg,transparent 0%,rgba(255,100,100,0.18)12%,rgba(255,200,50,0.22)27%,rgba(100,255,100,0.14)42%,rgba(100,150,255,0.20)57%,rgba(200,100,255,0.16)72%,transparent 100%)",
-          animation: "futHoloSweep 2.2s ease-in-out infinite",
+          position: "absolute", inset: "-40% -10%",
+          background: "linear-gradient(115deg,transparent 30%,rgba(255,255,255,0.5)45%,rgba(255,200,230,0.5)48%,rgba(200,220,255,0.45)51%,transparent 62%,transparent 100%)",
+          backgroundSize: "220% 220%",
+          mixBlendMode: "soft-light",
+          animation: `futHoloSweep ${speed}s ease-in-out infinite`,
         }} />
       </div>
     </>
@@ -131,6 +133,7 @@ export function FutEffects({ rarity, tiltX = 0, tiltY = 0, imageSrc = "", width 
       {rarity === "legendary" && (
         <>
           <HoloShiftEffect tiltX={tiltX} tiltY={tiltY} maxTilt={20} />
+          <HoloSweep speed={6} />
           <BannerChromaticPulse speed={10} colors={["transparent", "transparent 40%", "rgba(255,215,0,0.15) 45%", "rgba(255,215,0,0.25) 50%", "rgba(255,215,0,0.15) 55%", "transparent 60%", "transparent"]} blendMode="overlay" width={width} />
         </>
       )}
@@ -138,6 +141,7 @@ export function FutEffects({ rarity, tiltX = 0, tiltY = 0, imageSrc = "", width 
         <>
           <NeonGlowBorder tiltX={tiltX} tiltY={tiltY} colors={["#FF69B4", "#8B5CF6", "#ffffff"]} pulseSpeed={1.5} />
           <HoloShiftEffect tiltX={tiltX} tiltY={tiltY} maxTilt={20} />
+          <HoloSweep speed={4} />
           <BannerChromaticPulse speed={3} blendMode="overlay" width={width} />
         </>
       )}

@@ -1,10 +1,27 @@
 "use client";
 
-import { getCharacter, getElementColor } from "@/data/characters";
-import { AFFINITY_TIERS, getAffinityTier } from "@/lib/affinityConfig";
-import AffinityBar from "@/components/AffinityBar";
-import CharacterGallery from "@/components/CharacterGallery";
-import PersonalityAxis from "@/components/PersonalityAxis";
+import { getCharacterById } from "@/data/footballCards";
+import { CHARACTER_STATS } from "@/data/characterStats";
+
+const NATION_FLAGS: Record<string, string> = {
+  france: "🇫🇷",
+  allemagne: "🇩🇪",
+  angleterre: "🇬🇧",
+  italie: "🇮🇹",
+  espagne: "🇪🇸",
+  bresil: "🇧🇷",
+  japon: "🇯🇵",
+  argentine: "🇦🇷",
+};
+
+const STYLE_LABELS: Record<string, string> = {
+  percussion: "Percussion",
+  vista: "Vista",
+  pressing: "Pressing",
+  elevation: "Elevation",
+  sangFroid: "Sang-froid",
+};
+
 
 export default function CharacterView({
   characterId,
@@ -21,13 +38,21 @@ export default function CharacterView({
   onCheckin?: (characterId: string) => Promise<any>;
   onBack?: () => void;
 }) {
-  const character = getCharacter(characterId);
-  if (!character) return <div style={{ padding: 32, color: "var(--text-muted)" }}>Character not found.</div>;
+  const character = getCharacterById(characterId);
+  if (!character) return <div style={{ padding: 32, color: "var(--text-muted)" }}>Player not found.</div>;
 
-  const currentTier = getAffinityTier(affinityXp);
   const ownedCount = Object.values(ownedCards).reduce((a, b) => a + b, 0);
   const today = new Date().toISOString().slice(0, 10);
   const canCheckin = affinityCheckinDate !== today;
+  const flag = NATION_FLAGS[character.nation] ?? "";
+
+  const currentTier = (() => {
+    if (affinityXp >= 500) return { label: "Legendary", xpRequired: 500 };
+    if (affinityXp >= 300) return { label: "Epic", xpRequired: 300 };
+    if (affinityXp >= 150) return { label: "Rare", xpRequired: 150 };
+    if (affinityXp >= 50) return { label: "Fan", xpRequired: 50 };
+    return { label: "Newcomer", xpRequired: 0 };
+  })();
 
   return (
     <div className="mx-auto max-w-[600px] lg:max-w-[1100px]" style={{ padding: "24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
@@ -46,39 +71,51 @@ export default function CharacterView({
       <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
         <div style={{
           width: 96, height: 96, borderRadius: "50%",
-          background: `linear-gradient(135deg, ${character.color}44, ${character.color}11)`,
-          flexShrink: 0,
-        }} />
+          background: "linear-gradient(135deg, var(--accent-purple)44, var(--accent-purple)11)",
+          flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 36, fontWeight: 800, color: "var(--accent-purple)",
+        }}>
+          {character.name[0]}
+        </div>
         <div>
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: 28, color: "var(--text-primary)", margin: 0 }}>
             {character.name}
           </h1>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
-            {character.label && (
-              <span style={{ fontSize: 12, color: "var(--accent-purple)", fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase" }}>
-                {character.label}
-              </span>
-            )}
+            <span style={{ fontSize: 18, lineHeight: 1 }}>{flag}</span>
             <span style={{
               padding: "2px 8px", borderRadius: 4,
-              background: `linear-gradient(135deg, ${getElementColor(character.element)}22, transparent)`,
-              border: `2px solid ${getElementColor(character.element)}44`,
-              fontSize: 10, fontWeight: 700, color: getElementColor(character.element),
+              background: "rgba(201,177,255,0.22)",
+              border: "2px solid rgba(201,177,255,0.44)",
+              fontSize: 10, fontWeight: 700, color: "var(--accent-purple)",
               fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "1px",
             }}>
-              {character.element}
+              {STYLE_LABELS[character.defaultStyle] ?? character.defaultStyle}
             </span>
             <span style={{ fontSize: 12, color: "var(--text-muted)", fontFamily: "var(--font-display)" }}>
-              {character.archetype}
+              {character.nation.charAt(0).toUpperCase() + character.nation.slice(1)}
             </span>
           </div>
           <p style={{ fontSize: 14, color: "var(--text-muted)", margin: "6px 0 0", lineHeight: 1.5 }}>
-            {character.tagline}
+            {character.isCaptain ? "Team Captain" : `${CHARACTER_STATS[character.id]?.position ?? character.defaultPosition}`}
           </p>
         </div>
       </div>
 
-      <AffinityBar xp={affinityXp} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Affinity</span>
+          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{affinityXp} / 500 XP</span>
+        </div>
+        <div style={{ width: "100%", height: 10, borderRadius: 4, background: "rgba(var(--text-primary-rgb),0.08)", overflow: "hidden" }}>
+          <div style={{
+            width: `${Math.min(100, (affinityXp / 500) * 100)}%`,
+            height: "100%", borderRadius: 4,
+            background: "linear-gradient(90deg, var(--accent-hotpink), var(--accent-purple))",
+            transition: "width 0.4s",
+          }} />
+        </div>
+      </div>
 
       <button
         onClick={() => onCheckin?.(characterId)}
@@ -93,7 +130,7 @@ export default function CharacterView({
           width: "100%",
         }}
       >
-        {canCheckin ? `Greet ${character.name} (+10 XP)` : "\u2713 Already greeted today"}
+        {canCheckin ? `Greet ${character.name.split(" ")[0]} (+10 XP)` : "\u2713 Already greeted today"}
       </button>
 
       <div style={{ display: "flex", gap: 12 }}>
@@ -125,106 +162,17 @@ export default function CharacterView({
           gridTemplateColumns: "1fr 1fr",
           gap: 6,
         }}>
-          <StatCell label="Age" value={character.age} />
-          <StatCell label="Height" value={character.height} />
-          <StatCell label="Origin" value={character.origin} />
-          <StatCell label="Birthday" value={character.birthday} />
-          <StatCell label="Specialty" value={character.specialty} />
-          <StatCell label="Faction" value={character.label ?? "\u2014"} />
+          <StatCell label="Nation" value={character.nation.charAt(0).toUpperCase() + character.nation.slice(1)} />
+          <StatCell label="Position" value={CHARACTER_STATS[character.id]?.position ?? character.defaultPosition} />
+          <StatCell label="Style" value={STYLE_LABELS[character.defaultStyle] ?? character.defaultStyle} />
+          <StatCell label="Role" value={character.isCaptain ? "Captain" : "Player"} />
+          {CHARACTER_STATS[character.id]?.nickname && <StatCell label="Nickname" value={CHARACTER_STATS[character.id]!.nickname} />}
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <h3 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "2px" }}>
-          Personality
-        </h3>
-        <PersonalityAxis
-          leftLabel="Charm"
-          rightLabel="Charisma"
-          value={character.personality.charm}
-          leftColor="#F48FB1"
-          rightColor="#A87FFF"
-        />
-        <PersonalityAxis
-          leftLabel="Gentleness"
-          rightLabel="Intensity"
-          value={character.personality.gentleness}
-          leftColor="#F48FB1"
-          rightColor="#E53935"
-        />
-        <PersonalityAxis
-          leftLabel="Calm"
-          rightLabel="Energy"
-          value={character.personality.energy}
-          leftColor="#81D4FA"
-          rightColor="#FDD835"
-        />
-        <PersonalityAxis
-          leftLabel="Timidity"
-          rightLabel="Confidence"
-          value={character.personality.confidence}
-          leftColor="#BDBDBD"
-          rightColor="#FFB74D"
-        />
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <h3 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-disabled)", textTransform: "uppercase", letterSpacing: "2px" }}>
-          Unlockables
-        </h3>
-        {AFFINITY_TIERS.filter((t) => t.reward).map((t) => {
-          const unlocked = affinityXp >= t.xpRequired;
-          return (
-            <div key={t.tier} style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "12px 14px", borderRadius: 10,
-              background: unlocked ? "rgba(var(--text-primary-rgb),0.05)" : "rgba(var(--text-primary-rgb),0.03)",
-              border: `2px solid ${unlocked ? "rgba(var(--text-primary-rgb),0.10)" : "rgba(var(--text-primary-rgb),0.06)"}`,
-              opacity: unlocked ? 1 : 0.45,
-            }}>
-              <span style={{ fontSize: 22 }}>{t.icon}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{t.label}</div>
-                <div style={{ fontSize: 11, color: "var(--text-disabled)", fontFamily: "var(--font-mono, monospace)" }}>
-                  {unlocked
-                    ? `Unlocked \u2014 ${t.reward}`
-                    : `${t.xpRequired - affinityXp} XP to unlock`}
-                </div>
-              </div>
-              {unlocked && <span style={{ fontSize: 16 }}>\u2705</span>}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Reward visuals for unlocked tiers */}
-      {AFFINITY_TIERS.filter((t) => t.reward && affinityXp >= t.xpRequired).map((t) => (
-        <div key={`reward-${t.tier}`} style={{
-          marginTop: -4, padding: "8px 12px", borderRadius: 8,
-          background: "rgba(var(--text-primary-rgb),0.03)",
-          display: "flex", alignItems: "center", gap: 8,
-        }}>
-          {t.reward === "alt_portrait" && <span style={{ fontSize: 20 }}>\uD83D\uDDBC\uFE0F</span>}
-          {t.reward === "alt_outfit" && <span style={{ fontSize: 20 }}>\uD83D\uDC57</span>}
-          {t.reward === "mini_clip" && <span style={{ fontSize: 20 }}>\uD83C\uDFAC</span>}
-          {t.reward === "exclusive_outfit" && <span style={{ fontSize: 20 }}>\u2728</span>}
-          {t.reward === "full_gallery" && <span style={{ fontSize: 20 }}>\uD83C\uDFC6</span>}
-          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-            {t.reward === "alt_portrait" && "Alternate portrait unlocked"}
-            {t.reward === "alt_outfit" && "Alternate outfit unlocked"}
-            {t.reward === "mini_clip" && "Mini clip unlocked (3s)"}
-            {t.reward === "exclusive_outfit" && "Exclusive outfit unlocked"}
-            {t.reward === "full_gallery" && "Full gallery access"}
-          </span>
-        </div>
-      ))}
-
-      <CharacterGallery
-        characterName={character.name}
-        ownedCards={ownedCards}
-      />
-
-      <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7, maxWidth: 700 }}>{character.bio}</p>
+      <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7, maxWidth: 700 }}>
+        {character.name} is a {CHARACTER_STATS[character.id]?.position ?? character.defaultPosition} from {character.nation}, known for their {STYLE_LABELS[character.defaultStyle]?.toLowerCase() ?? character.defaultStyle} playing style.
+      </p>
     </div>
   );
 }

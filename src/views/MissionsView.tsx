@@ -105,7 +105,6 @@ export default function MissionsView({
         </h1>
       </div>
 
-      {/* ─── Tab bar ─── */}
       <PillBar
         tabs={TABS}
         activeTab={activeTab}
@@ -119,7 +118,6 @@ export default function MissionsView({
 
       <style>{`@keyframes titleFoil{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}`}</style>
 
-      {/* ─── Card container ─── */}
       <div
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -131,7 +129,6 @@ export default function MissionsView({
           overflow: "hidden",
         }}
       >
-        {/* Title bar */}
         <div
           style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -151,13 +148,11 @@ export default function MissionsView({
             {activeTab === "weekly" && `Weekly ${weeklyClaimed}/${weeklyMissions.length} claimed`}
             {activeTab === "achievements" && `Achievements ${lifetimeUnlocked}/${lifetimeTotal} unlocked`}
           </span>
-          {/* Timer */}
           <span style={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", color: "rgba(255,255,255,0.7)", letterSpacing: "0.5px" }}>
             ⏱ {activeTab === "daily" ? (dailyCountdown ?? "") : activeTab === "weekly" ? (weeklyCountdown ?? "") : ""}
           </span>
         </div>
 
-        {/* Content */}
         <div style={{ padding: 12, maxHeight: 400, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
           {activeTab === "daily" && (
             <>
@@ -178,7 +173,6 @@ export default function MissionsView({
                       </div>
                     </div>
                   ))}
-              {/* Event missions */}
               {eventMissions.length > 0 && (
                 <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{
@@ -265,7 +259,6 @@ export default function MissionsView({
         </div>
       </div>
 
-      {/* ─── Dots ─── */}
       <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;

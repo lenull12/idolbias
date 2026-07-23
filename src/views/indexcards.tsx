@@ -4,32 +4,30 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { IconGrid, IconSearch } from "@/components/Icons";
 import ArrowButton from "@/components/ArrowButton";
 import StyledSelect from "@/components/StyledSelect";
-import CARDS, { rarityFromReference } from "@/data/cards";
-import type { CardEntry } from "@/data/cards";
-import type { Rarity } from "@/components/CardEffects";
-import PhotoCard from "@/components/PhotoCard";
+import { getCharacters, getPrintsByCharacter, type CharacterDef } from "@/data/footballCards";
+import { CHARACTER_STATS } from "@/data/characterStats";
 import { RARITY_ORDER } from "@/lib/gameConfig";
-import { RARITY_LABELS, RARITY_BG, SEASON_COLORS } from "@/lib/rarityTheme";
 
-const RARITY_TEXT: Record<Rarity, string> = {
-  common: "rgba(var(--text-primary-rgb),0.3)",
-  rare: "var(--accent-pink)",
-  epic: "var(--accent-purple)",
-  legendary: "var(--rarity-legendary)",
-  secret: "var(--text-primary)",
+const NATION_FLAGS: Record<string, string> = {
+  france: "🇫🇷",
+  allemagne: "🇩🇪",
+  angleterre: "🇬🇧",
+  italie: "🇮🇹",
+  espagne: "🇪🇸",
+  bresil: "🇧🇷",
+  japon: "🇯🇵",
+  argentine: "🇦🇷",
 };
 
-function getGroups(cards: CardEntry[]): string[] {
-  return [...new Set(cards.map((c) => c.group))].sort();
-}
-function getPacks(cards: CardEntry[]): string[] {
-  return [...new Set(cards.map((c) => c.pack))].sort();
-}
-function getMembers(cards: CardEntry[]): string[] {
-  return [...new Set(cards.map((c) => c.idol))].sort();
-}
+const STYLE_LABELS: Record<string, string> = {
+  percussion: "Percussion",
+  vista: "Vista",
+  pressing: "Pressing",
+  elevation: "Elevation",
+  sangFroid: "Sang-froid",
+};
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 24;
 const GAP = 12;
 
 export default function IndexCards({
@@ -59,51 +57,46 @@ export default function IndexCards({
 
   const [viewMode, setViewMode] = useState<"collection" | "all">("collection");
   const [search, setSearch] = useState("");
-  const [filterGroup, setFilterGroup] = useState("all");
-  const [filterPack, setFilterPack] = useState("all");
-  const [filterMember, setFilterMember] = useState("all");
+  const [filterNation, setFilterNation] = useState("all");
+  const [filterPosition, setFilterPosition] = useState("all");
   const [filterRarity, setFilterRarity] = useState("all");
-  const [previewCard, setPreviewCard] = useState<CardEntry | null>(null);
   const [page, setPage] = useState(0);
 
-  const groups = useMemo(() => getGroups(CARDS), []);
-  const packs = useMemo(() => getPacks(CARDS), []);
-  const members = useMemo(() => getMembers(CARDS), []);
+  const characters = useMemo(() => getCharacters(), []);
+
+  const nations = useMemo(() => [...new Set(characters.map((c) => c.nation))].sort(), [characters]);
+  const positions = useMemo(() => [...new Set(characters.map((c) => c.defaultPosition))].sort(), [characters]);
 
   const filtered = useMemo(() => {
-    let list = [...CARDS];
+    let list = [...characters];
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
         (c) =>
-          c.idol.toLowerCase().includes(q) ||
-          c.reference.toLowerCase().includes(q) ||
-          c.group.toLowerCase().includes(q) ||
-          c.pack.toLowerCase().includes(q) ||
-          c.edition.toLowerCase().includes(q)
+          c.name.toLowerCase().includes(q) ||
+          c.nation.toLowerCase().includes(q) ||
+          c.defaultStyle.toLowerCase().includes(q) ||
+          (CHARACTER_STATS[c.id]?.nickname && CHARACTER_STATS[c.id]!.nickname!.toLowerCase().includes(q))
       );
     }
-    if (filterGroup !== "all") list = list.filter((c) => c.group === filterGroup);
-    if (filterPack !== "all") list = list.filter((c) => c.pack === filterPack);
-    if (filterMember !== "all") list = list.filter((c) => c.idol === filterMember);
-    if (filterRarity !== "all") list = list.filter((c) => rarityFromReference(c.reference) === filterRarity);
+    if (filterNation !== "all") list = list.filter((c) => c.nation === filterNation);
+    if (filterPosition !== "all") list = list.filter((c) => c.defaultPosition === filterPosition);
     if (viewMode === "collection") list = list.filter((c) => (owned[c.id] ?? 0) > 0);
-    list.sort((a, b) => a.reference.localeCompare(b.reference));
+    list.sort((a, b) => a.name.localeCompare(b.name));
     return list;
-  }, [search, filterGroup, filterPack, filterMember, filterRarity, viewMode, owned]);
+  }, [search, filterNation, filterPosition, filterRarity, viewMode, owned, characters]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const safePage = Math.min(page, Math.max(0, totalPages - 1));
-  const paginatedCards = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  const paginatedChars = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
-  // Reset page when filters change
-  useEffect(() => { setPage(0); }, [viewMode, search, filterGroup, filterPack, filterMember, filterRarity]);
+  useEffect(() => { setPage(0); }, [viewMode, search, filterNation, filterPosition, filterRarity]);
 
   const completion = useMemo(() => {
-    const total = CARDS.length;
-    const unlocked = CARDS.filter((c) => (owned[c.id] ?? 0) > 0).length;
+    const total = characters.length;
+    const unlocked = characters.filter((c) => (owned[c.id] ?? 0) > 0).length;
     return { unlocked, total };
-  }, [owned]);
+  }, [owned, characters]);
 
   const canPrev = safePage > 0;
   const canNext = safePage < totalPages - 1;
@@ -114,10 +107,10 @@ export default function IndexCards({
     <div className="mx-auto max-w-[600px] lg:max-w-[1100px]" style={{ padding: "24px 16px" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 4, flexWrap: "wrap" }}>
         <h1 style={{ fontFamily: "var(--font-display, cursive)", fontSize: 23, letterSpacing: "-0.3px", margin: 0, color: "var(--accent-hotpink)" }}>
-          Card Collection
+          Player Catalogue
         </h1>
         <span style={{ fontSize: 13, color: "var(--text-disabled)", fontWeight: 500 }}>
-          {CARDS.length} cards
+          {characters.length} players
         </span>
       </div>
 
@@ -170,11 +163,11 @@ export default function IndexCards({
             fontFamily: "var(--font-display)", whiteSpace: "nowrap",
             transition: "background 0.15s",
           }}>
-            <IconSearch size={13} /> All cards
+            <IconSearch size={13} /> All players
           </button>
         </div>
 
-        <input placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} style={{
+        <input placeholder="Search players…" value={search} onChange={(e) => setSearch(e.target.value)} style={{
           flex: "1 1 160px", padding: "6px 10px", borderRadius: 8,
           border: "2px solid rgba(var(--text-primary-rgb),0.12)",
           background: "rgba(var(--surface-white-rgb),0.5)", color: "var(--text-primary)", fontSize: 12, outline: "none",
@@ -185,26 +178,21 @@ export default function IndexCards({
         onBlur={(e) => e.target.style.borderColor = "rgba(var(--text-primary-rgb),0.12)"}
         />
         <StyledSelect
-          options={[{ value: "all", label: "All Groups" }, ...groups.map((g) => ({ value: g, label: g }))]}
-          value={filterGroup}
-          onChange={setFilterGroup}
+          options={[{ value: "all", label: "All Nations" }, ...nations.map((n) => ({ value: n, label: `${NATION_FLAGS[n] ?? ""} ${n.charAt(0).toUpperCase() + n.slice(1)}` }))]}
+          value={filterNation}
+          onChange={setFilterNation}
         />
         <StyledSelect
-          options={[{ value: "all", label: "All Members" }, ...members.map((m) => ({ value: m, label: m }))]}
-          value={filterMember}
-          onChange={setFilterMember}
+          options={[{ value: "all", label: "All Positions" }, ...positions.map((p) => ({ value: p, label: p }))]}
+          value={filterPosition}
+          onChange={setFilterPosition}
         />
         <StyledSelect
           options={[{ value: "all", label: "All Rarities" }, ...RARITY_ORDER.map((r) => ({ value: r, label: r.charAt(0).toUpperCase() + r.slice(1) }))]}
           value={filterRarity}
           onChange={setFilterRarity}
         />
-        <StyledSelect
-          options={[{ value: "all", label: "All Packs" }, ...packs.map((p) => ({ value: p, label: p }))]}
-          value={filterPack}
-          onChange={setFilterPack}
-        />
-        <button onClick={() => { setSearch(""); setFilterGroup("all"); setFilterPack("all"); setFilterMember("all"); setFilterRarity("all"); }} style={{
+        <button onClick={() => { setSearch(""); setFilterNation("all"); setFilterPosition("all"); setFilterRarity("all"); }} style={{
           padding: "5px 10px", borderRadius: 8, cursor: "pointer",
           border: "2px solid rgba(var(--text-primary-rgb),0.12)",
           background: "transparent", color: "var(--text-muted)", fontSize: 11,
@@ -217,43 +205,41 @@ export default function IndexCards({
       </div>
 
       <div style={{ fontSize: 10, color: "var(--text-disabled)", fontFamily: "var(--font-sans, monospace)", marginBottom: 12, fontWeight: 500 }}>
-        {filtered.length === CARDS.length
-          ? `${CARDS.length} cards`
-          : `${filtered.length} / ${CARDS.length} cards`}
+        {filtered.length === characters.length
+          ? `${characters.length} players`
+          : `${filtered.length} / ${characters.length} players`}
         {totalPages > 1 && ` · page ${safePage + 1}/${totalPages}`}
       </div>
 
       <div ref={gridRef} className="grid grid-cols-5 lg:grid-cols-10" style={{ gap: GAP }}>
-        {paginatedCards.map((card) => {
-          const rarity = rarityFromReference(card.reference);
-          const qty = owned[card.id] ?? 0;
+        {paginatedChars.map((char) => {
+          const prints = getPrintsByCharacter(char.id);
+          const qty = owned[char.id] ?? 0;
           const isOwned = qty > 0;
+          const flag = NATION_FLAGS[char.nation] ?? "";
+          const hasCaptain = char.isCaptain;
 
           return (
             <div
-              key={card.id}
-              onClick={isOwned ? undefined : () => setPreviewCard(card)}
-              style={{ cursor: isOwned ? "default" : "pointer", display: "flex", flexDirection: "column", gap: 6 }}
+              key={char.id}
+              style={{ cursor: "pointer", display: "flex", flexDirection: "column", gap: 6 }}
             >
               <div style={{
                 position: "relative",
-                filter: isOwned ? "none" : "grayscale(1) brightness(0.55)",
-                pointerEvents: isOwned ? "auto" : "none",
+                borderRadius: 12, overflow: "hidden",
+                aspectRatio: "896/1152",
+                background: "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))",
+                border: "2px solid rgba(var(--text-primary-rgb),0.08)",
+                boxShadow: "3px 3px 0px rgba(var(--text-primary-rgb),0.9)",
+                filter: isOwned ? "none" : "grayscale(0.6) brightness(0.6)",
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               }}>
-                <PhotoCard
-                  imageSrc={card.imageSrc}
-                  season={SEASON_COLORS[rarity]}
-                  meta={{
-                    idol: card.idol,
-                    group: card.group,
-                    pack: card.pack,
-                    edition: card.edition,
-                    reference: card.reference,
-                  }}
-                  rarity={rarity}
-                  maxTilt={8}
-                  width={thumbW}
-                />
+                <span style={{ fontSize: 36, fontWeight: 800, color: "var(--surface-white)", fontFamily: "var(--font-display, cursive)" }}>
+                  {char.name[0]}
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginTop: 4, fontFamily: "var(--font-sans, monospace)" }}>
+                  {flag} {CHARACTER_STATS[char.id]?.position ?? char.defaultPosition}
+                </span>
                 {!isOwned && (
                   <div style={{
                     position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%",
@@ -261,17 +247,36 @@ export default function IndexCards({
                   }}>🔒</div>
                 )}
                 {isOwned && qty > 1 && (
-                  <>
-                    <div style={{
-                      position: "absolute", top: 4, right: 4, zIndex: 2,
-                      padding: "1px 6px", borderRadius: 8,
-                      background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
-                      color: "var(--surface-white)", fontSize: 9, fontWeight: 800,
-                      fontFamily: "var(--font-sans, monospace)",
-                      boxShadow: "1px 1px 0px rgba(var(--text-primary-rgb),0.3)",
-                    }}>×{qty}</div>
-                  </>
+                  <div style={{
+                    position: "absolute", top: 4, right: 4, zIndex: 2,
+                    padding: "1px 6px", borderRadius: 8,
+                    background: "linear-gradient(135deg, var(--accent-hotpink), var(--accent-purple))",
+                    color: "var(--surface-white)", fontSize: 9, fontWeight: 800,
+                    fontFamily: "var(--font-sans, monospace)",
+                    boxShadow: "1px 1px 0px rgba(var(--text-primary-rgb),0.3)",
+                  }}>×{qty}</div>
                 )}
+                <div style={{
+                  position: "absolute", bottom: 4, left: 4, right: 4,
+                  display: "flex", gap: 3, justifyContent: "center", flexWrap: "wrap",
+                }}>
+                  {prints.map((p) => {
+                    const rarityColors: Record<string, string> = {
+                      common: "rgba(128,128,128,0.5)",
+                      rare: "var(--accent-pink)",
+                      epic: "var(--accent-purple)",
+                      legendary: "#c8960e",
+                      secret: "#ff69b4",
+                    };
+                    return (
+                      <span key={p.id} style={{
+                        width: 6, height: 6, borderRadius: "50%",
+                        background: rarityColors[p.rarity] ?? "gray",
+                        border: "1px solid rgba(255,255,255,0.3)",
+                      }} />
+                    );
+                  })}
+                </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 3, alignItems: "center" }}>
                 <span style={{
@@ -279,26 +284,13 @@ export default function IndexCards({
                   color: isOwned ? "var(--text-secondary)" : "var(--text-disabled)",
                   letterSpacing: "0.5px",
                 }}>
-                  {card.reference}
+                  {char.name.split(" ")[0]}
                 </span>
                 <span style={{
-                  display: "inline-block", padding: "1px 8px", borderRadius: 4,
-                  background: RARITY_BG[rarity],
-                  fontSize: 9, fontWeight: 700, letterSpacing: "1px",
+                  fontSize: 9, fontWeight: 700, color: "var(--text-muted)",
                   fontFamily: "var(--font-sans, monospace)",
                 }}>
-                  {rarity === "secret" ? (
-                    <span style={{
-                      backgroundImage: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple))",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      backgroundClip: "text",
-                    }}>{RARITY_LABELS[rarity]}</span>
-                  ) : (
-                    <span style={{
-                      color: isOwned ? RARITY_TEXT[rarity] : "var(--text-disabled)",
-                    }}>{RARITY_LABELS[rarity]}</span>
-                  )}
+                  {STYLE_LABELS[char.defaultStyle] ?? char.defaultStyle}
                 </span>
               </div>
             </div>
@@ -323,83 +315,9 @@ export default function IndexCards({
         <div style={{ textAlign: "center", padding: 48, color: "var(--text-disabled)", fontSize: 15 }}>
           {viewMode === "collection"
             ? "You don't own any cards yet. Pull a pack to start your collection ✨"
-            : "No cards match your filters."}
+            : "No players match your filters."}
         </div>
       )}
-
-      {previewCard && (() => {
-        const rarity = rarityFromReference(previewCard.reference);
-        return (
-          <div onClick={() => setPreviewCard(null)} style={{
-            position: "fixed", inset: 0, zIndex: 100,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(250,245,249,0.85)", backdropFilter: "blur(12px)", cursor: "pointer",
-          }}>
-            <div onClick={(e) => e.stopPropagation()} style={{
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 16,
-              animation: "modalIn 0.2s ease-out",
-            }}>
-              <style>{`@keyframes modalIn { 0% { opacity: 0; transform: scale(0.95); } 100% { opacity: 1; transform: scale(1); } }`}</style>
-              <div style={{ filter: "grayscale(1) brightness(0.55)" }}>
-                <PhotoCard
-                  imageSrc={previewCard.imageSrc}
-                  season={SEASON_COLORS[rarity]}
-                  meta={{
-                    idol: previewCard.idol,
-                    group: previewCard.group,
-                    pack: previewCard.pack,
-                    edition: previewCard.edition,
-                    reference: previewCard.reference,
-                  }}
-                  rarity={rarity}
-                  width={224}
-                />
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontFamily: "var(--font-display, cursive)", fontSize: 18, color: "var(--accent-hotpink)", marginBottom: 4 }}>
-                  ??? — Not unlocked yet
-                </div>
-                <div style={{ fontSize: 13, color: "var(--text-muted)", fontFamily: "var(--font-sans, monospace)", fontWeight: 500 }}>
-                  {previewCard.reference}
-                </div>
-                <div style={{ fontSize: 13, color: "var(--text-disabled)", marginTop: 2, fontWeight: 500 }}>
-                  {previewCard.group} ·{" "}
-                  <button onClick={(e) => { e.stopPropagation(); onGoToShop?.(previewCard.packCode); }} style={{
-                    background: "none", border: "none", padding: 0, cursor: "pointer",
-                    color: "var(--accent-hotpink)", fontSize: 13, fontWeight: 600,
-                    fontFamily: "var(--font-sans, monospace)", textDecoration: "underline",
-                  }}>
-                    {previewCard.pack}
-                  </button>
-                  {" · "}{previewCard.edition}
-                </div>
-                <div style={{ marginTop: 6 }}>
-                  <span style={{
-                    display: "inline-block", padding: "2px 12px", borderRadius: 4,
-                    fontSize: 10, fontWeight: 700, letterSpacing: "1.5px",
-                    fontFamily: "var(--font-sans, monospace)",
-                    background: RARITY_BG[rarity],
-                  }}>
-                    {rarity === "secret" ? (
-                      <span style={{
-                        backgroundImage: "linear-gradient(90deg, var(--accent-pink), var(--accent-purple))",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                      }}>{RARITY_LABELS[rarity]}</span>
-                    ) : (
-                      <span style={{ color: "var(--text-disabled)" }}>{RARITY_LABELS[rarity]}</span>
-                    )}
-                  </span>
-                  <span style={{ fontSize: 11, color: "var(--text-disabled)", fontStyle: "italic", marginLeft: 8 }}>
-                    Pull a pack to discover this card
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }

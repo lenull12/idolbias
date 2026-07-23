@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { STREAK_TICKETS, STREAK_BONUS_GEMS } from "@/lib/gameConfig";
+import { STREAK_BONUS_GEMS } from "@/lib/gameConfig";
+
+const STREAK_TICKETS = [3, 3, 3, 3, 3, 3, 3];
 import CloseButton from "@/components/CloseButton";
 
 export default function StreakModal({

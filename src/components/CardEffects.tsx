@@ -6,6 +6,8 @@ const abs = (s: React.CSSProperties): React.CSSProperties => ({
   position: "absolute",
   inset: 0,
   pointerEvents: "none",
+  overflow: "hidden",
+  borderRadius: "inherit",
   ...s,
 });
 
@@ -50,6 +52,8 @@ export function LightLeakEffect({
         style={{
           position: "absolute",
           inset: 0,
+          overflow: "hidden",
+          borderRadius: "inherit",
           background: `radial-gradient(circle at 0% 0%, ${color}cc 0%, ${color}55 20%, ${color}22 40%, transparent 60%)`,
           opacity: intensity,
           mixBlendMode: "overlay",
@@ -60,6 +64,8 @@ export function LightLeakEffect({
         style={{
           position: "absolute",
           inset: 0,
+          overflow: "hidden",
+          borderRadius: "inherit",
           background: `radial-gradient(circle at ${cx}% ${cy}%, ${color}40, transparent 55%)`,
           opacity: 0.35 + tiltFactor * 0.25,
           mixBlendMode: "overlay",
@@ -98,6 +104,8 @@ export function HoloShiftEffect({
         style={{
           position: "absolute",
           inset: 0,
+          overflow: "hidden",
+          borderRadius: "inherit",
           background: gradient,
           backgroundSize: "300% 100%",
           backgroundPosition: `${50 + (tiltY / maxTilt) * 20}% 50%`,
@@ -111,6 +119,8 @@ export function HoloShiftEffect({
         style={{
           position: "absolute",
           inset: 0,
+          overflow: "hidden",
+          borderRadius: "inherit",
           background: gradient,
           backgroundSize: "300% 100%",
           backgroundPosition: `${50 - (tiltY / maxTilt) * 12}% 50%`,
@@ -187,6 +197,7 @@ export function NeonGlowBorder({
             position: "absolute",
             inset: 0,
             borderRadius: "inherit",
+            overflow: "hidden",
             pointerEvents: "none",
             background: gradient,
           backgroundSize: "200% 100%",

@@ -4,12 +4,16 @@ import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { wallets, progression } from "@/db/schema";
 import type { MissionDef } from "@/lib/gameConfig";
+import { FIXED_DAILY, FIXED_WEEKLY, DAILY_POOL, WEEKLY_POOL } from "@/lib/gameConfig";
 
 const COOKIE_NAME = "idolbias_player_id";
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+const ALL_DAILY: MissionDef[] = [...FIXED_DAILY, ...DAILY_POOL];
+const ALL_WEEKLY: MissionDef[] = [...FIXED_WEEKLY, ...WEEKLY_POOL];
 
 export async function POST(
   _request: Request,
@@ -24,23 +28,10 @@ export async function POST(
   const [prog] = await db.select().from(progression).where(eq(progression.playerId, playerId)).limit(1);
   if (!prog) return NextResponse.json({ error: "Player not found" }, { status: 404 });
 
-  const dailyDef = ((prog.dailyTemplates ?? []) as MissionDef[]).find((m) => m.id === missionId);
-  const weeklyDef = ((prog.weeklyTemplates ?? []) as MissionDef[]).find((m) => m.id === missionId);
+  const dailyDef = ALL_DAILY.find((m) => m.id === missionId);
+  const weeklyDef = ALL_WEEKLY.find((m) => m.id === missionId);
   const def = dailyDef || weeklyDef;
   if (!def) return NextResponse.json({ error: "Unknown mission" }, { status: 400 });
-
-  // ─── Event missions ───────────────────────────────────────────────────
-  if (missionId.startsWith("event_")) {
-    try {
-      const { claimCollectionEvent } = await import("@/lib/claimCollectionEvent");
-      const eventId = missionId.replace("event_", "");
-      const result = await claimCollectionEvent(playerId, eventId);
-      return NextResponse.json(result);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Unknown error";
-      return NextResponse.json({ error: msg }, { status: 400 });
-    }
-  }
 
   if (!dailyDef && !weeklyDef) {
     return NextResponse.json({ error: "This mission is not active today" }, { status: 400 });

@@ -3,9 +3,10 @@ import { cookies } from "next/headers";
 import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { wallets, progression } from "@/db/schema";
-import { getMondayStr } from "@/lib/gameConfig";
+import { getMondayStr, FIXED_WEEKLY, WEEKLY_POOL } from "@/lib/gameConfig";
 import type { MissionDef } from "@/lib/gameConfig";
 
+const ALL_WEEKLY: MissionDef[] = [...FIXED_WEEKLY, ...WEEKLY_POOL];
 const COOKIE_NAME = "idolbias_player_id";
 
 export async function POST(
@@ -21,13 +22,8 @@ export async function POST(
   const [prog] = await db.select().from(progression).where(eq(progression.playerId, playerId)).limit(1);
   if (!prog) return NextResponse.json({ error: "Player not found" }, { status: 404 });
 
-  const templateDef = ((prog.weeklyTemplates ?? []) as MissionDef[]).find((m) => m.id === missionId);
-  const def = templateDef;
+  const def = ALL_WEEKLY.find((m) => m.id === missionId);
   if (!def) return NextResponse.json({ error: "Unknown mission" }, { status: 400 });
-
-  if (!templateDef) {
-    return NextResponse.json({ error: "This mission is not active this week" }, { status: 400 });
-  }
 
   const monday = getMondayStr();
   if (prog.weeklyMissionsDate !== monday) {

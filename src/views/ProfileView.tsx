@@ -1,8 +1,9 @@
 "use client";
 
-import CARDS, { getCardsByPack, getPackInfo } from "@/data/cards";
-import { GROUPS, findGroupByMember } from "@/data/artists";
-import { BIAS_COOLDOWN_DAYS, getFanLevel, STREAK_TICKETS, STREAK_BONUS_GEMS } from "@/lib/gameConfig";
+import { getCharacters } from "@/data/footballCards";
+import { getFanLevel, STREAK_BONUS_GEMS } from "@/lib/gameConfig";
+
+const STREAK_TICKETS = [3, 3, 3, 3, 3, 3, 3];
 import { useEffect, useState, useMemo } from "react";
 import { authClient } from "@/lib/auth/client";
 import Link from "next/link";
@@ -20,15 +21,13 @@ type Purchase = {
   createdAt: number;
 };
 
-// ─── Types ─────────────────────────────────────────────────────────────────
-
 export default function ProfileView({
   bias, onSetBias, tickets, gems, collectionCount, uniqueCards, biasCooldown,
   dust = 0, owned = {}, streak = 0, canClaimDaily = false,
   onClaimDaily, playerName, createdAt,
 }: {
-  bias: string | null;
-  onSetBias: (idol: string) => void;
+  bias?: string | null;
+  onSetBias?: (idol: string) => void;
   tickets: number;
   gems: number;
   collectionCount: number;
@@ -61,15 +60,12 @@ export default function ProfileView({
   const todayTickets = STREAK_TICKETS[todayIdx];
   const todayGems = STREAK_BONUS_GEMS[todayIdx];
   const fan = useMemo(() => {
-    // Approximate fan XP from owned cards
     const totalXp = Object.entries(owned).reduce((sum, [id, qty]) => {
-      const card = CARDS.find(c => c.id === id);
-      return sum + (card ? 5 : 0) * qty;
+      return sum + 5 * qty;
     }, 0);
     return getFanLevel(totalXp);
   }, [owned]);
 
-  const [selectedGroup, setSelectedGroup] = useState<string>(GROUPS[0]?.id ?? "");
   const [showContact, setShowContact] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteHover, setDeleteHover] = useState(false);
@@ -82,7 +78,6 @@ export default function ProfileView({
     setClaimingStreak(false);
   };
 
-  // Badge helpers
   const badge = (icon: string, name: string, unlocked: boolean, desc: string) => {
     const [expanded, setExpanded] = useState(false);
     return (
@@ -125,25 +120,21 @@ export default function ProfileView({
   const fanLevel = fan.level;
   const completeSets = useMemo(() => {
     const ownedSet = new Set(Object.keys(owned));
-    const packCodes = [...new Set(CARDS.map(c => c.packCode))];
+    const packCodes = [...new Set(getCharacters().map(c => c.id))];
     let completed = 0;
     for (const code of packCodes) {
-      const packCards = getCardsByPack(code);
-      if (packCards.length > 0 && packCards.every(c => ownedSet.has(c.id))) completed++;
+      if (ownedSet.has(code)) completed++;
     }
     return completed;
   }, [owned]);
 
-  // Pack progression for collection window
   const packProgression = useMemo(() => {
+    const characters = getCharacters();
     const ownedSet = new Set(Object.keys(owned));
-    const packCodes = [...new Set(CARDS.map(c => c.packCode))];
-    return packCodes.map(code => {
-      const packCards = getCardsByPack(code);
-      const ownedCount = packCards.filter(c => ownedSet.has(c.id)).length;
-      const total = packCards.length;
-      const name = CARDS.find(c => c.packCode === code)?.pack || code;
-      return { code, name, ownedCount, total };
+    return characters.map(char => {
+      const ownedCount = ownedSet.has(char.id) ? (owned[char.id] ?? 0) : 0;
+      const total = 5;
+      return { code: char.id, name: char.name, ownedCount: Math.min(ownedCount, total), total };
     }).sort((a, b) => {
       const aPct = a.total > 0 ? a.ownedCount / a.total : 1;
       const bPct = b.total > 0 ? b.ownedCount / b.total : 1;
@@ -156,7 +147,6 @@ export default function ProfileView({
       className="mx-auto max-w-[600px] lg:max-w-[1100px]"
       style={{ padding: "24px 16px 48px", display: "flex", flexDirection: "column", gap: 20 }}
     >
-      {/* ─── Identity + Wallet ─── */}
       <SystemWindow title="My Profile" width="100%">
         <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
           <div style={{
@@ -192,12 +182,11 @@ export default function ProfileView({
             </div>
             <div style={{ fontSize: 12, color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent-hotpink)", display: "inline-block" }} />
-              Favorite: {bias || "None"}{bias ? ` · ${findGroupByMember(bias)?.name ?? "VICIOUS"}` : ""}
+              Favorite: {bias || "None"}
             </div>
           </div>
         </div>
 
-        {/* Wallet */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginTop: 16 }}>
           {[
             { icon: "", value: tickets, label: "Tickets", color: "var(--accent-hotpink)" },
@@ -220,7 +209,6 @@ export default function ProfileView({
           ))}
         </div>
 
-        {/* Fan level */}
         <div style={{ marginTop: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Fan Lv.{fan.level}</span>
@@ -244,7 +232,6 @@ export default function ProfileView({
         </div>
       </SystemWindow>
 
-      {/* ─── Daily login card ─── */}
       <div style={{
         background: "var(--surface-white)",
         border: "2px solid var(--text-primary)",
@@ -252,7 +239,6 @@ export default function ProfileView({
         borderRadius: 14, padding: "20px 16px",
         display: "flex", flexDirection: "column", gap: 16,
       }}>
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 20 }}>🔥</span>
@@ -265,7 +251,6 @@ export default function ProfileView({
           </span>
         </div>
 
-        {/* 7 day cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6 }}>
           {Array.from({ length: 7 }).map((_, i) => {
             const dayTickets = STREAK_TICKETS[i];
@@ -356,7 +341,6 @@ export default function ProfileView({
           })}
         </div>
 
-        {/* Claim button */}
         <button
           onClick={handleClickDaily}
           disabled={!canClaimDaily || claimingStreak}
@@ -386,11 +370,7 @@ export default function ProfileView({
         </button>
       </div>
 
-      {/* Gift banner removed */}
-
-      {/* ─── Grid Badges + Collection + Bias + Account ─── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
-        {/* Left: Badges */}
         <SystemWindow title="Badges" width="100%">
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
@@ -424,17 +404,9 @@ export default function ProfileView({
                 {badge("🌙", "30-Day Devotion", streak >= 30, "Maintain a 30-day streak")}
               </div>
             </div>
-            <div>
-              <SectionTitle>Secret hunt & trading</SectionTitle>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-                {badge("🌟", "Secret Hunter", false, "Own every secret from one set")}
-                {badge("🔄", "First Trade", false, "Complete a P2P trade")}
-              </div>
-            </div>
           </div>
         </SystemWindow>
 
-        {/* Right: Collection + Purchase history + Bias + Account */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <SystemWindow title="Collection" width="100%">
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -442,14 +414,16 @@ export default function ProfileView({
                 const pct = pack.total > 0 ? Math.round((pack.ownedCount / pack.total) * 100) : 0;
                 return (
                   <div key={pack.code} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    {(() => {
-                      const pi = getPackInfo(pack.code);
-                      return (
-                        <div style={{ width: 40, height: 52, borderRadius: 6, flexShrink: 0, background: pi?.coverImage ? "none" : "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))", border: "1.5px solid var(--text-primary)", overflow: "hidden" }}>
-                          {pi?.coverImage && <img src={pi.coverImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
-                        </div>
-                      );
-                    })()}
+                    <div style={{
+                      width: 40, height: 52, borderRadius: 6, flexShrink: 0,
+                      background: "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))",
+                      border: "1.5px solid var(--text-primary)", overflow: "hidden",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: "var(--surface-white)" }}>
+                        {pack.name[0]}
+                      </span>
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{pack.name}</span>
@@ -483,64 +457,6 @@ export default function ProfileView({
                 })}
               </div>
             )}
-          </SystemWindow>
-
-          <SystemWindow title="Choose Your Favorite" width="100%">
-            <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 12 }}>
-              Your favorite gets better odds every time you pull. You can change once every {BIAS_COOLDOWN_DAYS} days.
-            </div>
-            {biasCooldown !== null && biasCooldown !== undefined && biasCooldown > 0 && (
-              <div style={{ fontSize: 11, color: "var(--accent-pink)", fontWeight: 600, marginBottom: 8 }}>
-                ⏳ Can change again in {biasCooldown} day(s)
-              </div>
-            )}
-            {GROUPS.length > 1 && (
-              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-                {GROUPS.map((g) => (
-                  <button
-                    key={g.id}
-                    onClick={() => setSelectedGroup(g.id)}
-                    style={{
-                       padding: "6px 14px", borderRadius: 8, cursor: "pointer", border: "2px solid rgba(var(--text-primary-rgb),0.12)",
-                       background: selectedGroup === g.id ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "transparent",
-                       color: selectedGroup === g.id ? "var(--text-primary)" : "var(--text-secondary)",
-                       fontFamily: "var(--font-display)", fontSize: 12, fontWeight: 700,
-                    }}
-                  >
-                    {g.name}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {(GROUPS.length > 1 && selectedGroup
-                ? GROUPS.find(g => g.id === selectedGroup)?.members ?? []
-                : GROUPS.flatMap(g => g.members)
-              ).map((member) => {
-                const isActive = bias === member.stageName;
-                return (
-                  <button
-                    key={member.id}
-                    onClick={() => onSetBias(member.stageName)}
-                    style={{
-                       padding: "8px 14px", borderRadius: 8, cursor: "pointer", border: "none",
-                       outline: isActive ? "2px solid var(--text-primary)" : "2px solid rgba(var(--text-primary-rgb),0.12)",
-                      outlineOffset: -2,
-                      background: isActive ? "linear-gradient(135deg, var(--accent-pink), var(--accent-purple))" : "rgba(var(--surface-white-rgb),0.6)",
-                      color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-                      fontFamily: "var(--font-display, cursive)", fontSize: 13, fontWeight: 700,
-                      boxShadow: isActive ? "3px 3px 0px rgba(var(--text-primary-rgb),0.9)" : "none",
-                      display: "flex", alignItems: "center", gap: 6,
-                    }}
-                  >
-                    {isActive ? "💖 " : ""}{member.stageName}
-                    {member.color && !isActive && (
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: member.color, display: "inline-block" }} />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
           </SystemWindow>
 
           <SystemWindow title="Account" width="100%">

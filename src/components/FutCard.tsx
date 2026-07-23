@@ -3,11 +3,12 @@
 import { useRef, useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Rarity } from "./CardEffects";
-import { FUT_RARITY_CONFIG, HOLO_GRADIENT, HOLO_NICKNAME_GRADIENT, NATION_FLAGS } from "@/lib/futConfig";
+import { FUT_RARITY_CONFIG, HOLO_GRADIENT, HOLO_NICKNAME_GRADIENT, NATION_FLAGS, RARITY_BACKGROUND, RARITY_RIM_GLOW } from "@/lib/futConfig";
 import { FutEffects } from "./FutCardEffects";
 
 export type FutCardProps = {
   imageSrc: string;
+  backgroundSrc?: string; // optionnel — si absent, résolu via RARITY_BACKGROUND[rarity]
   ovr: number;
   position: string;
   nation: string;
@@ -15,6 +16,7 @@ export type FutCardProps = {
   rarity: Rarity;
   name: string;
   nickname?: string;
+  serial?: number; // numéro de série universel (1-based par printId)
   styleTag?: string;
   refCode?: string;
   nationLabel?: string;
@@ -61,7 +63,7 @@ function FutCardBack(p: FutCardProps) {
       boxShadow: `inset 0 0 0 0.5px ${bd}`,
       background: `linear-gradient(170deg, ${cfg.cardBg}, #0d0d18)`,
       display: "flex", flexDirection: "column", alignItems: "center",
-      padding: `${s(0.04)} ${s(0.048)} ${s(0.028)}`,
+      padding: `${s(0.08)} ${s(0.048)} ${s(0.028)}`,
       justifyContent: "space-between",
       ...(p.rarity === "secret" ? { animation: "futSecretBorder 3s ease-in-out infinite" } : {}),
     }}>
@@ -70,7 +72,7 @@ function FutCardBack(p: FutCardProps) {
       {/* Nation */}
       <div style={{ fontSize: s(0.036), fontWeight: 700, letterSpacing: s(0.02), textTransform: "uppercase", marginTop: s(0.01), color: bd }}>{p.nationLabel ?? p.nation}</div>
       {/* Nickname */}
-      {p.nickname && <div style={{ fontSize: s(0.038), fontWeight: 600, letterSpacing: s(0.02), textTransform: "uppercase", marginTop: s(0.006), color: bd, opacity: 0.7, fontFamily: "var(--font-rajdhani), var(--font-sans)" }}>{p.nickname}</div>}
+      {p.nickname && p.rarity === "secret" && <div style={{ fontSize: s(0.038), fontWeight: 600, letterSpacing: s(0.02), textTransform: "uppercase", marginTop: s(0.006), color: bd, opacity: 0.7, fontFamily: "var(--font-rajdhani), var(--font-sans)" }}>{p.nickname}</div>}
       {/* Name */}
       <div style={{ fontSize: s(0.06), fontWeight: 800, letterSpacing: s(0.016), textTransform: "uppercase", marginTop: s(0.006), fontFamily: cfg.font === "orbitron" ? "var(--font-orbitron), var(--font-sans)" : cfg.font === "rajdhani" ? "var(--font-rajdhani), var(--font-sans)" : "var(--font-sans)", color: p.rarity === "secret" ? "transparent" : "#fff", ...(p.rarity === "secret" ? { background: HOLO_GRADIENT, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", animation: "futAccentSweep 2.5s ease-in-out infinite" } : {}) }}>{p.name}</div>
       {/* Position */}
@@ -103,6 +105,7 @@ function FutCardFront(p: FutCardProps) {
   const flagUrl = NATION_FLAGS[p.nation];
   const bd = borderColor(p.rarity);
   const bw = borderWidth(p.rarity);
+  const bgSrc = p.backgroundSrc ?? RARITY_BACKGROUND[p.rarity];
 
   return (
     <div style={{
@@ -114,21 +117,27 @@ function FutCardFront(p: FutCardProps) {
       background: cfg.cardBg,
       ...(p.rarity === "secret" ? { animation: "futSecretBorder 3s ease-in-out infinite" } : {}),
     }}>
+      {/* Layer 0 : fond fixe par rareté */}
+      <img src={bgSrc} alt="" draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0, pointerEvents: "none" }} />
+      {/* Layer 1 : ground-glow (ellipse floutée sous le portrait) */}
+      {p.rarity !== "common" && (
+        <div style={{ position: "absolute", left: "5%", right: "5%", bottom: "10%", height: "40%", zIndex: 1, pointerEvents: "none", mixBlendMode: "screen", background: `radial-gradient(ellipse at 50% 100%, ${bd}55 0%, transparent 70%)`, filter: "blur(16px)" }} />
+      )}
       <FutEffects rarity={p.rarity} tiltX={p.tiltX ?? 0} tiltY={p.tiltY ?? 0} imageSrc={p.imageSrc} width={w} />
       {p.rarity !== "common" && <div style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none", background: `radial-gradient(ellipse at 50% 28%, ${bd}22 0%, transparent 50%)` }} />}
       {p.rarity !== "common" && <div style={{ position: "absolute", inset: 0, zIndex: 4, pointerEvents: "none", background: `linear-gradient(160deg, ${bd}12 0%, transparent 40%, transparent 80%, ${bd}08 100%)` }} />}
       <div style={{ position: "absolute", inset: 0, zIndex: 3 }}>
-        <img src={p.imageSrc} alt={p.name} draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 12%", display: "block" }} />
+        <img src={p.imageSrc} alt={p.name} draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 12%", display: "block", filter: RARITY_RIM_GLOW[p.rarity] }} />
       </div>
       <div style={{ position: "absolute", top: s(0.02), left: s(0.024), zIndex: 10, display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1 }}>
         <span style={{ fontSize: s(0.137), fontWeight: 900, fontFamily: cfg.font === "orbitron" ? "var(--font-orbitron), 'Arial Black', sans-serif" : cfg.font === "rajdhani" ? "var(--font-rajdhani), 'Arial Black', sans-serif" : "'Arial Black', 'Impact', sans-serif", letterSpacing: s(-0.008), color: cfg.ovrColor, textShadow: `0 0 ${s(0.024)} rgba(0,0,0,0.9)` }}>{p.ovr}</span>
         <span style={{ fontSize: s(0.032), fontWeight: 700, letterSpacing: s(0.01), textTransform: "uppercase", marginTop: s(0.016), marginLeft: s(0.004), color: cfg.posColor, textShadow: `0 0 ${s(0.016)} rgba(0,0,0,0.8)` }}>{p.position}</span>
       </div>
       {flagUrl && <div style={{ position: "absolute", top: s(0.02), right: s(0.02), zIndex: 10, width: s(0.105), height: s(0.105), borderRadius: "50%", overflow: "hidden", border: `${s(0.008)} solid rgba(255,255,255,0.25)`, boxShadow: `0 ${s(0.008)} ${s(0.032)} rgba(0,0,0,0.5)`, background: "#1a1a2e" }}><img src={flagUrl} alt={p.nation} style={{ width: "100%", height: "100%", objectFit: "cover" }} /></div>}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10, overflow: "hidden", borderBottomLeftRadius: s(0.036), borderBottomRightRadius: s(0.036) }}>
         <div style={{ height: s(0.012), width: "100%", background: p.rarity === "secret" ? HOLO_GRADIENT : cfg.bandAccent, ...(p.rarity === "secret" ? { backgroundSize: "200% 100%", animation: "futAccentSweep 4s ease-in-out infinite" } : {}) }} />
         <div style={{ background: "rgba(4,4,10,0.72)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", padding: `${s(0.016)} ${s(0.04)} ${s(0.02)}`, display: "flex", flexDirection: "column", alignItems: "center", gap: s(0.008), minHeight: s(0.177), justifyContent: "center" }}>
-          {p.nickname && <div style={{ fontSize: s(0.028), fontWeight: 600, letterSpacing: s(0.016), textTransform: "uppercase", lineHeight: 1, fontFamily: "var(--font-rajdhani), system-ui, sans-serif", background: HOLO_NICKNAME_GRADIENT, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", animation: "futAccentSweep 3.5s ease-in-out infinite" }}>{p.nickname}</div>}
+          {p.nickname && p.rarity === "secret" && <div style={{ fontSize: s(0.028), fontWeight: 600, letterSpacing: s(0.016), textTransform: "uppercase", lineHeight: 1, fontFamily: "var(--font-rajdhani), system-ui, sans-serif", background: HOLO_NICKNAME_GRADIENT, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", animation: "futAccentSweep 3.5s ease-in-out infinite" }}>{p.nickname}</div>}
           <span style={{ fontSize: p.rarity === "secret" ? s(0.04) : p.rarity === "legendary" ? s(0.044) : p.rarity === "epic" ? s(0.052) : s(0.048), fontWeight: 800, letterSpacing: p.rarity === "secret" ? s(0.012) : s(0.008), textTransform: "uppercase", lineHeight: 1, fontFamily: cfg.font === "orbitron" ? "var(--font-orbitron), system-ui, sans-serif" : cfg.font === "rajdhani" ? "var(--font-rajdhani), system-ui, sans-serif" : "system-ui, sans-serif", ...(p.rarity === "secret" ? { background: HOLO_GRADIENT, backgroundSize: "200% 100%", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", animation: "futAccentSweep 2.5s ease-in-out infinite" } : { color: cfg.nameColor, textShadow: cfg.nameGlow === "none" ? "none" : cfg.nameGlow }) }}>{p.name}</span>
           <div style={{ display: "flex", gap: s(0.056), alignItems: "center" }}>
             {(["tec","phy","men"] as const).map(k => (
@@ -139,6 +148,17 @@ function FutCardFront(p: FutCardProps) {
             ))}
           </div>
         </div>
+        {/* Serial — bas à droite du bandeau */}
+        {p.serial != null && (
+          <div style={{
+            position: "absolute", right: s(0.028), bottom: s(0.018), zIndex: 11,
+            fontSize: s(0.026), fontWeight: 600, fontFamily: "'Courier New', monospace",
+            letterSpacing: s(0.006), color: "rgba(255,255,255,0.55)",
+            textShadow: `0 0 ${s(0.012)} rgba(0,0,0,0.9)`, pointerEvents: "none",
+          }}>
+            #{String(p.serial).padStart(4, "0")}
+          </div>
+        )}
       </div>
     </div>
   );

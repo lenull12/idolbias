@@ -3,7 +3,9 @@ import { cookies } from "next/headers";
 import { eq, ne, and, or, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/db/client";
 import { wallets, progression } from "@/db/schema";
-import { STREAK_TICKETS, STREAK_BONUS_GEMS, todayStr, daysBetween, getMondayStr } from "@/lib/gameConfig";
+import { STREAK_BONUS_GEMS, todayStr, daysBetween, getMondayStr } from "@/lib/gameConfig";
+
+const STREAK_TICKETS = [3, 3, 3, 3, 3, 3, 3];
 
 const COOKIE_NAME = "idolbias_player_id";
 

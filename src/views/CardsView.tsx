@@ -1,23 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import PillBar from "@/components/PillBar";
 import type { CardGrade } from "@/db/schema";
+import type { OwnedCard } from "@/types/ownedCard";
 import CardHub from "./CardHub";
-import IndexCards from "./indexcards";
 import BinderView from "@/components/binder/BinderView";
-import BinderAlbumView from "@/components/binder/BinderAlbumView";
-import SetCompletionModal from "@/components/binder/SetCompletionModal";
-import { getAllPacks, getCardsByPack, getPackInfo } from "@/data/cards";
-
-function wereAllCardsOwned(collection: Record<string, number>, packCode: string): boolean {
-  const cards = getCardsByPack(packCode);
-  if (cards.length === 0) return false;
-  return cards.every((c) => (collection[c.id] ?? 0) > 0);
-}
+import IndexCards from "./indexcards";
 
 export default function CardsView({
   owned = {},
+  ownedCards = [],
   ownedGrades = {},
   dust = 0,
   gems = 0,
@@ -28,6 +21,7 @@ export default function CardsView({
   onBumpMission,
 }: {
   owned?: Record<string, number>;
+  ownedCards?: OwnedCard[];
   ownedGrades?: Record<string, Partial<Record<CardGrade, number>>>;
   dust?: number;
   gems?: number;
@@ -38,113 +32,9 @@ export default function CardsView({
   onBumpMission?: (id: string) => void;
 }) {
   const [mode, setMode] = useState<"mycards" | "sets" | "catalogue">("mycards");
-  const [selectedPack, setSelectedPack] = useState<string | null>(null);
-  const [localOverride, setLocalOverride] = useState<Record<string, number> | null>(null);
-  const [completionModal, setCompletionModal] = useState<{
-    packCode: string; packName: string; edition: string;
-    coverImage?: string; totalCards: number;
-  } | null>(null);
-  const [claimedPacks, setClaimedPacks] = useState<Record<string, boolean>>({});
-  const [claiming, setClaiming] = useState(false);
-
-  const effectiveOwned = localOverride ?? owned;
-
-  // Completion detection
-  const prevOwned = useRef(effectiveOwned);
-  useEffect(() => {
-    if (Object.keys(prevOwned.current).length === 0) {
-      prevOwned.current = effectiveOwned;
-      return;
-    }
-    for (const [code] of getAllPacks().filter(([, p]) => !p.locked)) {
-      const wasComplete = wereAllCardsOwned(prevOwned.current, code);
-      const isComplete = wereAllCardsOwned(effectiveOwned, code);
-      if (!wasComplete && isComplete && !claimedPacks[code]) {
-        const info = getPackInfo(code);
-        setCompletionModal({
-          packCode: code,
-          packName: info.name,
-          edition: info.edition,
-          coverImage: info.coverImage,
-          totalCards: getCardsByPack(code).length,
-        });
-        break;
-      }
-    }
-    prevOwned.current = effectiveOwned;
-  }, [effectiveOwned, claimedPacks]);
-
-  const handleClaimReward = async (packCode: string, _dev?: boolean) => {
-    setClaiming(true);
-    try {
-      const res = await fetch("/api/sets/claim-reward", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ packCode, _dev }),
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      if (data.success) {
-        setClaimedPacks((p) => ({ ...p, [packCode]: true }));
-        setCompletionModal(null);
-        onClaimed?.();
-      }
-    } catch (e) {
-      console.error("Claim reward failed:", e);
-    } finally {
-      setClaiming(false);
-    }
-  };
-
-  const handleDevComplete = (packCode: string, action: "complete" | "reset") => {
-    const cards = getCardsByPack(packCode);
-    const next = { ...effectiveOwned };
-    if (action === "complete") {
-      for (const c of cards) if (!next[c.id] || next[c.id] === 0) next[c.id] = 1;
-      const info = getPackInfo(packCode);
-      setCompletionModal({
-        packCode,
-        packName: info.name,
-        edition: info.edition,
-        coverImage: info.coverImage,
-        totalCards: cards.length,
-      });
-    } else {
-      for (const c of cards) delete next[c.id];
-    }
-    setLocalOverride(next);
-  };
-
-  // ── Sets tab → BinderAlbumView drill-down ─────────────────────────────
-  if (selectedPack) {
-    return (
-      <BinderAlbumView
-        packCode={selectedPack}
-        owned={effectiveOwned}
-        onBack={() => setSelectedPack(null)}
-        onGoToShop={onGoToShop}
-        onDevComplete={handleDevComplete}
-      />
-    );
-  }
 
   return (
     <>
-      {completionModal && (
-        <SetCompletionModal
-          packCode={completionModal.packCode}
-          packName={completionModal.packName}
-          edition={completionModal.edition}
-          coverImage={completionModal.coverImage}
-          totalCards={completionModal.totalCards}
-          reward={{ dust: 40, gems: 20 }}
-          onClaim={() => handleClaimReward(completionModal.packCode, typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.search.includes("dev=1")) ? true : undefined)}
-          onDismiss={() => setCompletionModal(null)}
-          claiming={claiming}
-          claimed={!!claimedPacks[completionModal.packCode]}
-        />
-      )}
-
       <div className="mx-auto max-w-[600px] lg:max-w-[1100px]" style={{ padding: "24px 16px 48px" }}>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 2, marginBottom: 16 }}>
@@ -178,21 +68,18 @@ export default function CardsView({
 
         {mode === "mycards" && (
           <CardHub
-            owned={owned}
-            ownedGrades={ownedGrades}
-            dust={dust}
-            gems={gems}
+            ownedCards={ownedCards}
             onChanged={() => onChanged?.()}
             onBumpMission={onBumpMission}
           />
         )}
 
         {mode === "sets" && (
-          <BinderView owned={effectiveOwned} onSelectPack={setSelectedPack} onGoToShop={onGoToShop} claimedPacks={claimedPacks} />
+          <BinderView owned={owned} onView={onView} onGoToShop={onGoToShop} />
         )}
 
         {mode === "catalogue" && (
-          <IndexCards owned={effectiveOwned} onView={onView} onGoToShop={onGoToShop} />
+          <IndexCards owned={owned} onView={onView} onGoToShop={onGoToShop} />
         )}
       </div>
     </>

@@ -2,8 +2,8 @@
 "use client";
 
 import { useState } from "react";
-import type { PackInfo } from "@/data/cards";
-import { getPullCost, PULL_COUNTS, type PullCount } from "@/lib/pullConfig";
+import type { PackInfo } from "@/data/footballCards";
+import { getPullCost, PULL_COUNTS, CARDS_PER_PACK, BUNDLE_PACK_COUNT, BUNDLE_DISCOUNT, type PullCount } from "@/lib/pullConfig";
 
 export type Method = "tickets" | "gems";
 type Size = "sm" | "md" | "lg";
@@ -84,7 +84,7 @@ export function PullCountToggle({ selected, onSelect, size }: {
             color: active ? "var(--text-primary)" : "var(--text-secondary)",
             fontFamily: "var(--font-sans, monospace)", fontSize: cfg.chipFont, fontWeight: 700, cursor: "pointer",
           }}>
-            {n}×
+            {`${n * CARDS_PER_PACK} cards${n === BUNDLE_PACK_COUNT ? ` · −${Math.round(BUNDLE_DISCOUNT * 100)}%` : ""}`}
           </button>
         );
       })}

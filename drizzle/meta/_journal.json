@@ -5,50 +5,15 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1783414469319,
-      "tag": "0000_strong_sugar_man",
+      "when": 1784718201107,
+      "tag": "0000_flaky_mac_gargan",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1783450800000,
-      "tag": "0001_create_owned_cards",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1783458000000,
-      "tag": "0002_add_dust_and_trades",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1783600000000,
-      "tag": "0003_add_bias",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1783792964622,
-      "tag": "0004_add_battle_pass",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1783860000000,
-      "tag": "0008_add_affinity",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1784000000000,
-      "tag": "0009_add_pity_counters",
+      "when": 1784807478958,
+      "tag": "0001_loose_chat",
       "breakpoints": true
     }
   ]
