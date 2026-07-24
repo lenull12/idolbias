@@ -1,4 +1,4 @@
-import type { Rarity, TecStats, PhyStats, MenStats } from "@/db/footballSchema";
+import type { Rarity, TecStats, PhyStats, MenStats, GkStats, SetPieceStats, Position12 } from "@/db/footballSchema";
 import type { CardGrade } from "@/db/schema";
 import { rollGrade } from "./gradeConfig";
 import { RARITY_ORDER } from "./gameConfig";
@@ -12,6 +12,7 @@ import {
 } from "@/data/footballCards";
 import { generateStatsForRarity } from "./statGenerator";
 import { CHARACTER_STATS } from "@/data/characterStats";
+import type { Position } from "@/db/footballSchema";
 import { HARD_PITY_THRESHOLD, HARD_PITY_MIN_RARITY } from "./pullConfig";
 
 export type ServerCard = {
@@ -23,17 +24,22 @@ export type ServerCard = {
   grade: CardGrade;
   name: string;
   nickname?: string;
-  serial?: number; // numéro de série de l'instance (assigné au mint)
+  serial?: number;
   nation: string;
-  position: string;
+  group: Position;
+  position12: Position12;
+  characterId: string;
   pack: string;
   edition: string;
   reference: string;
   pityTriggered?: boolean;
   ovr: number;
-  tecStats: TecStats;
+  tecStats: TecStats | null;
+  gkStats: GkStats | null;
+  setPieceStats: SetPieceStats | null;
   phyStats: PhyStats;
   menStats: MenStats;
+  role?: string;
 };
 
 function rollRarity(weights: Record<string, number>): Rarity {
@@ -88,8 +94,9 @@ export function generatePull(
     const usedPrint = print ?? characterPrints.find((p) => p.editionCode === edition)!;
 
     const seed = `${usedPrint.id}-${batchSeed}-${i}`;
-    const position = CHARACTER_STATS[character.id]?.position ?? character.defaultPosition;
-    const { tec, phy, men, ovr } = generateStatsForRarity(character.id, targetRarity, seed);
+    const cs = CHARACTER_STATS[character.id];
+    const position12 = (cs?.position ?? "ST") as Position12;
+    const { tec, gk, phy, men, setPiece, ovr } = generateStatsForRarity(character.id, targetRarity, seed);
 
     results.push({
       id: `${usedPrint.id}-${batchSeed}-${i}`,
@@ -99,15 +106,19 @@ export function generatePull(
       rarity: targetRarity,
       grade: rollGrade(),
       name: character.name,
-      nickname: CHARACTER_STATS[character.id]?.nickname ?? "",
+      nickname: cs?.nickname ?? "",
       nation: character.nation,
-      position,
+      group: character.defaultPosition,
+      position12,
+      characterId: character.id,
       pack: packCode,
       edition,
       reference: usedPrint.refCode,
       pityTriggered: mustHitHardPity,
       ovr,
       tecStats: tec,
+      gkStats: gk,
+      setPieceStats: setPiece,
       phyStats: phy,
       menStats: men,
     });

@@ -97,7 +97,7 @@ export default function CharacterView({
             </span>
           </div>
           <p style={{ fontSize: 14, color: "var(--text-muted)", margin: "6px 0 0", lineHeight: 1.5 }}>
-            {character.isCaptain ? "Team Captain" : `${CHARACTER_STATS[character.id]?.position ?? character.defaultPosition}`}
+            {CHARACTER_STATS[character.id]?.position ?? character.defaultPosition}
           </p>
         </div>
       </div>
@@ -165,7 +165,7 @@ export default function CharacterView({
           <StatCell label="Nation" value={character.nation.charAt(0).toUpperCase() + character.nation.slice(1)} />
           <StatCell label="Position" value={CHARACTER_STATS[character.id]?.position ?? character.defaultPosition} />
           <StatCell label="Style" value={STYLE_LABELS[character.defaultStyle] ?? character.defaultStyle} />
-          <StatCell label="Role" value={character.isCaptain ? "Captain" : "Player"} />
+          <StatCell label="Role" value={CHARACTER_STATS[character.id]?.position ?? character.defaultPosition} />
           {CHARACTER_STATS[character.id]?.nickname && <StatCell label="Nickname" value={CHARACTER_STATS[character.id]!.nickname} />}
         </div>
       </div>

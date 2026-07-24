@@ -81,14 +81,14 @@ export default function CardHub({
   }, []);
 
   const nations = useMemo(() => [...new Set(ownedCards.map((c) => c.nation))].sort(), [ownedCards]);
-  const positions = useMemo(() => [...new Set(ownedCards.map((c) => c.position))].sort(), [ownedCards]);
+  const positions = useMemo(() => [...new Set(ownedCards.map((c) => c.group))].sort(), [ownedCards]);
 
   const filteredCards = useMemo(() => {
     let list = [...ownedCards];
 
     if (favFilter) list = list.filter((c) => favorites[c.id]);
     if (filterNation !== "all") list = list.filter((c) => c.nation === filterNation);
-    if (filterPosition !== "all") list = list.filter((c) => c.position === filterPosition);
+    if (filterPosition !== "all") list = list.filter((c) => c.group === filterPosition);
     if (filterRarity !== "all") list = list.filter((c) => c.rarity === filterRarity);
 
     list.sort((a, b) => {
@@ -209,7 +209,7 @@ export default function CardHub({
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>
-                        {card.position} · {card.rarity}
+                        {card.group} · {card.rarity}
                       </span>
                       {card.serial != null && (
                         <span style={{ fontSize: 8, fontWeight: 700, color: "rgba(255,255,255,0.5)", fontFamily: "var(--font-mono, monospace)" }}>

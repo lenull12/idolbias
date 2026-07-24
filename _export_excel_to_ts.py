@@ -48,6 +48,7 @@ def main():
         nation = (ws.cell(row=r, column=3).value or '').strip().lower()
         arch = (ws.cell(row=r, column=8).value or '')
         nickname = (ws.cell(row=r, column=2).value or '').strip()
+        role = (ws.cell(row=r, column=5).value or '').strip()
         sid = slug(name)
         is_gk = (poste == 'GK')
         names = GK_NAMES if is_gk else OUT_NAMES
@@ -57,10 +58,13 @@ def main():
         for i, n in enumerate(names):
             v = raw[i]
             stats[KEY[n]] = int(v) if isinstance(v,(int,float)) else 0
+        if is_gk:
+            for k in ['cf','corners','penalty','longThrows']:
+                stats.pop(k, None)
         players.append({
             'id': sid, 'name': name, 'nation': nation, 'poste': poste,
             'group': POS_MAP.get(poste,'ATT'), 'style': style, 'base': base,
-            'arch': arch, 'isGK': is_gk, 'stats': stats, 'nickname': nickname,
+            'arch': arch, 'isGK': is_gk, 'stats': stats, 'nickname': nickname, 'role': role,
         })
     # emit TS
     lines = []
@@ -81,6 +85,7 @@ def main():
     lines.append("  style: string;")
     lines.append("  isGK: boolean;")
     lines.append("  nickname: string;")
+    lines.append("  role?: string;")
     lines.append("  stats: Partial<Record<StatKey, number>>;")
     lines.append("}")
     lines.append("")
@@ -93,6 +98,7 @@ def main():
         lines.append(f"    style: \"{p['style']}\",")
         lines.append(f"    isGK: {str(p['isGK']).lower()},")
         lines.append(f"    nickname: \"{p['nickname']}\",")
+        lines.append(f"    role: \"{p['role']}\",")
         lines.append("    stats: {")
         for k, v in p['stats'].items():
             lines.append(f"      {k}: {v},")

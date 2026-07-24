@@ -14,13 +14,16 @@ export async function GET() {
   const rows = await db
     .select({
       id: cardInstances.id,
-      characterId: cardPrints.characterId,
+      characterId: cardInstances.characterId,
       printId: cardInstances.printId,
       ovr: cardInstances.ovr,
       serial: cardInstances.serial,
       grade: cardInstances.grade,
-      position: cardInstances.position,
+      group: cardInstances.position,
+      position12: cardInstances.position12,
       tecStats: cardInstances.tecStats,
+      gkStats: cardInstances.gkStats,
+      setPieceStats: cardInstances.setPieceStats,
       phyStats: cardInstances.phyStats,
       menStats: cardInstances.menStats,
       obtainedAt: cardInstances.obtainedAt,

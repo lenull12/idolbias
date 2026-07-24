@@ -35,7 +35,6 @@ export type CharacterDef = {
   nation: Nation;
   defaultStyle: Style;
   defaultPosition: Position;
-  isCaptain: boolean;
   photoVariants: {
     standard: string;
     field?: string;
@@ -111,7 +110,6 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "vista",
     defaultPosition: "ATT",
-    isCaptain: true,
     photoVariants: {
       standard: "/cards/football/argentine/soledad-diaz/standard.png",
     },
@@ -122,7 +120,6 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "sangFroid",
     defaultPosition: "ATT",
-    isCaptain: false,
     photoVariants: {
       standard: "/cards/football/argentine/valentina-gimenez/standard.png",
     },
@@ -133,7 +130,6 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "percussion",
     defaultPosition: "ATT",
-    isCaptain: false,
     photoVariants: {
       standard: "/cards/football/argentine/renata-navarro/standard.png",
     },
@@ -144,7 +140,6 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "percussion",
     defaultPosition: "ATT",
-    isCaptain: false,
     photoVariants: {
       standard: "/cards/football/argentine/catalina-navarro/standard.png",
     },
@@ -155,7 +150,6 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "pressing",
     defaultPosition: "MIL",
-    isCaptain: false,
     photoVariants: {
       standard: "/cards/football/argentine/martina-romero/standard.png",
     },
@@ -166,7 +160,6 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "elevation",
     defaultPosition: "MIL",
-    isCaptain: false,
     photoVariants: {
       standard: "/cards/football/argentine/roxy-cabrera/standard.png",
     },
@@ -177,7 +170,6 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "vista",
     defaultPosition: "DEF",
-    isCaptain: false,
     photoVariants: {
       standard: "/cards/football/argentine/celeste-benitez/standard.png",
     },
@@ -188,7 +180,6 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "pressing",
     defaultPosition: "DEF",
-    isCaptain: false,
     photoVariants: {
       standard: "/cards/football/argentine/melina-soria/standard.png",
     },
@@ -199,7 +190,6 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "sangFroid",
     defaultPosition: "DEF",
-    isCaptain: false,
     photoVariants: {
       standard: "/cards/football/argentine/pilar-roldan/standard.png",
     },
@@ -210,7 +200,6 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "elevation",
     defaultPosition: "DEF",
-    isCaptain: false,
     photoVariants: {
       standard: "/cards/football/argentine/mercedes-perez/standard.png",
     },
@@ -221,9 +210,118 @@ export const CHARACTERS: CharacterDef[] = [
     nation: "argentine",
     defaultStyle: "sangFroid",
     defaultPosition: "GB",
-    isCaptain: false,
     photoVariants: {
       standard: "/cards/football/argentine/esperanza-galvan/standard.png",
+    },
+  },
+  {
+    id: "karen-himekami",
+    name: "Karen Himekami",
+    nation: "japon",
+    defaultStyle: "percussion",
+    defaultPosition: "ATT",
+    photoVariants: {
+      standard: "/cards/football/japon/karen-himekami/standard.png",
+    },
+  },
+  {
+    id: "shiori-saonji",
+    name: "Shiori Saonji",
+    nation: "japon",
+    defaultStyle: "vista",
+    defaultPosition: "MIL",
+    photoVariants: {
+      standard: "/cards/football/japon/shiori-saonji/standard.png",
+    },
+  },
+  {
+    id: "reika-shinomiya",
+    name: "Reika Shinomiya",
+    nation: "japon",
+    defaultStyle: "percussion",
+    defaultPosition: "ATT",
+    photoVariants: {
+      standard: "/cards/football/japon/reika-shinomiya/standard.png",
+    },
+  },
+  {
+    id: "miyabi-kirishima",
+    name: "Miyabi Kirishima",
+    nation: "japon",
+    defaultStyle: "vista",
+    defaultPosition: "ATT",
+    photoVariants: {
+      standard: "/cards/football/japon/miyabi-kirishima/standard.png",
+    },
+  },
+  {
+    id: "hina-tsukiyomi",
+    name: "Hina Tsukiyomi",
+    nation: "japon",
+    defaultStyle: "vista",
+    defaultPosition: "MIL",
+    photoVariants: {
+      standard: "/cards/football/japon/hina-tsukiyomi/standard.png",
+    },
+  },
+  {
+    id: "hana-kamishiro",
+    name: "Hana Kamishiro",
+    nation: "japon",
+    defaultStyle: "pressing",
+    defaultPosition: "MIL",
+    photoVariants: {
+      standard: "/cards/football/japon/hana-kamishiro/standard.png",
+    },
+  },
+  {
+    id: "momo-hasegawa",
+    name: "Momo Hasegawa",
+    nation: "japon",
+    defaultStyle: "vista",
+    defaultPosition: "DEF",
+    photoVariants: {
+      standard: "/cards/football/japon/momo-hasegawa/standard.png",
+    },
+  },
+  {
+    id: "rin-morishita",
+    name: "Rin Morishita",
+    nation: "japon",
+    defaultStyle: "pressing",
+    defaultPosition: "DEF",
+    photoVariants: {
+      standard: "/cards/football/japon/rin-morishita/standard.png",
+    },
+  },
+  {
+    id: "yuriko-otake",
+    name: "Yuriko \u014ctake",
+    nation: "japon",
+    defaultStyle: "elevation",
+    defaultPosition: "DEF",
+    photoVariants: {
+      standard: "/cards/football/japon/yuriko-otake/standard.png",
+    },
+  },
+  {
+    id: "aya-mishima",
+    name: "Aya Mishima",
+    nation: "japon",
+    defaultStyle: "elevation",
+    defaultPosition: "DEF",
+    photoVariants: {
+      standard: "/cards/football/japon/aya-mishima/standard.png",
+    },
+  },
+  {
+    id: "hinata-shigaki",
+    name: "Hinata Shigaki",
+    nation: "japon",
+    defaultStyle: "sangFroid",
+    defaultPosition: "GB",
+    photoVariants: {
+      standard: "/cards/football/japon/hinata-shigaki/standard.png",
     },
   },
 ];

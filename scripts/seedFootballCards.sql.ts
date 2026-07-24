@@ -16,8 +16,8 @@ for (const c of CHARACTERS) {
   const nickname = CHARACTER_STATS[c.id]?.nickname ? `'${CHARACTER_STATS[c.id]!.nickname!.replace(/'/g, "''")}'` : "NULL";
   const pv = JSON.stringify(c.photoVariants).replace(/'/g, "''");
   lines.push(
-    `INSERT OR REPLACE INTO characters (id, name, nickname, nation, default_style, default_position, is_captain, photo_variants, created_at) ` +
-    `VALUES ('${c.id}', '${c.name.replace(/'/g, "''")}', ${nickname}, '${c.nation}', '${c.defaultStyle}', '${c.defaultPosition}', ${c.isCaptain ? 1 : 0}, '${pv}', '${now}');`
+    `INSERT OR REPLACE INTO characters (id, name, nickname, nation, default_style, default_position, photo_variants, created_at) ` +
+    `VALUES ('${c.id}', '${c.name.replace(/'/g, "''")}', ${nickname}, '${c.nation}', '${c.defaultStyle}', '${c.defaultPosition}', '${pv}', '${now}');`
   );
 }
 

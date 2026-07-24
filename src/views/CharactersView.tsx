@@ -105,11 +105,6 @@ export default function CharactersView({
                     <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontFamily: "var(--font-display)" }}>
                       {CHARACTER_STATS[character.id]?.position ?? character.defaultPosition}
                     </span>
-                    {character.isCaptain && (
-                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", letterSpacing: "1px", textTransform: "uppercase" }}>
-                        CAPTAIN
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>

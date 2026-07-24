@@ -9,15 +9,6 @@ import { getPackInfo } from "@/data/footballCards";
 import { generatePull, type ServerCard } from "@/lib/gachaEngine";
 import { getPullCost, CARDS_PER_PACK, type PullCount } from "@/lib/pullConfig";
 import { getMondayStr } from "@/lib/gameConfig";
-import type { Position } from "@/db/footballSchema";
-
-const POSITION_GROUP: Record<string, Position> = {
-  ST: "ATT", LW: "ATT", RW: "ATT", LM: "ATT", RM: "ATT", CAM: "ATT",
-  RB: "DEF", LB: "DEF", CB: "DEF",
-  CDM: "MIL", CM: "MIL",
-  GK: "GB",
-};
-const toGroup = (pos: string): Position => POSITION_GROUP[pos] ?? "ATT";
 
 const COOKIE_NAME = "idolbias_player_id";
 const MAX_RETRIES = 3;
@@ -158,11 +149,16 @@ export async function POST(request: Request) {
           id: c.id,
           printId: c.printId,
           ownerId: playerId,
+          characterId: c.characterId,
           serial: serials[c.id],
-          tecStats: c.tecStats,
+          tecStats: c.tecStats ?? { passe: 0, tir: 0, dribble: 0, centre: 0, tacle: 0, controle: 0 },
+          gkStats: c.gkStats,
+          setPieceStats: c.setPieceStats,
           phyStats: c.phyStats,
           menStats: c.menStats,
-          position: toGroup(c.position),
+          position: c.group,
+          position12: c.position12,
+          role: c.role,
           ovr: c.ovr,
           grade: c.grade as any,
           affinityLastActiveAt: now,

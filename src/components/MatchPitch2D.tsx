@@ -32,15 +32,13 @@ function eventLabel(e: any, homeLabel: string, awayLabel: string, homeTeamId: st
   const teamLabel = e.team === homeTeamId ? homeLabel : awayLabel;
   switch (e.type) {
     case "goal":
-      return `But ! ${e.player} (${teamLabel}) — ${e.phase}`;
-    case "signature":
-      return `Technique signature ! ${e.player} (${teamLabel})`;
+      return `But ! ${e.player} (${teamLabel}) — ${e.zone}`;
     case "turnover":
       return `Perte de balle — ${teamLabel} récupère.`;
     case "save":
       return `Arrêt de ${e.player} (${teamLabel}).`;
     default:
-      return `${e.player} (${teamLabel}) — ${e.phase}`;
+      return `${e.player} (${teamLabel}) — ${e.zone}`;
   }
 }
 
@@ -91,19 +89,19 @@ export function MatchPitch2D({ result, homeTeamId, awayTeamId, homeLabel = "Domi
 
       drawPitch(ctx, w, h);
 
-      const ballFrom = kf.ballZone;
-      const ballTo = nextKf ? nextKf.ballZone : kf.ballZone;
+      const ballFrom = kf.ball;
+      const ballTo = nextKf ? nextKf.ball : kf.ball;
       const ball = ballBezier(ballFrom, ballTo, localT);
 
-      for (const p of kf.involvedPlayers) {
-        const target = nextKf?.involvedPlayers.find((q) => q.playerId === p.playerId);
+      for (const p of kf.positions) {
+        const target = nextKf?.positions.find((q) => q.instanceId === p.instanceId);
         const x = target ? lerp(p.x, target.x, ease(localT)) : p.x;
         const y = target ? lerp(p.y, target.y, ease(localT)) : p.y;
         drawDot(ctx, x, y, w, h, "#378ADD", 7);
       }
       drawDot(ctx, ball.x, ball.y, w, h, "#ffffff", 4);
 
-      setPhaseLabel(kf.phase);
+      setPhaseLabel(kf.outcome);
       setMinuteLabel(`${kf.minute}'`);
     },
     [drawPitch, drawDot],
@@ -126,7 +124,7 @@ export function MatchPitch2D({ result, homeTeamId, awayTeamId, homeLabel = "Domi
           }
           const kf = keyframes[newIdx];
           if (kf.outcome && kf.outcome !== "success") {
-            const matchingEvent = result.events.find((e) => e.minute === kf.minute && e.phase === kf.phase);
+            const matchingEvent = result.events.find((e) => e.minute === kf.minute);
             if (matchingEvent) setEventLog(eventLabel(matchingEvent, homeLabel, awayLabel, homeTeamId));
           }
           return newIdx;

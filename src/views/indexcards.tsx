@@ -217,7 +217,6 @@ export default function IndexCards({
           const qty = owned[char.id] ?? 0;
           const isOwned = qty > 0;
           const flag = NATION_FLAGS[char.nation] ?? "";
-          const hasCaptain = char.isCaptain;
 
           return (
             <div

@@ -34,7 +34,6 @@ async function seed() {
         nation: c.nation as Nation,
         defaultStyle: c.defaultStyle as Style,
         defaultPosition: c.defaultPosition as Position,
-        isCaptain: c.isCaptain,
         photoVariants: c.photoVariants,
         createdAt: now,
       })
@@ -46,7 +45,6 @@ async function seed() {
           nation: c.nation as Nation,
           defaultStyle: c.defaultStyle as Style,
           defaultPosition: c.defaultPosition as Position,
-          isCaptain: c.isCaptain,
           photoVariants: c.photoVariants,
         },
       });

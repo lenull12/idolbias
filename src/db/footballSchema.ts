@@ -37,7 +37,6 @@ export const characters = sqliteTable("characters", {
   nation: text("nation").$type<Nation>().notNull(),
   defaultStyle: text("default_style").$type<Style>().notNull(),
   defaultPosition: text("default_position").$type<Position>().notNull(),
-  isCaptain: integer("is_captain", { mode: "boolean" }).notNull().default(false),
   photoVariants: text("photo_variants", { mode: "json" })
     .$type<{ standard: string; field?: string; signature?: string; mythic?: string }>()
     .notNull(),
@@ -61,16 +60,30 @@ export const cardPrints = sqliteTable("card_prints", {
 export interface TecStats { passe: number; tir: number; dribble: number; centre: number; tacle: number; controle: number; }
 export interface PhyStats { vitesse: number; acceleration: number; endurance: number; puissance: number; agilite: number; detente: number; }
 export interface MenStats { anticipation: number; sangFroid: number; leadership: number; positionnement: number; agressivite: number; decision: number; }
+export interface GkStats {
+  reflexes: number; handling: number; aerialReach: number;
+  commandArea: number; kicking: number; rushingOut: number;
+}
+export interface SetPieceStats {
+  cf: number; corners: number; penalty: number; longThrows: number;
+}
+export type Position12 =
+  "GK" | "RB" | "LB" | "CB" | "CDM" | "CM" | "CAM" | "LM" | "RM" | "LW" | "RW" | "ST";
 
 export const cardInstances = sqliteTable("card_instances", {
   id: text("id").primaryKey(),
   printId: text("print_id").notNull().references(() => cardPrints.id),
   ownerId: text("owner_id").notNull().references(() => players.id),
+  characterId: text("character_id").notNull().references(() => characters.id),
   serial: integer("serial"),
-  tecStats: text("tec_stats", { mode: "json" }).$type<TecStats>().notNull(),
+  tecStats: text("tec_stats", { mode: "json" }).$type<TecStats | null>().notNull(),
+  gkStats: text("gk_stats", { mode: "json" }).$type<GkStats | null>(),
+  setPieceStats: text("set_piece_stats", { mode: "json" }).$type<SetPieceStats | null>(),
   phyStats: text("phy_stats", { mode: "json" }).$type<PhyStats>().notNull(),
   menStats: text("men_stats", { mode: "json" }).$type<MenStats>().notNull(),
   position: text("position").$type<Position>().notNull(),
+  position12: text("position12").$type<Position12>().notNull(),
+  role: text("role"),
   ovr: integer("ovr").notNull(),
   grade: text("grade").$type<Grade>().notNull().default("standard"),
   affinityXp: integer("affinity_xp").notNull().default(0),
@@ -141,37 +154,6 @@ export const transferSales = sqliteTable("transfer_sales", {
   priceDollars: integer("price_dollars").notNull(),
   soldAt: integer("sold_at", { mode: "timestamp" }).notNull(),
 });
-
-type StatKey = keyof TecStats | keyof PhyStats | keyof MenStats;
-
-export const POSITION_WEIGHTS: Record<Position, Partial<Record<StatKey, number>>> = {
-  ATT: { tir: 3, dribble: 2, vitesse: 2, sangFroid: 2, acceleration: 2 },
-  MIL: { passe: 3, decision: 2, controle: 2, endurance: 2, dribble: 2 },
-  DEF: { tacle: 3, positionnement: 3, puissance: 2, anticipation: 2 },
-  GB: { anticipation: 3, agilite: 3, positionnement: 2, sangFroid: 2 },
-};
-
-const DEFAULT_WEIGHT = 1;
-
-export function computeOVR(
-  tec: TecStats,
-  phy: PhyStats,
-  men: MenStats,
-  position: Position,
-  editorialBoost = 0,
-): number {
-  const all: Record<StatKey, number> = { ...tec, ...phy, ...men };
-  const weights = POSITION_WEIGHTS[position];
-  let sum = 0;
-  let totalWeight = 0;
-  for (const key of Object.keys(all) as StatKey[]) {
-    const w = weights[key] ?? DEFAULT_WEIGHT;
-    sum += all[key] * w;
-    totalWeight += w;
-  }
-  const raw = Math.round((sum / totalWeight / 20) * 99) + editorialBoost;
-  return raw;
-}
 
 export function clampOVRToRarityBand(ovr: number, rarity: Rarity): number {
   const [min, max] = OVR_BAND[rarity];

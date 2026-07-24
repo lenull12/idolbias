@@ -40,10 +40,10 @@ function aggregateStats(card: ServerCard): { tec: number; phy: number; men: numb
     const avgRaw = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
     return Math.max(1, Math.min(99, Math.round(avgRaw * frac)));
   };
-  const clean = (o: Record<string, any>) =>
+  const clean = (o: Record<string, any> | null) =>
     Object.values(o ?? {}).filter((v): v is number => typeof v === "number");
   return {
-    tec: scale(clean(card.tecStats)),
+    tec: scale(clean(card.gkStats ?? card.tecStats)),
     phy: scale(clean(card.phyStats)),
     men: scale(clean(card.menStats)),
   };
@@ -52,12 +52,12 @@ function aggregateStats(card: ServerCard): { tec: number; phy: number; men: numb
 function mapToFutCard(c: ServerCard): FutCardProps {
   const m = NATION_MAP[c.nation];
   return {
-    imageSrc: c.imageSrc, ovr: c.ovr, position: c.position, nation: m?.flag ?? c.nation.toUpperCase(),
+    imageSrc: c.imageSrc, ovr: c.ovr, position: c.group, nation: m?.flag ?? c.nation.toUpperCase(),
     stats: aggregateStats(c), rarity: c.rarity as any, name: c.name.toUpperCase(),
     nickname: c.nickname, refCode: c.reference, serial: c.serial,
     nationLabel: m?.label ?? c.nation.toUpperCase(),
-    positionLabel: c.position,
-    styleTag: `OVR ${c.ovr} · ${c.position}`,
+    positionLabel: c.group,
+    styleTag: `OVR ${c.ovr} · ${c.group}`,
   };
 }
 

@@ -8,8 +8,11 @@ export type OwnedCard = {
   rarity: string;
   serial: number | null;
   grade: string;
-  position: string;
-  tecStats: Record<string, number>;
+  group: string;
+  position12: string;
+  tecStats: Record<string, number> | null;
+  gkStats: Record<string, number> | null;
+  setPieceStats: Record<string, number> | null;
   phyStats: Record<string, number>;
   menStats: Record<string, number>;
 };
