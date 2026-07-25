@@ -13,11 +13,15 @@ const lines: string[] = [];
 
 lines.push("-- Seed characters");
 for (const c of CHARACTERS) {
-  const nickname = CHARACTER_STATS[c.id]?.nickname ? `'${CHARACTER_STATS[c.id]!.nickname!.replace(/'/g, "''")}'` : "NULL";
+  const cs = CHARACTER_STATS[c.id];
+  const nickname = cs?.nickname ? `'${cs.nickname!.replace(/'/g, "''")}'` : "NULL";
+  const taille = cs?.tailleCm ?? 170;
+  const poids = cs?.poidsKg ?? 65;
+  const pied = cs?.piedPrefere ? `'${cs.piedPrefere.replace(/'/g, "''")}'` : "'right'";
   const pv = JSON.stringify(c.photoVariants).replace(/'/g, "''");
   lines.push(
-    `INSERT OR REPLACE INTO characters (id, name, nickname, nation, default_style, default_position, photo_variants, created_at) ` +
-    `VALUES ('${c.id}', '${c.name.replace(/'/g, "''")}', ${nickname}, '${c.nation}', '${c.defaultStyle}', '${c.defaultPosition}', '${pv}', '${now}');`
+    `INSERT OR REPLACE INTO characters (id, name, nickname, nation, default_style, default_position, taille_cm, poids_kg, pied_prefere, photo_variants, created_at) ` +
+    `VALUES ('${c.id}', '${c.name.replace(/'/g, "''")}', ${nickname}, '${c.nation}', '${c.defaultStyle}', '${c.defaultPosition}', ${taille}, ${poids}, ${pied}, '${pv}', '${now}');`
   );
 }
 

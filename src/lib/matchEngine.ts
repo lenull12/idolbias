@@ -40,6 +40,9 @@ export interface MatchPlayer {
   style: Style;
   rarity: Rarity;
   stats: Partial<Record<StatKey, number>>;
+  tailleCm: number;
+  poidsKg: number;
+  piedPrefere: string;
   baseX: number;
   baseY: number;
   equippedSkills: EquippedSkill[];
@@ -91,7 +94,7 @@ export interface Keyframe {
 
 export interface MatchEvent {
   minute: number;
-  type: "goal" | "save" | "turnover";
+  type: "goal" | "save" | "turnover" | "breakaway" | "highlight";
   team: string;
   player: string;
   zone: ZoneKey;
@@ -188,7 +191,7 @@ function weightedScore(
 const ZONE_ATTACK_WEIGHTS: Record<ZoneKey, Partial<Record<StatKey, number>>> = {
   relance: {
     passe: 2.0, controle: 1.5, decision: 1.5,
-    puissance: 0.8, sangFroid: 1.0, agressivite: 0.5,
+    force: 0.8, sangFroid: 1.0, agressivite: 0.5,
   },
   construction: {
     passe: 2.0, controle: 1.5, decision: 1.5,
@@ -198,12 +201,12 @@ const ZONE_ATTACK_WEIGHTS: Record<ZoneKey, Partial<Record<StatKey, number>>> = {
   milieu: {
     passe: 1.5, dribble: 1.5, controle: 1.2,
     decision: 1.2, endurance: 1.0, agressivite: 0.8,
-    puissance: 0.5, anticipation: 0.5,
+    force: 0.5, anticipation: 0.5,
   },
   progression: {
     dribble: 2.0, vitesse: 1.5, acceleration: 1.5,
     centre: 1.0, passe: 0.8, decision: 0.8,
-    puissance: 0.5, agilite: 0.5,
+    force: 0.5, agilite: 0.5,
   },
   finition: {
     tir: 2.0, sangFroid: 1.5, detente: 1.0,
@@ -240,7 +243,7 @@ const ZONE_DEFENSE_WEIGHTS: Record<ZoneKey, Partial<Record<StatKey, number>>> = 
 // ─── GK_ATTACK_WEIGHTS — la gardienne relance ─────────────────────────────────
 
 const GK_ATTACK_WEIGHTS: Record<ZoneKey, Partial<Record<StatKey, number>>> = {
-  relance: { passe: 2.0, decision: 1.5, sangFroid: 1.0 },
+  relance: { kicking: 2.0, decision: 1.5, sangFroid: 1.0 },
   construction: { kicking: 1.5, passe: 1.0, decision: 1.0 },
   milieu: {},
   progression: {},
@@ -256,7 +259,7 @@ const GK_DEFENSE_WEIGHTS: Record<ZoneKey, Partial<Record<StatKey, number>>> = {
   progression: { anticipation: 1.5, agilite: 1.0, positionnement: 0.5 },
   finition: {
     reflexes: 2.0, handling: 1.5, commandArea: 1.2,
-    aerialReach: 1.0, rushingOut: 1.0, kicking: 0.5,
+    aerialReach: 1.0, detente: 0.8, rushingOut: 1.0, kicking: 0.5,
     anticipation: 1.5, agilite: 1.5, positionnement: 1.2,
   },
 };
@@ -274,7 +277,7 @@ const ZONE_K: Record<ZoneKey, number> = {
 const ZONE_SURPRISE_ATTACK: Record<ZoneKey, StatKey[]> = {
   relance: ["controle", "passe", "decision", "sangFroid"],
   construction: ["dribble", "passe", "decision", "vitesse"],
-  milieu: ["dribble", "passe", "decision", "puissance", "agilite"],
+  milieu: ["dribble", "passe", "decision", "force", "agilite"],
   progression: ["vitesse", "acceleration", "dribble", "agilite", "decision"],
   finition: ["tir", "detente", "sangFroid", "puissance", "agilite"],
 };
@@ -400,6 +403,49 @@ function roam(player: MatchPlayer): number {
   return ROLE_ROAM[player.role ?? ""] ?? DEFAULT_ROAM;
 }
 
+// ─── Indices composites dérivés (phase 6) ─────────────────────────────────────
+
+export function tailleIndex(tailleCm: number): number {
+  const clamped = Math.max(150, Math.min(195, tailleCm));
+  return Math.round(((clamped - 150) / (195 - 150)) * 99);
+}
+
+export function techniqueMult(stats: Partial<Record<StatKey, number>>): number {
+  const t = stats.technique ?? 50;
+  return 0.85 + (t / 99) * 0.30;
+}
+
+export function complementBonus(a: number, b: number, weight = 0.15): number {
+  return Math.min(a, b) * weight;
+}
+
+export function indexImplication(stats: Partial<Record<StatKey, number>>): number {
+  const workRate = stats.workRate ?? 50;
+  const endurance = stats.endurance ?? 50;
+  const positionnement = stats.positionnement ?? 50;
+  const raw = workRate * 0.5 + endurance * 0.3 + positionnement * 0.2;
+  return 0.75 + (raw - 50) / 100;
+}
+
+export function indexDribble(stats: Partial<Record<StatKey, number>>): number {
+  const technique = (stats.dribble ?? 50) * 0.6 + (stats.controle ?? 50) * 0.4;
+  const physique = (stats.agilite ?? 50) * 0.5 + (stats.vitesse ?? 50) * 0.3 + (stats.acceleration ?? 50) * 0.2;
+  const base = technique * 0.55 + physique * 0.35 + complementBonus(technique, physique, 0.15);
+  return base * techniqueMult(stats);
+}
+
+export function indexAerien(stats: Partial<Record<StatKey, number>>, tailleCm: number): number {
+  const saut = (stats.detente ?? 50) * 0.5 + tailleIndex(tailleCm) * 0.5;
+  const technique = stats.jeu_de_tete ?? 50;
+  return saut * 0.55 + technique * 0.45 + complementBonus(saut, technique, 0.10);
+}
+
+export function indexPhysique(stats: Partial<Record<StatKey, number>>, tailleCm: number): number {
+  const brut = (stats.force ?? 50) * 0.75 + tailleIndex(tailleCm) * 0.25;
+  const controle = stats.controle ?? 50;
+  return brut * 0.7 + controle * 0.3;
+}
+
 // ─── RPS ──────────────────────────────────────────────────────────────────────
 
 const RPS_ADVANTAGE: Partial<Record<Style, Style>> = {
@@ -422,7 +468,7 @@ function applyStyleModifiers(
   switch (actress.style) {
     case "percussion":
       if (["milieu", "progression"].includes(zone)) {
-        mod.puissance = (mod.puissance ?? 1) * 1.2;
+        mod.force = (mod.force ?? 1) * 1.2;
         mod.agressivite = (mod.agressivite ?? 1) * 1.2;
       }
       break;
@@ -482,7 +528,8 @@ function interventionScore(
   const proximity = Math.max(0, 1 - dist / 100);
   const zm = getRoleMatch(player, zoneFromY(ball.y), "attack");
   const lat = lateralBonus(player.position12, ball.x);
-  return proximity * (zm + lat) * (1 + roam(player));
+  const implication = indexImplication(player.stats);
+  return proximity * (zm + lat) * (1 + roam(player)) * implication;
 }
 
 function defenseInterventionScore(
@@ -499,7 +546,8 @@ function defenseInterventionScore(
   const ant = (player.stats.anticipation ?? 50) / 99;
   const posi = (player.stats.positionnement ?? 50) / 99;
   const mentalFactor = 0.5 + 0.5 * ((ant + posi) / 2);
-  return proximity * (zm + lat) * (1 + roam(player)) * mentalFactor;
+  const implication = indexImplication(player.stats);
+  return proximity * (zm + lat) * (1 + roam(player)) * mentalFactor * implication;
 }
 
 function selectActor(
@@ -562,12 +610,13 @@ function computePressingScore(
     return { pressingScore: 20, spaceBehind: 0 };
   }
 
+  const PRESSING_WEIGHT_SUM = 1.0 + 0.7 + 0.5 + 0.3;
   const avgPressing = presseurs.reduce((sum, p) => sum + (
-    (p.stats.agressivite ?? 50) * 1.0 +
+    (p.stats.workRate ?? 50) * 1.0 +
     (p.stats.endurance ?? 50) * 0.7 +
     (p.stats.anticipation ?? 50) * 0.5 +
     (p.stats.vitesse ?? 50) * 0.3
-  ), 0) / presseurs.length;
+  ), 0) / (presseurs.length * PRESSING_WEIGHT_SUM);
 
   const nombreBonus = presseurs.length >= 4 ? 1.2 : presseurs.length >= 2 ? 1.1 : 1.0;
   const pressingScore = avgPressing * params.bonusScore * nombreBonus;
@@ -584,11 +633,11 @@ function computePressingScore(
 const LIGNE_PARAMS: Record<TacticSlider, {
   ligneHauteur: number; compressionAdverse: number; counterBonusOwn: number; offsideMult: number;
 }> = {
-  [-2]: { ligneHauteur: 12, compressionAdverse: 0.65, counterBonusOwn: 1.80, offsideMult: 0.35 },
-  [-1]: { ligneHauteur: 28, compressionAdverse: 0.75, counterBonusOwn: 1.50, offsideMult: 0.50 },
-  [0]:  { ligneHauteur: 50, compressionAdverse: 1.00, counterBonusOwn: 1.00, offsideMult: 1.00 },
-  [1]:  { ligneHauteur: 68, compressionAdverse: 1.15, counterBonusOwn: 0.60, offsideMult: 1.60 },
-  [2]:  { ligneHauteur: 82, compressionAdverse: 1.30, counterBonusOwn: 0.35, offsideMult: 2.20 },
+  [-2]: { ligneHauteur: 85, compressionAdverse: 0.65, counterBonusOwn: 1.80, offsideMult: 0.35 },
+  [-1]: { ligneHauteur: 65, compressionAdverse: 0.75, counterBonusOwn: 1.50, offsideMult: 0.50 },
+  [0]:  { ligneHauteur: 40, compressionAdverse: 1.00, counterBonusOwn: 1.00, offsideMult: 1.00 },
+  [1]:  { ligneHauteur: 22, compressionAdverse: 1.15, counterBonusOwn: 0.60, offsideMult: 1.60 },
+  [2]:  { ligneHauteur: 10, compressionAdverse: 1.30, counterBonusOwn: 0.35, offsideMult: 2.20 },
 };
 
 const ZONE_CENTER_Y: Record<ZoneKey, number> = {
@@ -637,6 +686,59 @@ const DIRECTNESS_PARAMS: Record<TacticSlider, { distanceMult: number; errorMult:
   [2]:  { distanceMult: 1.40, errorMult: 1.30 },
 };
 
+// ─── Résolution progression — trois types d'action (phase 6) ───────────────────
+
+export function resolveProgressionAction(
+  actress: MatchPlayer,
+  _defender: MatchPlayer,
+  ball: BallState,
+  _minute: number,
+  fm: number,
+  rng: () => number,
+): { attackScore: number; actionType: "dribble" | "passe_profondeur" | "centre"; lastActionWasCross: boolean } {
+  const isWidePlayer = (["RB", "LB", "RM", "LM", "RW", "LW"] as Position12[]).includes(actress.position12);
+  const inAttackingHalf = ball.y >= 50;
+
+  if (isWidePlayer && inAttackingHalf && (actress.stats.centre ?? 50) > 40) {
+    const centreChance = ((actress.stats.centre ?? 50) - 40) / 120;
+    if (rng() < centreChance) {
+      const score = ((actress.stats.centre ?? 50) * 0.6 + (actress.stats.passe ?? 50) * 0.4) * techniqueMult(actress.stats) * fm;
+      return { attackScore: score, actionType: "centre", lastActionWasCross: true };
+    }
+  }
+
+  const dribbleProneness: Record<string, number> = {
+    winger: 0.65, inside_forward: 0.6, false_nine: 0.5, second_striker: 0.5,
+    poacher: 0.2, deep_lying_playmaker: 0.15, regista: 0.1, anchor: 0.1,
+  };
+  const dribbleStat = actress.stats.dribble ?? 50;
+  const passeStat = actress.stats.passe ?? 50;
+  const fallbackProneness = dribbleStat / Math.max(1, dribbleStat + passeStat);
+  const proneness = dribbleProneness[actress.role ?? ""] ?? fallbackProneness;
+
+  if (rng() < proneness) {
+    return { attackScore: indexDribble(actress.stats) * fm, actionType: "dribble", lastActionWasCross: false };
+  }
+  const passScore = ((actress.stats.passe ?? 50) * 0.6 + (actress.stats.decision ?? 50) * 0.4) * techniqueMult(actress.stats);
+  return { attackScore: passScore * fm, actionType: "passe_profondeur", lastActionWasCross: false };
+}
+
+// ─── Résolution finition — frappe vs tête (phase 6) ───────────────────────────
+
+export function resolveFinitionAttempt(
+  actress: MatchPlayer,
+  lastActionWasCross: boolean,
+  _minute: number,
+  formMod: number,
+): { shotScore: number; kind: "frappe" | "tete" } {
+  if (lastActionWasCross) {
+    return { shotScore: indexAerien(actress.stats, actress.tailleCm) * formMod, kind: "tete" };
+  }
+  const shotScore = ((actress.stats.tir ?? 50) * 0.5 + (actress.stats.sangFroid ?? 50) * 0.3 + (actress.stats.decision ?? 50) * 0.2)
+    * techniqueMult(actress.stats) * formMod;
+  return { shotScore, kind: "frappe" };
+}
+
 // ─── Résolution micro-action (avec contre-pied) ──────────────────────────────
 
 function resolveMicroAction(
@@ -654,26 +756,44 @@ function resolveMicroAction(
   momentumDef = 1.0,
   justRecovered = false,
   redCards?: Set<string>,
-): { success: boolean; distance: number; newBall: BallState; breakaway: boolean } {
+  lastActionWasCross = false,
+): { success: boolean; distance: number; newBall: BallState; breakaway: boolean; lastActionWasCross: boolean; actionType?: string; attackScore: number; defenseScore: number } {
   const fm = (p: MatchPlayer) => formMap?.get(p.instanceId) ?? 1.0;
-  const attackWeights = actress.isGK ? GK_ATTACK_WEIGHTS[zone] : ZONE_ATTACK_WEIGHTS[zone];
-  const modAttack = applyStyleModifiers(attackWeights, actress, defender, zone);
-  const surprise = rng();
 
   let attackScore: number;
   let defenseScore: number;
   let spaceBehind = 0;
+  let newLastActionWasCross = lastActionWasCross;
+  let actionType: string | undefined;
 
-  if (surprise < 0.2) {
-    attackScore = resolveSurprise(actress.stats, ZONE_SURPRISE_ATTACK[zone], rng);
+  if (zone === "progression") {
+    const progResult = resolveProgressionAction(actress, defender, ball, minute, fm(actress), rng);
+    attackScore = progResult.attackScore * momentumAtk;
+    newLastActionWasCross = progResult.lastActionWasCross;
+    actionType = progResult.actionType;
+  } else if (zone === "finition") {
+    const finResult = resolveFinitionAttempt(actress, lastActionWasCross, minute, fm(actress));
+    attackScore = finResult.shotScore * momentumAtk;
+    actionType = finResult.kind;
   } else {
-    attackScore = weightedScore(actress.stats, modAttack, minute, attackingTeam.mentality, fm(actress), 1.0, attackingTeam.tempo);
+    const attackWeights = actress.isGK ? GK_ATTACK_WEIGHTS[zone] : ZONE_ATTACK_WEIGHTS[zone];
+    const modAttack = applyStyleModifiers(attackWeights, actress, defender, zone);
+    const surprise = rng();
+    const flairBonus = ((actress.stats.flair ?? 50) - 50) / 500;
+    const surpriseChance = 0.40 + flairBonus;
+    if (surprise < surpriseChance) {
+      attackScore = resolveSurprise(actress.stats, ZONE_SURPRISE_ATTACK[zone], rng);
+    } else {
+      attackScore = weightedScore(actress.stats, modAttack, minute, attackingTeam.mentality, fm(actress), 1.0, attackingTeam.tempo);
+    }
   }
 
   const defWeights = defender.isGK ? GK_DEFENSE_WEIGHTS[zone] : ZONE_DEFENSE_WEIGHTS[zone];
   const modDefense = applyStyleModifiers(defWeights, actress, defender, zone);
   const individualDefense = weightedScore(defender.stats, modDefense, minute, defendingTeam.mentality, fm(defender), 1.0, defendingTeam.tempo);
-  const zoneDefense = computeZoneDefenseScore(defendingTeam, zone, ball, positions, individualDefense);
+  const physMult = indexPhysique(defender.stats, defender.tailleCm);
+  const combinedDefense = individualDefense * 0.7 + physMult * 0.3;
+  const zoneDefense = computeZoneDefenseScore(defendingTeam, zone, ball, positions, combinedDefense);
   defenseScore = zoneDefense.defenseScore;
   spaceBehind = zoneDefense.spaceBehind;
 
@@ -720,7 +840,7 @@ function resolveMicroAction(
     ? Math.min(100, ball.y + distance)
     : Math.max(0, ball.y - 2);
 
-  return { success, distance, newBall: { x: newX, y: newY }, breakaway };
+  return { success, distance, newBall: { x: newX, y: newY }, breakaway, lastActionWasCross: newLastActionWasCross, actionType, attackScore, defenseScore };
 }
 
 // ─── Mouvement 2D ─────────────────────────────────────────────────────────────
@@ -753,9 +873,9 @@ function updatePositions(
 // ─── Fatigue différentielle par catégorie de stat ─────────────────────────────
 
 const FATIGUE_CATEGORIES: { coeff: number; stats: StatKey[] }[] = [
-  { coeff: 1.4, stats: ["vitesse", "acceleration", "endurance", "puissance", "agilite", "detente"] },
-  { coeff: 0.8, stats: ["anticipation", "sangFroid", "leadership", "positionnement", "agressivite", "decision"] },
-  { coeff: 0.6, stats: ["passe", "tir", "dribble", "centre", "tacle", "controle",
+  { coeff: 1.4, stats: ["vitesse", "acceleration", "endurance", "puissance", "agilite", "detente", "force"] },
+  { coeff: 0.8, stats: ["anticipation", "sangFroid", "leadership", "positionnement", "agressivite", "decision", "flair", "workRate"] },
+  { coeff: 0.6, stats: ["passe", "tir", "dribble", "centre", "tacle", "controle", "jeu_de_tete", "technique",
     "reflexes", "handling", "aerialReach", "commandArea", "kicking", "rushingOut"] },
   { coeff: 0.4, stats: ["cf", "corners", "penalty", "longThrows"] },
 ];
@@ -790,7 +910,8 @@ function resolveShot(
   tempo?: TacticSlider,
 ): { goal: boolean; save: boolean } {
   const fmA = formMap?.get(actress.instanceId) ?? 1.0;
-  const shotScore = weightedScore(actress.stats, ZONE_ATTACK_WEIGHTS["finition"], minute, mentality, fmA, 1.0, tempo);
+  const shotScore = ((actress.stats.tir ?? 50) * 0.5 + (actress.stats.sangFroid ?? 50) * 0.3 + (actress.stats.decision ?? 50) * 0.2)
+    * techniqueMult(actress.stats) * fmA;
   const gkScore = gk ? weightedScore(gk.stats, GK_DEFENSE_WEIGHTS["finition"], minute, mentality, formMap?.get(gk.instanceId) ?? 1.0, 1.0, tempo) : 0;
 
   // xG-like : la qualité du tir dépend de la distance et de l'angle
@@ -943,6 +1064,9 @@ export function simulateMatch(
   // ─── Contre-attaque ────────────────────────────────────────────────────
   let justRecovered = false;
 
+  // ─── Chaîne centre→tête (phase 6) ─────────────────────────────────────
+  let lastActionWasCross = false;
+
   // ─── Momentum (vagues psychologiques) ──────────────────────────────────
   // Après un but : l'équipe qui a marqué a +5% stats pendant 5 min,
   // l'équipe qui a encaissé a -5% stats pendant 5 min
@@ -1008,10 +1132,11 @@ export function simulateMatch(
       continue;
     }
 
-    // Taux d'erreur modulé par le tempo + la directivité
+    // Taux d'erreur modulé par le tempo + la directivité + la technique individuelle
     const tempoErrMult = TEMPO_PARAMS[attackingTeam.tempo ?? 0].errorMult;
     const directnessErrMult = DIRECTNESS_PARAMS[attackingTeam.passingDirectness ?? 0].errorMult;
-    if (rng() < 0.20 * tempoErrMult * directnessErrMult) {
+    const techErrMult = zone !== "finition" ? (1.15 - techniqueMult(actress.stats) * 0.15) : 1.0;
+    if (rng() < 0.20 * tempoErrMult * directnessErrMult * techErrMult) {
       events.push({
         minute, type: "turnover", team: defendingTeam.teamId,
         player: actress.name + " (erreur)", zone,
@@ -1040,7 +1165,7 @@ export function simulateMatch(
         const goal = rng() < goalProb;
         if (goal) {
           score[attackingTeam.teamId]++;
-          events.push({ minute, type: "goal", team: attackingTeam.teamId, player: actress.name + " (CF)", zone });
+          events.push({ minute, type: "goal", team: attackingTeam.teamId, player: actress.name + " (frappe lointaine)", zone });
         } else {
           events.push({ minute, type: "save", team: defendingTeam.teamId, player: gk?.name ?? "?", zone });
         }
@@ -1066,10 +1191,36 @@ export function simulateMatch(
       continue;
     }
 
+    // ─── Événement rare "action de génie" (phase 6) ──────────────────────
+    if (!rareEventHandled && (zone === "progression" || zone === "finition")) {
+      const genieChance = ((actress.stats.flair ?? 50) / 99) * 0.02;
+      if (rng() < genieChance) {
+        const successChance = 0.85 + ((actress.stats.flair ?? 50) / 99) * 0.10;
+        if (rng() < successChance) {
+          const eventType = zone === "finition" ? "goal" : "highlight";
+          events.push({ minute, type: eventType, team: attackingTeam.teamId, player: actress.name + " (action de génie)", zone });
+          if (zone === "finition") {
+            score[attackingTeam.teamId]++;
+            ball.x = 50; ball.y = 20;
+          } else {
+            ball.x = 50; ball.y = Math.min(100, ball.y + 25);
+          }
+        } else {
+          events.push({ minute, type: "turnover", team: defendingTeam.teamId, player: actress.name + " (tentative de génie ratée)", zone });
+          ball.y = 100 - ball.y;
+        }
+        justRecovered = true;
+        [attackingTeam, defendingTeam] = [defendingTeam, attackingTeam];
+        possessionSteps = 0; possessionStartY = ball.y;
+        continue;
+      }
+    }
+
     // Résoudre la micro-action
     const momAtk = minute <= momentumUntilMinute && momentumTeam === attackingTeam.teamId ? MOMENTUM_BOOST : minute <= momentumUntilMinute ? MOMENTUM_PENALTY : 1.0;
     const momDef = minute <= momentumUntilMinute && momentumTeam === defendingTeam.teamId ? MOMENTUM_BOOST : minute <= momentumUntilMinute ? MOMENTUM_PENALTY : 1.0;
-    const resolved = resolveMicroAction(actress, defender, zone, ball, rng, minute, defendingTeam, attackingTeam, positions, formMap, momAtk, momDef, justRecovered, redCards);
+    const resolved = resolveMicroAction(actress, defender, zone, ball, rng, minute, defendingTeam, attackingTeam, positions, formMap, momAtk, momDef, justRecovered, redCards, lastActionWasCross);
+    lastActionWasCross = resolved.lastActionWasCross;
     justRecovered = false;
     ball.x = resolved.newBall.x;
     ball.y = resolved.newBall.y;
@@ -1081,6 +1232,14 @@ export function simulateMatch(
 
     // Tracker possession
     possessionEvents.push(attackingTeam.teamId);
+
+    // Log progression action type for centre→tête chain visibility
+    if (zone === "progression" && resolved.actionType === "centre" && resolved.success) {
+      events.push({
+        minute, type: "highlight", team: attackingTeam.teamId,
+        player: actress.name + " (centre)", zone,
+      });
+    }
 
     // Enregistrer micro-action
     const posSnapshot: PlayerPosition[] = allP.map((p) => ({
@@ -1094,8 +1253,8 @@ export function simulateMatch(
       positions: posSnapshot,
       actress: actress.instanceId,
       defender: defender.instanceId,
-      attackScore: weightedScore(actress.stats, ZONE_ATTACK_WEIGHTS[zone], minute, attackingTeam.mentality, formMap?.get(actress.instanceId) ?? 1.0, 1.0, attackingTeam.tempo),
-      defenseScore: weightedScore(defender.stats, ZONE_DEFENSE_WEIGHTS[zone], minute, defendingTeam.mentality, formMap?.get(defender.instanceId) ?? 1.0, 1.0, defendingTeam.tempo),
+      attackScore: resolved.attackScore,
+      defenseScore: resolved.defenseScore,
       success: resolved.success,
       phaseKey: zone,
     });
@@ -1151,7 +1310,7 @@ export function simulateMatch(
 
     // Contre-attaque éclair
     if (resolved.breakaway) {
-      events.push({ minute, type: "goal", team: attackingTeam.teamId, player: actress.name + " (contre-attaque)", zone });
+      events.push({ minute, type: "breakaway", team: attackingTeam.teamId, player: actress.name + " (contre-attaque)", zone });
     }
 
     // ─── Hors-jeu : après une action réussie en milieu/progression ──────────
@@ -1267,9 +1426,10 @@ export function simulateMatch(
         const assister = lastAssister && lastAssister !== actress.instanceId
           ? allP.find(p => p.instanceId === lastAssister)?.name
           : null;
+        const actionSuffix = resolved.actionType === "tete" ? " (tête)" : "";
         events.push({
           minute, type: "goal", team: attackingTeam.teamId,
-          player: actress.name + (assister ? " (" + assister + ")" : ""), zone,
+          player: actress.name + (assister ? " (" + assister + ")" : "") + actionSuffix, zone,
         });
         momentumTeam = attackingTeam.teamId;
         momentumUntilMinute = minute + MOMENTUM_DURATION;

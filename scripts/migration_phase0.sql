@@ -6,6 +6,9 @@ ALTER TABLE card_instances ADD COLUMN set_piece_stats TEXT;
 ALTER TABLE card_instances ADD COLUMN position12 TEXT NOT NULL DEFAULT 'ST';
 ALTER TABLE card_instances ADD COLUMN role TEXT;
 ALTER TABLE card_instances ADD COLUMN character_id TEXT;
+ALTER TABLE card_instances ADD COLUMN taille_cm INTEGER DEFAULT 0;
+ALTER TABLE card_instances ADD COLUMN poids_kg INTEGER DEFAULT 0;
+ALTER TABLE card_instances ADD COLUMN pied_prefere TEXT DEFAULT '';
 
 -- Remplir character_id depuis card_prints
 UPDATE card_instances

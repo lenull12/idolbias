@@ -11,7 +11,7 @@
  *   – Détail des zones, actrices, événements
  */
 
-import { simulateMatch, type TeamMatchInput, type MatchPlayer } from "../src/lib/matchEngine";
+import { simulateMatch, type TeamMatchInput, type MatchPlayer, indexDribble, indexPhysique, indexAerien, techniqueMult, indexImplication, type ZoneKey } from "../src/lib/matchEngine";
 import { CHARACTER_STATS } from "../src/data/characterStats";
 import { CHARACTERS } from "../src/data/footballCards";
 import { FORMATIONS } from "../src/db/lineupSchema";
@@ -40,6 +40,9 @@ function buildPlayer(char: typeof CHARACTERS[0], slot: typeof FORMATION[0]): Mat
     style: char.defaultStyle as Style,
     rarity: "common",
     stats,
+    tailleCm: cs?.tailleCm ?? 170,
+    poidsKg: cs?.poidsKg ?? 65,
+    piedPrefere: cs?.piedPrefere ?? "right",
     baseX: slot.x,
     baseY: slot.y,
     equippedSkills: [],
@@ -65,7 +68,7 @@ const ARG_IDS = [
 const JPN_IDS = [
   "karen-himekami", "shiori-saonji", "reika-shinomiya", "miyabi-kirishima",
   "hina-tsukiyomi", "hana-kamishiro", "momo-hasegawa", "rin-morishita",
-  "yuriko-otake", "aya-mishima", "hinata-shigaki",
+  "yuriko-take", "aya-mishima", "hinata-shigaki",
 ];
 
 const WEAK_IDS = Array(11).fill("celeste-benitez"); // 11 × Celeste = 77 base
@@ -325,5 +328,106 @@ const argEvents = rDetail.events.filter(e => e.team === "ARG");
 const jpnEvents = rDetail.events.filter(e => e.team === "JPN");
 console.log(`\nBilan ARG: ${rDetail.events.length > 0 ? (argEvents.filter(e => e.type === "goal").length) : 0} buts, ${argEvents.filter(e => e.type === "turnover").length} turnovers`);
 console.log(`Bilan JPN: ${jpnEvents.filter(e => e.type === "goal").length} buts, ${jpnEvents.filter(e => e.type === "turnover").length} turnovers`);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  TEST 8 : VALIDATION PHASE 6 — Indices composites
+// ═══════════════════════════════════════════════════════════════════════════════
+
+console.log("\n\n═══════════════════════════════════════════════════════════════════");
+console.log(" TEST 8 : VALIDATION PHASE 6 — 7 SCÉNARIOS");
+console.log("═══════════════════════════════════════════════════════════════════");
+
+// ─── 8.1 Complémentarité ─────────────────────────────────────────────────
+console.log("\n─── 8.1 Complémentarité (indexDribble) ───");
+const complet = indexDribble({ dribble: 90, agilite: 90, vitesse: 90, acceleration: 90, controle: 90, technique: 50 });
+const picUnique = indexDribble({ dribble: 99, agilite: 50, vitesse: 50, acceleration: 50, controle: 90, technique: 50 });
+console.log(`  Complet (90/90/90):         ${complet.toFixed(1)}`);
+console.log(`  Pic unique (99/50/50):      ${picUnique.toFixed(1)}`);
+console.log(`  Écart:                      ${(complet - picUnique).toFixed(1)} points`);
+console.log(`  ${complet > picUnique ? "✅" : "❌"} Complétude bat pic unique`);
+
+// ─── 8.2 Technique bornée ─────────────────────────────────────────────────
+console.log("\n─── 8.2 Technique bornée (plage [0.85-1.15]) ───");
+const tech99 = techniqueMult({ technique: 99 });
+const tech50 = techniqueMult({ technique: 50 });
+const tech1 = techniqueMult({ technique: 1 });
+console.log(`  technique=99 → mult ${tech99.toFixed(3)}`);
+console.log(`  technique=50 → mult ${tech50.toFixed(3)}`);
+console.log(`  technique=1  → mult ${tech1.toFixed(3)}`);
+// Vérification de la plage
+const basTech99Drib50 = ((50 * 0.6 + 50 * 0.4) * 0.55 + (50 * 0.5 + 50 * 0.3 + 50 * 0.2) * 0.35 + Math.min(50, 50) * 0.15) * tech99;
+const basTech50Drib70 = ((70 * 0.6 + 50 * 0.4) * 0.55 + (50 * 0.5 + 50 * 0.3 + 50 * 0.2) * 0.35 + Math.min(50, 50) * 0.15) * tech50;
+console.log(`  technique=99,dribble=50:    ${basTech99Drib50.toFixed(1)} (attendu ~60.4)`);
+console.log(`  technique=50,dribble=70:    ${basTech50Drib70.toFixed(1)} (attendu ~59.2)`);
+const diff = Math.abs(basTech99Drib50 - basTech50Drib70);
+console.log(`  Écart: ${diff.toFixed(1)} points`);
+console.log(`  ${diff < 5 ? "✅" : "❌"} Proches mais pas de domination (attendu < 5 pts)`);
+
+// ─── 8.3 Volume de jeu (workRate) ────────────────────────────────────────
+console.log("\n─── 8.3 Volume de jeu (workRate vs agressivite) ───");
+const impWR90 = indexImplication({ workRate: 90, endurance: 50, positionnement: 50 });
+const impWR50 = indexImplication({ workRate: 50, endurance: 50, positionnement: 50 });
+console.log(`  workRate=90 → implication ${impWR90.toFixed(3)}`);
+console.log(`  workRate=50 → implication ${impWR50.toFixed(3)}`);
+console.log(`  Ratio: ${(impWR90 / impWR50).toFixed(2)}x`);
+console.log(`  ${impWR90 > impWR50 * 1.15 ? "✅" : "❌"} Impact significatif du workRate`);
+
+// ─── 8.4 Aérien réaliste ─────────────────────────────────────────────────
+console.log("\n─── 8.4 Aérien réaliste (taille vs technique) ───");
+const attaquante = indexAerien({ jeu_de_tete: 90, detente: 90 }, 160);
+const defenseure = indexAerien({ jeu_de_tete: 40, detente: 50 }, 185);
+console.log(`  Attaquante (160cm/90/90):    ${attaquante.toFixed(1)}`);
+console.log(`  Défenseure (185cm/40/50):    ${defenseure.toFixed(1)}`);
+console.log(`  ${attaquante > defenseure ? "✅" : "❌"} Petite technique bat grande non-technique`);
+
+// ─── 8.5 Physique corrigé (poids taille 0.25) ────────────────────────────
+console.log("\n─── 8.5 Physique corrigé (force domine taille) ───");
+const verratti = indexPhysique({ force: 85, controle: 70 }, 165);
+const cb185 = indexPhysique({ force: 60, controle: 50 }, 185);
+console.log(`  Verratti-like (165cm/force=85):  ${verratti.toFixed(1)}`);
+console.log(`  CB 185cm (force=60):             ${cb185.toFixed(1)}`);
+console.log(`  ${verratti > cb185 ? "✅" : "❌"} Petite/forte bat grande/moins forte`);
+
+// ─── 8.6 Chaîne centre→tête ──────────────────────────────────────────────
+console.log("\n─── 8.6 Chaîne centre→tête (20 matchs JPN) ───");
+let centreEventCount = 0;
+let teteButCount = 0;
+for (let i = 0; i < 20; i++) {
+  const jpn = buildTeam(JPN_IDS, "JPN");
+  const jpn2 = buildTeam(JPN_IDS, "JPN2");
+  const r = simulateMatch(jpn, jpn2, `chaine-${i}`, 120);
+  for (const e of r.events) {
+    if (e.player.includes("(centre)")) centreEventCount++;
+    if (e.player.includes("(tête)")) teteButCount++;
+  }
+}
+console.log(`  Événements centre: ${centreEventCount}`);
+console.log(`  Buts de la tête: ${teteButCount}`);
+console.log(`  ${teteButCount > 0 || centreEventCount > 0 ? "✅" : "⚠️"} Centres et têtes détectés dans les logs`);
+
+// ─── 8.7 Action de génie avec échec ──────────────────────────────────────
+console.log("\n─── 8.7 Action de génie (50 matchs ARG vs ARG) ───");
+let genieReussi = 0;
+let genieRate = 0;
+for (let i = 0; i < 50; i++) {
+  const a = buildTeam(ARG_IDS, "ARG");
+  const a2 = buildTeam(ARG_IDS, "ARG2");
+  const r = simulateMatch(a, a2, `genie-${i}`, 120);
+  for (const e of r.events) {
+    if (e.player.includes("(action de génie)")) genieReussi++;
+    if (e.player.includes("(tentative de génie ratée)")) genieRate++;
+  }
+}
+const totalGenie = genieReussi + genieRate;
+console.log(`  Réussies: ${genieReussi}`);
+console.log(`  Ratées:   ${genieRate}`);
+console.log(`  Total:    ${totalGenie}`);
+if (totalGenie > 0) {
+  const ratio = genieReussi / totalGenie;
+  console.log(`  Taux de succès: ${(ratio * 100).toFixed(0)}%`);
+  console.log(`  ${ratio >= 0.80 ? "✅" : "⚠️"} Ratio ≥ 80% conforme`);
+} else {
+  console.log(`  ⚠️ Aucune action de génie déclenchée (flair médian trop bas)`);
+}
 
 console.log("\n\n✅ TESTS TERMINÉS");

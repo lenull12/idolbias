@@ -40,6 +40,9 @@ export const characters = sqliteTable("characters", {
   photoVariants: text("photo_variants", { mode: "json" })
     .$type<{ standard: string; field?: string; signature?: string; mythic?: string }>()
     .notNull(),
+  tailleCm: integer("taille_cm").notNull(),
+  poidsKg: integer("poids_kg").notNull(),
+  piedPrefere: text("pied_prefere").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 });
 
@@ -57,15 +60,20 @@ export const cardPrints = sqliteTable("card_prints", {
     .on(t.characterId, t.editionCode, t.rarity),
 }));
 
-export interface TecStats { passe: number; tir: number; dribble: number; centre: number; tacle: number; controle: number; }
-export interface PhyStats { vitesse: number; acceleration: number; endurance: number; puissance: number; agilite: number; detente: number; }
-export interface MenStats { anticipation: number; sangFroid: number; leadership: number; positionnement: number; agressivite: number; decision: number; }
+export interface TecStats { passe: number; tir: number; dribble: number; centre: number; tacle: number; controle: number; jeu_de_tete: number; technique: number; }
+export interface PhyStats { vitesse: number; acceleration: number; endurance: number; puissance: number; agilite: number; detente: number; force: number; }
+export interface MenStats { anticipation: number; sangFroid: number; leadership: number; positionnement: number; agressivite: number; decision: number; workRate: number; flair: number; }
 export interface GkStats {
   reflexes: number; handling: number; aerialReach: number;
   commandArea: number; kicking: number; rushingOut: number;
 }
 export interface SetPieceStats {
   cf: number; corners: number; penalty: number; longThrows: number;
+}
+export interface Morphologie {
+  tailleCm: number;
+  poidsKg: number;
+  piedPrefere: "left" | "right" | "both";
 }
 export type Position12 =
   "GK" | "RB" | "LB" | "CB" | "CDM" | "CM" | "CAM" | "LM" | "RM" | "LW" | "RW" | "ST";
@@ -90,6 +98,9 @@ export const cardInstances = sqliteTable("card_instances", {
   affinityLastActiveAt: integer("affinity_last_active_at", { mode: "timestamp" }).notNull(),
   matchesPlayed: integer("matches_played").notNull().default(0),
   pityTriggered: integer("pity_triggered", { mode: "boolean" }).notNull().default(false),
+  tailleCm: integer("taille_cm").notNull(),
+  poidsKg: integer("poids_kg").notNull(),
+  piedPrefere: text("pied_prefere").notNull(),
   obtainedAt: integer("obtained_at", { mode: "timestamp" }).notNull(),
 }, (t) => ({
   ownerIdx: uniqueIndex("card_instances_owner_idx").on(t.id, t.ownerId),

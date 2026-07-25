@@ -40,6 +40,9 @@ export type ServerCard = {
   phyStats: PhyStats;
   menStats: MenStats;
   role?: string;
+  tailleCm: number;
+  poidsKg: number;
+  piedPrefere: string;
 };
 
 function rollRarity(weights: Record<string, number>): Rarity {
@@ -96,7 +99,7 @@ export function generatePull(
     const seed = `${usedPrint.id}-${batchSeed}-${i}`;
     const cs = CHARACTER_STATS[character.id];
     const position12 = (cs?.position ?? "ST") as Position12;
-    const { tec, gk, phy, men, setPiece, ovr } = generateStatsForRarity(character.id, targetRarity, seed);
+    const { tec, gk, phy, men, setPiece, ovr, tailleCm, poidsKg, piedPrefere } = generateStatsForRarity(character.id, targetRarity, seed);
 
     results.push({
       id: `${usedPrint.id}-${batchSeed}-${i}`,
@@ -121,6 +124,10 @@ export function generatePull(
       setPieceStats: setPiece,
       phyStats: phy,
       menStats: men,
+      role: cs?.role,
+      tailleCm,
+      poidsKg,
+      piedPrefere,
     });
 
     pityCount = rarityAtLeast(targetRarity, HARD_PITY_MIN_RARITY) ? 0 : pityCount + 1;

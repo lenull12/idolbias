@@ -35,6 +35,9 @@ async function seed() {
         defaultStyle: c.defaultStyle as Style,
         defaultPosition: c.defaultPosition as Position,
         photoVariants: c.photoVariants,
+        tailleCm: CHARACTER_STATS[c.id]?.tailleCm ?? 170,
+        poidsKg: CHARACTER_STATS[c.id]?.poidsKg ?? 65,
+        piedPrefere: CHARACTER_STATS[c.id]?.piedPrefere ?? "right",
         createdAt: now,
       })
       .onConflictDoUpdate({

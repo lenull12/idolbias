@@ -1,0 +1,3 @@
+ALTER TABLE card_instances ADD COLUMN taille_cm INTEGER NOT NULL DEFAULT 170;
+ALTER TABLE card_instances ADD COLUMN poids_kg INTEGER NOT NULL DEFAULT 60;
+ALTER TABLE card_instances ADD COLUMN pied_prefere TEXT NOT NULL DEFAULT 'right';

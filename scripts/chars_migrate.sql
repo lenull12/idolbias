@@ -1,0 +1,3 @@
+ALTER TABLE characters ADD COLUMN taille_cm INTEGER DEFAULT 0;
+ALTER TABLE characters ADD COLUMN poids_kg INTEGER DEFAULT 0;
+ALTER TABLE characters ADD COLUMN pied_prefere TEXT DEFAULT '';

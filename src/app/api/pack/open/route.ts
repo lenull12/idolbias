@@ -151,7 +151,7 @@ export async function POST(request: Request) {
           ownerId: playerId,
           characterId: c.characterId,
           serial: serials[c.id],
-          tecStats: c.tecStats ?? { passe: 0, tir: 0, dribble: 0, centre: 0, tacle: 0, controle: 0 },
+          tecStats: c.tecStats ?? { passe: 0, tir: 0, dribble: 0, centre: 0, tacle: 0, controle: 0, jeu_de_tete: 0, technique: 0 },
           gkStats: c.gkStats,
           setPieceStats: c.setPieceStats,
           phyStats: c.phyStats,
@@ -163,6 +163,9 @@ export async function POST(request: Request) {
           grade: c.grade as any,
           affinityLastActiveAt: now,
           pityTriggered: c.pityTriggered ?? false,
+          tailleCm: c.tailleCm,
+          poidsKg: c.poidsKg,
+          piedPrefere: c.piedPrefere,
           obtainedAt: now,
         }),
       );
@@ -189,6 +192,7 @@ export async function POST(request: Request) {
     try {
       results = await db.batch(stmts as any);
     } catch (e: any) {
+      console.error("Batch failed:", e?.message ?? String(e), "attempt", attempt);
       // Hard error (e.g. UNIQUE(serial) collision backstop) => retry with fresh state.
       if (attempt === MAX_RETRIES - 1) throw e;
       continue;

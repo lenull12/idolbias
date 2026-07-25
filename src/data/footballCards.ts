@@ -324,6 +324,62 @@ export const CHARACTERS: CharacterDef[] = [
       standard: "/cards/football/japon/hinata-shigaki/standard.png",
     },
   },
+  // ─── Allemagne ────────────────────────────────────────────────────────────
+  {
+    id: "valerie-weiss", name: "Valerie Weiss", nation: "allemagne",
+    defaultStyle: "elevation", defaultPosition: "ATT",
+    photoVariants: { standard: "/cards/football/allemagne/valerie-weiss/standard.png" },
+  },
+  {
+    id: "hilda-schneider", name: "Hilda Schneider", nation: "allemagne",
+    defaultStyle: "vista", defaultPosition: "ATT",
+    photoVariants: { standard: "/cards/football/allemagne/hilda-schneider/standard.png" },
+  },
+  {
+    id: "lieselotte-schwarz", name: "Lieselotte Schwarz", nation: "allemagne",
+    defaultStyle: "vista", defaultPosition: "MIL",
+    photoVariants: { standard: "/cards/football/allemagne/lieselotte-schwarz/standard.png" },
+  },
+  {
+    id: "klara-richter", name: "Klara Richter", nation: "allemagne",
+    defaultStyle: "vista", defaultPosition: "MIL",
+    photoVariants: { standard: "/cards/football/allemagne/klara-richter/standard.png" },
+  },
+  {
+    id: "greta-von-kaiser", name: "Greta Von Kaiser", nation: "allemagne",
+    defaultStyle: "vista", defaultPosition: "MIL",
+    photoVariants: { standard: "/cards/football/allemagne/greta-von-kaiser/standard.png" },
+  },
+  {
+    id: "sigrid-lindner", name: "Sigrid Lindner", nation: "allemagne",
+    defaultStyle: "pressing", defaultPosition: "MIL",
+    photoVariants: { standard: "/cards/football/allemagne/sigrid-lindner/standard.png" },
+  },
+  {
+    id: "marlene-weber", name: "Marlene Weber", nation: "allemagne",
+    defaultStyle: "pressing", defaultPosition: "DEF",
+    photoVariants: { standard: "/cards/football/allemagne/marlene-weber/standard.png" },
+  },
+  {
+    id: "astrid-vogel", name: "Astrid Vogel", nation: "allemagne",
+    defaultStyle: "pressing", defaultPosition: "DEF",
+    photoVariants: { standard: "/cards/football/allemagne/astrid-vogel/standard.png" },
+  },
+  {
+    id: "ilse-wallner", name: "Ilse Wallner", nation: "allemagne",
+    defaultStyle: "elevation", defaultPosition: "DEF",
+    photoVariants: { standard: "/cards/football/allemagne/ilse-wallner/standard.png" },
+  },
+  {
+    id: "greta-hoffmann", name: "Greta Hoffmann", nation: "allemagne",
+    defaultStyle: "elevation", defaultPosition: "DEF",
+    photoVariants: { standard: "/cards/football/allemagne/greta-hoffmann/standard.png" },
+  },
+  {
+    id: "brunhilde-jaeger", name: "Brunhilde Jaeger", nation: "allemagne",
+    defaultStyle: "sangFroid", defaultPosition: "GB",
+    photoVariants: { standard: "/cards/football/allemagne/brunhilde-jaeger/standard.png" },
+  },
 ];
 
 // ─── Card Prints ─────────────────────────────────────────────────────────────

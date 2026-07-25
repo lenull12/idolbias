@@ -33,6 +33,9 @@ function buildPlayer(char: typeof CHARACTERS[0], slot: typeof FORMATION[0]): Mat
     style: char.defaultStyle as Style,
     rarity: "common",
     stats,
+    tailleCm: cs?.tailleCm ?? 170,
+    poidsKg: cs?.poidsKg ?? 65,
+    piedPrefere: cs?.piedPrefere ?? "right",
     baseX: slot.x,
     baseY: slot.y,
     equippedSkills: [],
@@ -62,7 +65,7 @@ const ARG_IDS = [
 const JPN_IDS = [
   "karen-himekami", "shiori-saonji", "reika-shinomiya", "miyabi-kirishima",
   "hina-tsukiyomi", "hana-kamishiro", "momo-hasegawa", "rin-morishita",
-  "yuriko-otake", "aya-mishima", "hinata-shigaki",
+  "yuriko-take", "aya-mishima", "hinata-shigaki",
 ];
 
 const home = buildTeam(ARG_IDS, "ARG");

@@ -8,8 +8,8 @@ import {
   type SetPieceStats,
 } from "@/db/footballSchema";
 
-const PHY_KEYS: (keyof PhyStats)[] = ["vitesse", "acceleration", "endurance", "puissance", "agilite", "detente"];
-const MEN_KEYS: (keyof MenStats)[] = ["anticipation", "sangFroid", "leadership", "positionnement", "agressivite", "decision"];
+const PHY_KEYS: (keyof PhyStats)[] = ["vitesse", "acceleration", "endurance", "puissance", "agilite", "detente", "force"];
+const MEN_KEYS: (keyof MenStats)[] = ["anticipation", "sangFroid", "leadership", "positionnement", "agressivite", "decision", "workRate", "flair"];
 
 const FRAC: Record<Rarity, number> = {
   common: 0.78,
@@ -41,6 +41,9 @@ export interface GeneratedStats {
   phy: PhyStats;
   men: MenStats;
   setPiece: SetPieceStats | null;
+  tailleCm: number;
+  poidsKg: number;
+  piedPrefere: string;
   ovr: number;
 }
 
@@ -80,6 +83,9 @@ export function generateStatsForRarity(
       phy,
       men,
       setPiece: null,
+      tailleCm: cs.tailleCm,
+      poidsKg: cs.poidsKg,
+      piedPrefere: cs.piedPrefere,
       ovr,
     };
   }
@@ -92,6 +98,8 @@ export function generateStatsForRarity(
       centre: cs.stats.centre ?? 0,
       tacle: cs.stats.tacle ?? 0,
       controle: cs.stats.controle ?? 0,
+      jeu_de_tete: cs.stats.jeu_de_tete ?? 0,
+      technique: cs.stats.technique ?? 0,
     },
     gk: null,
     phy,
@@ -102,6 +110,9 @@ export function generateStatsForRarity(
       penalty: cs.stats.penalty ?? 0,
       longThrows: cs.stats.longThrows ?? 0,
     },
+    tailleCm: cs.tailleCm,
+    poidsKg: cs.poidsKg,
+    piedPrefere: cs.piedPrefere,
     ovr,
   };
 }

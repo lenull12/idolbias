@@ -199,21 +199,21 @@ export default function FutCard(props: FutCardProps) {
   const [isZoomed, setIsZoomed] = useState(false);
 
   const applyTilt = useCallback((px: number, py: number) => {
-    if (!innerRef.current) return;
+    if (!innerRef.current || zoomed) return;
     const ry = (px - 0.5) * maxTilt * 2;
     const rx = (0.5 - py) * maxTilt * 2;
     setTiltX(rx); setTiltY(ry);
     innerRef.current.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg) scale(1.04)`;
-  }, [maxTilt]);
+  }, [maxTilt, zoomed]);
 
   const resetTilt = useCallback((instant = false) => {
-    if (!innerRef.current) return;
+    if (!innerRef.current || zoomed) return;
     innerRef.current.style.transition = instant ? "none" : "transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)";
     innerRef.current.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
     setTiltX(0); setTiltY(0);
     if (instant) { requestAnimationFrame(() => { if (innerRef.current) innerRef.current.style.transition = "transform 0.1s cubic-bezier(0.23, 1, 0.32, 1)"; }); return; }
     setTimeout(() => { if (innerRef.current) innerRef.current.style.transition = "transform 0.1s cubic-bezier(0.23, 1, 0.32, 1)"; }, 500);
-  }, []);
+  }, [zoomed]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (dragging.current) return; setIsInteracting(true);
@@ -240,8 +240,8 @@ export default function FutCard(props: FutCardProps) {
 
     {isZoomed && createPortal(<ZoomOverlay onClose={() => setIsZoomed(false)}><FutCard {...props} width={Math.min(480, typeof window !== "undefined" ? window.innerWidth * 0.85 : 480)} zoomed startFlipped={isFlipped} /></ZoomOverlay>, document.body)}
 
-    <div ref={wrapRef} style={{ perspective: `${Math.round(width * 3.57)}px`, width, height, display: "inline-block", cursor: dragging.current ? "grabbing" : "grab", userSelect: "none", WebkitUserSelect: "none", animation: isInteracting ? "none" : "futAutoTilt 8s ease-in-out infinite" }}
-      onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} onPointerDown={handlePointerDown} onClick={handleClick}>
+    <div ref={wrapRef} style={{ perspective: `${Math.round(width * 3.57)}px`, width, height, display: "inline-block", cursor: zoomed ? "default" : dragging.current ? "grabbing" : "grab", userSelect: "none", WebkitUserSelect: "none", animation: zoomed ? "none" : isInteracting ? "none" : "futAutoTilt 8s ease-in-out infinite" }}
+      onMouseMove={zoomed ? undefined : handleMouseMove} onMouseLeave={zoomed ? undefined : handleMouseLeave} onPointerDown={zoomed ? undefined : handlePointerDown} onClick={handleClick}>
       <div ref={innerRef} style={{ width: "100%", height: "100%", transformStyle: "preserve-3d", transition: "transform 0.1s cubic-bezier(0.23, 1, 0.32, 1)", willChange: "transform" }}>
         <div style={{ width: "100%", height: "100%", position: "relative", transformStyle: "preserve-3d", transition: swipeX !== 0 ? "none" : "transform 0.65s cubic-bezier(0.23, 1, 0.32, 1)", transform: `rotateY(${currentRotation}deg)` }}>
           <FutCardFront {...props} tiltX={tiltX} tiltY={tiltY} />
