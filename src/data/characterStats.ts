@@ -575,7 +575,7 @@ export const CHARACTER_STATS: Record<string, CharacterStats> = {
     tailleCm: 158,
     poidsKg: 52,
     piedPrefere: "both",
-    posSec1: "LW",
+    posSec1: "LM",
     stats: {
       vitesse: 83,
       acceleration: 84,
@@ -617,7 +617,7 @@ export const CHARACTER_STATS: Record<string, CharacterStats> = {
     tailleCm: 170,
     poidsKg: 61,
     piedPrefere: "right",
-    posSec1: "RW",
+    posSec1: "RM",
     stats: {
       vitesse: 72,
       acceleration: 76,

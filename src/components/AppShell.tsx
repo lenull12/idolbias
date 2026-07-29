@@ -11,6 +11,9 @@ import CardsView from "@/views/CardsView";
 import CharactersView from "@/views/CharactersView";
 import CharacterView from "@/views/CharacterView";
 import ProfileView from "@/views/ProfileView";
+import SquadView from "@/views/SquadView";
+import MatchLabView from "@/views/MatchLabView";
+import PitchDecorPreviewView from "@/views/PitchDecorPreviewView";
 import FAQPage from "@/app/faq/page";
 import StreakModal from "@/components/StreakModal";
 import RewardToast from "@/components/RewardToast";
@@ -25,7 +28,7 @@ import { todayStr, daysBetween } from "@/lib/gameConfig";
 import { getCharacters } from "@/data/footballCards";
 import type { OwnedCard } from "@/types/ownedCard";
 
-export type TabId = "home" | "shop" | "cards" | "squad" | "transfer" | "characters" | "profile";
+export type TabId = "home" | "shop" | "cards" | "squad" | "transfer" | "characters" | "profile" | "lab" | "pitch";
 
 export default function AppShell() {
   const { player, loading, refresh } = usePlayer();
@@ -150,11 +153,11 @@ export default function AppShell() {
           />
         );
       case "squad":
-        return (
-          <div style={{ padding: 48, textAlign: "center", color: "var(--text-muted)", fontSize: 15 }}>
-            Squad view coming soon
-          </div>
-        );
+        return <SquadView />;
+      case "lab":
+        return <MatchLabView />;
+      case "pitch":
+        return <PitchDecorPreviewView />;
       case "transfer":
         return (
           <div style={{ padding: 48, textAlign: "center", color: "var(--text-muted)", fontSize: 15 }}>

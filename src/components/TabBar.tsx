@@ -4,6 +4,10 @@ import Image from "next/image";
 
 import type { TabId } from "@/components/AppShell";
 
+export const LAB_ICON = (
+  <path d="M9 3v5.5a3.5 3.5 0 0 1-2.5 3.8c-.8.2-1.5.7-1.5 1.5V17a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3.2c0-.8-.7-1.3-1.5-1.5A3.5 3.5 0 0 1 15 8.5V3M9 3h6M9 3v12a3 3 0 0 0 3 3" />
+);
+
 export const ICONS: Record<TabId, React.ReactNode> = {
   home: (
     <path d="M3 10.5 12 4l9 6.5M5.5 9.5V19a1 1 0 0 0 1 1H10v-5a2 2 0 0 1 2-2 2 2 0 0 1 2 2v5h3.5a1 1 0 0 0 1-1V9.5" />
@@ -44,6 +48,12 @@ export const ICONS: Record<TabId, React.ReactNode> = {
       <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
     </>
   ),
+  lab: (
+    <path d="M9 3v5.5a3.5 3.5 0 0 1-2.5 3.8c-.8.2-1.5.7-1.5 1.5V17a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-3.2c0-.8-.7-1.3-1.5-1.5A3.5 3.5 0 0 1 15 8.5V3M9 3h6M9 3v12a3 3 0 0 0 3 3" />
+  ),
+  pitch: (
+    <path d="M4 8h16M4 16h16M6 3v18M18 3v18M3 6h18M3 18h18" />
+  ),
 };
 
 export const TABS: { id: TabId; label: string }[] = [
@@ -54,6 +64,8 @@ export const TABS: { id: TabId; label: string }[] = [
   { id: "transfer", label: "Transfer" },
   { id: "characters", label: "Players" },
   { id: "profile", label: "Profile" },
+  { id: "lab", label: "Lab" },
+  { id: "pitch", label: "Pitch" },
 ];
 
 export default function TabBar({

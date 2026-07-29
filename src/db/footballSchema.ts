@@ -14,14 +14,6 @@ export type Style = "percussion" | "vista" | "pressing" | "elevation" | "sangFro
 export type Position = "GB" | "DEF" | "MIL" | "ATT";
 export type Grade = "standard" | "fine" | "mint" | "pristine" | "gem";
 
-export const OVR_BAND: Record<Rarity, [number, number]> = {
-  common: [45, 64],
-  rare: [65, 74],
-  epic: [75, 84],
-  legendary: [85, 94],
-  secret: [95, 99],
-};
-
 export const SKILL_SLOTS_BY_RARITY: Record<Rarity, number> = {
   common: 0,
   rare: 1,
@@ -165,8 +157,3 @@ export const transferSales = sqliteTable("transfer_sales", {
   priceDollars: integer("price_dollars").notNull(),
   soldAt: integer("sold_at", { mode: "timestamp" }).notNull(),
 });
-
-export function clampOVRToRarityBand(ovr: number, rarity: Rarity): number {
-  const [min, max] = OVR_BAND[rarity];
-  return Math.max(min, Math.min(max, ovr));
-}

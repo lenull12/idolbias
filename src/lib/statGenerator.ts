@@ -10,6 +10,9 @@ import {
 
 const PHY_KEYS: (keyof PhyStats)[] = ["vitesse", "acceleration", "endurance", "puissance", "agilite", "detente", "force"];
 const MEN_KEYS: (keyof MenStats)[] = ["anticipation", "sangFroid", "leadership", "positionnement", "agressivite", "decision", "workRate", "flair"];
+const TEC_KEYS: (keyof TecStats)[] = ["passe", "tir", "dribble", "centre", "tacle", "controle", "jeu_de_tete", "technique"];
+const GK_KEYS: (keyof GkStats)[] = ["reflexes", "handling", "aerialReach", "commandArea", "kicking", "rushingOut"];
+const SP_KEYS: (keyof SetPieceStats)[] = ["cf", "corners", "penalty", "longThrows"];
 
 const FRAC: Record<Rarity, number> = {
   common: 0.78,
@@ -47,12 +50,27 @@ export interface GeneratedStats {
   ovr: number;
 }
 
-function extractPhy(cs: typeof CHARACTER_STATS[string]): PhyStats {
-  return Object.fromEntries(PHY_KEYS.map((k) => [k, cs.stats[k] ?? 0])) as unknown as PhyStats;
+function scaleStatValue(value: number, frac: number, baseSeed: string, statKey: string): number {
+  const seedA = baseSeed + '-' + statKey + '-a';
+  const seedB = baseSeed + '-' + statKey + '-b';
+  const jitter = Math.max(-JITTER, Math.min(JITTER,
+    Math.round(seededGaussianNoise(seedA, seedB) * JITTER)
+  ));
+  return Math.max(1, Math.min(99, Math.round(value * frac + jitter)));
 }
 
-function extractMen(cs: typeof CHARACTER_STATS[string]): MenStats {
-  return Object.fromEntries(MEN_KEYS.map((k) => [k, cs.stats[k] ?? 0])) as unknown as MenStats;
+function scaleCategory<T>(
+  cs: typeof CHARACTER_STATS[string],
+  keys: (keyof T)[],
+  frac: number,
+  baseSeed: string,
+): T {
+  const result: Record<string, number> = {};
+  for (const k of keys) {
+    const statKey = k as string;
+    result[statKey] = scaleStatValue((cs.stats as any)[statKey] ?? 0, frac, baseSeed, statKey);
+  }
+  return result as unknown as T;
 }
 
 export function generateStatsForRarity(
@@ -63,25 +81,21 @@ export function generateStatsForRarity(
   const cs = CHARACTER_STATS[characterId];
   if (!cs) throw new Error(`CharacterStats not found: ${characterId}`);
 
-  const jitter = Math.max(-JITTER, Math.min(JITTER, Math.round(seededGaussianNoise(seed + '-jit', seed + '-jit2') * JITTER)));
-  const ovr = Math.max(1, Math.min(99, Math.round(cs.base * FRAC[rarity] + jitter)));
+  const frac = FRAC[rarity];
 
-  const phy = extractPhy(cs);
-  const men = extractMen(cs);
+  const ovrJitter = Math.max(-JITTER, Math.min(JITTER,
+    Math.round(seededGaussianNoise(seed + '-jit', seed + '-jit2') * JITTER)
+  ));
+  const ovr = Math.max(1, Math.min(99, Math.round(cs.base * frac + ovrJitter)));
+
+  const baseSeed = seed + '-' + characterId + '-' + rarity;
 
   if (cs.isGK) {
     return {
       tec: null,
-      gk: {
-        reflexes: cs.stats.reflexes ?? 0,
-        handling: cs.stats.handling ?? 0,
-        aerialReach: cs.stats.aerialReach ?? 0,
-        commandArea: cs.stats.commandArea ?? 0,
-        kicking: cs.stats.kicking ?? 0,
-        rushingOut: cs.stats.rushingOut ?? 0,
-      },
-      phy,
-      men,
+      gk: scaleCategory<GkStats>(cs, GK_KEYS, frac, baseSeed),
+      phy: scaleCategory<PhyStats>(cs, PHY_KEYS, frac, baseSeed),
+      men: scaleCategory<MenStats>(cs, MEN_KEYS, frac, baseSeed),
       setPiece: null,
       tailleCm: cs.tailleCm,
       poidsKg: cs.poidsKg,
@@ -91,25 +105,11 @@ export function generateStatsForRarity(
   }
 
   return {
-    tec: {
-      passe: cs.stats.passe ?? 0,
-      tir: cs.stats.tir ?? 0,
-      dribble: cs.stats.dribble ?? 0,
-      centre: cs.stats.centre ?? 0,
-      tacle: cs.stats.tacle ?? 0,
-      controle: cs.stats.controle ?? 0,
-      jeu_de_tete: cs.stats.jeu_de_tete ?? 0,
-      technique: cs.stats.technique ?? 0,
-    },
+    tec: scaleCategory<TecStats>(cs, TEC_KEYS, frac, baseSeed),
     gk: null,
-    phy,
-    men,
-    setPiece: {
-      cf: cs.stats.cf ?? 0,
-      corners: cs.stats.corners ?? 0,
-      penalty: cs.stats.penalty ?? 0,
-      longThrows: cs.stats.longThrows ?? 0,
-    },
+    phy: scaleCategory<PhyStats>(cs, PHY_KEYS, frac, baseSeed),
+    men: scaleCategory<MenStats>(cs, MEN_KEYS, frac, baseSeed),
+    setPiece: scaleCategory<SetPieceStats>(cs, SP_KEYS, frac, baseSeed),
     tailleCm: cs.tailleCm,
     poidsKg: cs.poidsKg,
     piedPrefere: cs.piedPrefere,

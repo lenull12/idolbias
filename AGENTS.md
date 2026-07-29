@@ -1,37 +1,110 @@
-# IdolBias — Gacha de Photocards d'Idols Virtuelles
+# IdolBias — Football Gacha Game
 
-> **Domaine :** idolbias.com  
-> **Tagline :** *Where idols come to life. Your next bias, one pull away.*  
-> **Statut :** MVP (pré-lancement)
+> **Domaine :** idolbias.com
+> **Tagline :** *Where idols come to life. Your next bias, one pull away.*
+> **Statut :** MVP (pré-lancement) — Pivot football effectué juillet 2026
 
 ---
 
 ## Concept
 
-Plateforme de collection de photocards digitales d'idols K-pop **fictives** (personnages originaux, pas de vraies idols).  
-Système de gacha avec crédits in-app, trading P2P, réseau social intégré, et musique générée par IA.
+Jeu de cartes gacha football féminin (inspiration Olive & Tom). 33 joueuses réparties en 3 nations (Argentine, Japon, Allemagne). Collection de cartes avec raretés, stats individuelles, système de gacha, et moteur de match spatial.
 
----
+## Système de Jeu
 
-## Univers Artistique
+### Architecture Stats
+- **22 stats OUTFIELD** : 6 PHY + 6 MEN + 6 TECH + 4 SET-PIECE
+- **18 stats GK** : 6 PHY + 6 MEN + 6 TECH GK
+- TECH split exclusif OUTFIELD vs GK
+- Scale : 1-99
 
-- **Style visuel :** Illustrious SDXL semi-realistic
-- **Groupes au lancement :** 4 prévus (2M + 2F), 1 actif (VICIOUS)
-- **Membres par groupe :** 4 à 7
-- **Chaque groupe a :** concept visuel distinct, lore, label fictif, biographie
-- **Membres :** nom, âge, rôle (leader, vocal, dance...), personnalité, couleur associée
-- **Consistance des visages :** LoRA par personnage (IP-Adapter / face swap en backup)
-- **Cartes :** bordures de rareté, effet holo, éditions limitées
+### 12 Postes
+GK, RB, LB, CB, CDM, CM, CAM, LM, RM, LW, RW, ST
+SS = rôle FM (second_striker), pas un poste
+
+### 5 Styles RPS
+Percussion / Vista / Pressing / Élévation / Sang-froid
+
+### Génération Stats (System B)
+- **Base** : saisie manuelle dans Excel, capée 93
+- **OVR par rareté** : `OVR = min(99, round(base × FRAC + jitter))`, jitter ±3
+  - FRAC : common 0.78 / rare 0.85 / epic 0.91 / legendary 1.00 / secret 1.12
+- Pipeline : Excel → `_export_excel_to_ts.py` → `src/data/characterStats.ts`
+
+### Tirage 2 Étapes
+- Perso d'abord (STAR_PERSO_BASE=0.15, BANNER_FEATURED_SHARE=0.60, PITY_PERSO=30)
+- Rareté ensuite (HARD_PITY=50 → legendary+)
+- Pack = 5 cartes. Bundle 5 packs −20%.
+
+### Raretés & Sérialisation
+- common (50%) → rare (30%) → epic (14%) → legendary (5%) → secret (1%)
+- Serial cosmétique sur toutes les raretés
+- Mint caps : legendary=1000, secret=100, autres illimitées
+- Cap full → serial=null (pas de blocage)
+
+## Match Engine (v0.2)
+
+### Architecture
+- **Modèle spatial 100×100** : ballon en (x,y), 4 phases (relance→construction→milieu→progression→finition)
+- **~60 micro-actions/match**, 18-24 séquences de possession
+- **Résolution** : sigmoïde `1/(1+exp(-k*(attack-defense)))` avec ZONE_K=0.20
+- **Sélection** par proximité × zoneMatch(position, zone) × implication × roam
+
+### Fonctionnalités Implémentées
+- Forme du jour PES-style (5 niveaux, −6% à +6%)
+- Momentum post-but (+5% stats 5 min)
+- Fatigue catégorielle (PHY 1.4 / MEN 0.8 / TEC 0.6 / SP 0.4)
+- Chaîne centre→tête
+- Actions de génie (flair, succès 85-95%)
+- RPS (5 styles, bonus 1.1× en avantage)
+- Hors-jeu (probabiliste, rare)
+- Cartons (jaune, 2e jaune, rouge direct + remplacement GK)
+- Événements rares (frappe lointaine 5%, erreur 2%)
+- Penalty / Coup franc / Corner
+- Contre-attaque (space behind > 10)
+- Touche (long throw 3% si >70)
+- xG-like (distance × angle)
+- 4 sliders tactiques : mentality, tempo, directness, ligne défensive
+- Rôles FM (poacher, false_nine, box_to_box, regista, etc.)
+
+### Limitations Actuelles
+- Trop stat-dépendant (comparateur de stats, pas simulateur de foot)
+- Tests uniquement manuels (0 fichier .test.ts)
+- Hors-jeu inopérant avec modèle spatial actuel
+- Aucun système d'événements narratifs
+
+## Match Engine (v0.2) — Détails Techniques
+
+### Phases de Possession
+```
+relance (y≤20) → construction (y≤40) → milieu (y≤60) → progression (y≤80) → finition (y≤100)
+```
+
+### Poids par Zone (Attaque)
+| Zone | Stats Clés |
+|------|-----------|
+| relance | passe 2.0, controle 1.5, decision 1.5 |
+| construction | passe 2.0, controle 1.5, decision 1.5, dribble 1.0 |
+| milieu | passe 1.5, dribble 1.5, controle 1.2, decision 1.2 |
+| progression | dribble 2.0, vitesse 1.5, acceleration 1.5, centre 1.0 |
+| finition | tir 2.0, sangFroid 1.5, detente 1.0, decision 1.0 |
+
+### Poids par Zone (Défense)
+| Zone | Stats Clés |
+|------|-----------|
+| relance | positionnement 1.5, tacle 1.0, anticipation 1.0 |
+| construction | positionnement 1.5, tacle 1.5, anticipation 1.2 |
+| milieu | tacle 1.5, anticipation 1.5, positionnement 1.2 |
+| progression | tacle 1.5, positionnement 1.5, vitesse 1.0 |
+| finition | anticipation 1.5, positionnement 1.5, agilite 1.2 |
+
+### GK Weights
+- **GK_ATTACK** : kicking/decision/sangFroid en relance/construction
+- **GK_DEFENSE** : reflexes/handling/commandArea/aerialReach en finition (1.0-2.0). Vides en relance/construction (corrigé)
 
 ## Économie & Monétisation
 
-- **Monnaie in-app :** Gems (achat en €) + Tickets (gratuits via missions) + Dust (craft)
-- **1 pull = 1 ticket ou gemme selon le pack**
-- **Raretés :** Common (50%) → Rare (30%) → Epic (14%) → Legendary (5%) → Secret (1%)
-- **Pool pré-généré :** pas de génération en temps réel
-
-### Gem Shop (6 packs)
-
+### Gem Shop (6 Packs)
 | Prix | Gems | Bonus | 💎/€ |
 |------|------|-------|------|
 | 1,99€ | 200 | 0% | 100 |
@@ -41,38 +114,20 @@ Système de gacha avec crédits in-app, trading P2P, réseau social intégré, e
 | 49,99€ | 6 500 | +30% | 130 |
 | 99,99€ | 14 000 | +40% | 140 ★ BEST VALUE |
 
-### Packs de cartes
-
-- Chaque set contient 40 cartes (10 par membre × 4 membres)
+### Packs de Cartes
 - Packs achetables en tickets ou gems
-- 5 cartes par pull, raretés poolées selon les drop rates du pack
+- 5 cartes par pull (CARDS_PER_PACK = 5)
+- Bundle 5 packs = −20%
 - Packs standards, limited, discount selon les events
 
-## Trading & Marketplace
+### Trading
+- Échange direct P2P dans WorkshopView
+- Fusion : Dust → carte
+- Marketplace (V2) : commission 5-10%
 
-- **Échange direct P2P** dans WorkshopView (créer/annuler/accepter des offres)
-- **Fusion :** 5 Common → 1 pull Rare (craft), désenchantement en dust
-- **Pas de cash-out :** impossible de revendre contre de l'argent réel
-- **Marketplace (V2) :** plus tard avec commission 5-10%
+## Architecture Technique
 
-## Réseau Social Intégré
-
-- **Feed Instagram-like** : posts d'idols, likes, commentaires
-- **Cosmo Room** : journal intime par membre, threads privés + mur public
-- **Follow** : abonnement aux membres pour feed personnalisé
-- **Profils utilisateurs publics** : collection, badges, achievements, statistiques
-- **Messagerie (V2)** : plus tard
-
-## Système de Missions
-
-- **Daily :** 4 missions pickées aléatoirement depuis un pool de 12, reset chaque jour (minuit UTC)
-- **Weekly :** 4 missions pickées depuis un pool de 8, reset chaque lundi
-- **Lifetime / Achievements :** paliers progressifs (collection, fan level, login)
-- **Events :** missions limitées avec récompenses spéciales
-- **Timer de reset** visible dans MissionsView
-
-## Stack Technique
-
+### Stack
 | Couche | Technologie |
 |--------|-------------|
 | Frontend | Next.js 16 (App Router) + Tailwind CSS 4 |
@@ -82,135 +137,76 @@ Système de gacha avec crédits in-app, trading P2P, réseau social intégré, e
 | Paiement | Stripe (Checkout Sessions + Webhooks) |
 | Emails | Resend (reset password) |
 | Stockage | Cloudflare R2 |
-| Génération images | ComfyUI + Illustrious SDXL (pool pré-généré local) |
-| Génération musique | ACE-Step (local) |
-| PWA | Intégré Next.js (manifest.json) |
+| Génération images | ComfyUI + Illustrious / SD.Next (Vlad Mandic) |
 | Déploiement | Cloudflare Workers via wrangler + OpenNext |
+
+### Structure Projet
+```
+src/
+├── app/api/          # Routes API (pack, missions, shop, auth, market, player...)
+├── data/
+│   ├── characterStats.ts  # AUTO-GEN from Excel — stats des 33 persos
+│   └── footballCards.ts   # SOURCE OF TRUTH — personnages, prints, packs, drop rates
+├── db/
+│   ├── footballSchema.ts  # Tables football (card_instances, card_prints, skill_cards...)
+│   └── schema.ts          # Tables core (players, wallets, progression, owned_cards...)
+├── lib/
+│   ├── gachaEngine.ts     # Tirage 2 étapes (personnage → rareté)
+│   ├── statGenerator.ts   # Application System B (FRAC × base + jitter)
+│   ├── matchEngine.ts     # Moteur de match spatial (1500 lignes)
+│   ├── pullConfig.ts      # CARDS_PER_PACK, BUNDLE_DISCOUNT, HARD_PITY
+│   └── gameConfig.ts      # Missions, raretés, craft, strea
+```
+
+## Roster Actuel (33 Joueuses)
+
+### Argentine (11)
+Soledad Díaz (ST), Valentina Giménez (ST), Renata Navarro (LM), Catalina Navarro (RM), Martina Romero (CDM), Roxy Cabrera (CM), Celeste Benítez (RB), Melina Soria (LB), Pilar Roldán (CB), Mercedes Pérez (CB), Esperanza Galván (GK)
+
+### Japon (11)
+Karen Himekami (ST), Shiori Saonji (CAM), Reika Shinomiya (LW), Miyabi Kirishima (RW), Hina Tsukiyomi (CDM), Hana Kamishiro (CDM), Momo Hasegawa (LB), Rin Morishita (RB), Yuriko Ōtake (CB), Aya Mishima (CB), Hinata Shigaki (GK)
+
+### Allemagne (11)
+Valerie Weiss (ST), Hilda Schneider (ST), Lieselotte Schwarz (CAM), Klara Richter (CAM), Greta von Kaiser (CDM), Sigrid Lindner (CDM), Marlene Weber (RB), Astrid Vogel (LB), Ilse Wallner (CB), Greta Hoffmann (CB), Brunhilde Jaeger (GK)
 
 ## Déploiement
 
 ```bash
 cd ~/idolbias && bash scripts/deploy.sh
 ```
-
 Pas de Cloudflare Pages — utilisation de `wrangler deploy` avec OpenNext pour le build worker.
 
-## Fonctionnalités Implémentées
+## Bugs Connus à Corriger (Audit juillet 2026)
 
-### Core
-- [x] Stripe Gem Shop (6 packs, waiver modal, webhook)
-- [x] Pull de packs avec animation hold-to-open + swipe-to-reveal
-- [x] Collection visible sur profil (Binder, My Cards, Catalogue)
-- [x] Design system Y2K : hard borders 2px, box-shadow, holo gradients
+### 🔴 Critique
+- **statGenerator.ts** : les stats individuelles (tec/phy/men/gk/setPiece) ne sont PAS scalées par FRAC[rarity]. Common et Secret ont les mêmes stats de jeu. Seul l'OVR d'affichage change.
+- **OVR_BAND jamais appliqué** : `clampOVRToRarityBand()` existe dans footballSchema.ts mais n'est appelé nulle part.
+- **lifetime/claim** : `collect_legendary` compte les MIL (position) au lieu des legendary (rareté). `collect_secret` compte les ATT. Copier-coller raté.
 
-### Auth & Comptes
-- [x] Google OAuth (Better Auth)
-- [x] Email + mot de passe (inscription, connexion)
-- [x] Reset password via Resend (template email pro)
-- [x] Guest players (cookie `idolbias_player_id`)
-- [x] Link OAuth ↔ guest player
-- [x] Delete account (supprime toutes les données)
+### 🟠 Élevé
+- **lifetime/claim** : pas de SQL guard contre le double-claim concurrent (JS check only).
+- **player/claim-gift** : pas de `WHERE welcomePackClaimedAt IS NULL` sur l'update.
+- **market-transfer/list** : TOCTOU (SELECT → INSERT sans contrainte UNIQUE DB) + buy ne vérifie pas que la carte appartient toujours au vendeur.
 
-### Collection
-- [x] IndexCards (catalogue complet avec filtres)
-- [x] BinderView + SetCard (progression par set)
-- [x] BinderAlbumView (drill-down dans un set, cartes par membre, pagination)
-- [x] MyCardsView (cartes possédées, favoris localStorage, filtres)
-- [x] SetCompletion (modal avec confettis + rewards quand un set est complet)
-- [x] PhotoCard (tilt 3D, swipe-to-flip, zoom overlay, effets par rareté)
+### 🟡 Moyen
+- **gachaEngine.ts** : print fallback peut rétrograder silencieusement une pity garantie. `continue` peut rendre un pack x5 avec <5 cartes.
+- `_progress` paramètre inutilisé dans generatePull.
 
-### Missions
-- [x] Daily pool (12 missions, 4 pickées par jour avec poids)
-- [x] Weekly pool (8 missions, 4 pickées par semaine)
-- [x] Achievements / lifetime tiers
-- [x] Timer de reset (daily + weekly)
-- [x] Difficulté (pastille verte/orange/rouge)
-- [x] Bump calls pour toutes les actions
+### 🟢 Mineur
+- FAQ page : toutes les réponses "TODO"
+- futConfig.ts : chemins d'assets TODO
 
-### Social
-- [x] FeedView (posts, pagination, mode For You / Following)
-- [x] Likes, commentaires
-- [x] Follow / unfollow
-- [x] Idol profiles
-- [x] Cosmo Room (public wall + private thread)
-
-### Events
-- [x] Tables `events` + `event_participation`
-- [x] `/api/events/active`
-- [x] Rate-up dans le gacha (multiplicateur, raretés ciblées)
-- [x] Collection events (target pack, claim reward)
-- [x] EventCountdown component
-- [x] Event missions dans le pool
-
-### Workshop
-- [x] Désenchantement (cartes → dust)
-- [x] Craft (dust → carte aléatoire d'une rareté)
-- [x] Trading P2P (offres, acceptation, annulation)
-
-### UI/UX
-- [x] PullOverlay responsive (desktop 5 cartes, mobile 1 par 1)
-- [x] Pages légales (Terms, Privacy, Notices)
-- [x] Animations (card reveal, confettis, confetti set completion)
-
-## Pages & Routes API
-
-### Pages
-- `/` — AppShell (vue principale avec tabs)
-- `/login` — Connexion (Google + email/mdp)
-- `/reset-password/[token]` — Reset de mot de passe
-- `/account` — Gestion compte (si déconnecté du shell)
-- `/legal/terms`, `/legal/privacy`, `/legal/notices`
-
-### Routes API principales
-- `POST /api/pack/open` — Pull de 5 cartes (atomic debit)
-- `POST /api/shop/checkout` — Création session Stripe
-- `POST /api/webhooks/stripe` — Webhook Stripe
-- `GET /api/missions/templates` — Templates daily/weekly/events
-- `GET /api/events/active` — Events actifs
-- `GET/POST /api/feed/*` — Feed social
-- `GET/POST /api/cosmo/*` — Cosmo Room
-- `GET /api/player` — Données joueur
-- `POST /api/sets/claim-reward` — Claim set completion
-- `GET /api/purchases` — Historique d'achat
-- `GET /api/auth/*` — Better Auth (login, signup, reset password)
-
-## Roadmap
-
-### MVP — Fait
-- [x] Domaine acheté (idolbias.com)
-- [x] Inscription OAuth (Google) + email/mdp
-- [x] Gem shop Stripe
-- [x] Pull de packs avec animation reveal
-- [x] Collection visible (Binder + Catalogue + My Cards)
-- [x] 1 groupe (VICIOUS, 4 membres, 2 sets × 40 cartes)
-- [x] Missions (daily/weekly/lifetime/events)
-- [x] Feed social + Cosmo Room
-- [x] Pages légales
-- [x] PWA
-
-### V1.1
-- [ ] 2e groupe
-- [ ] Marketplace (commission 5-10%)
-- [ ] Éditions limitées / events visuels
-- [ ] Messagerie entre utilisateurs
-
-## Décisions Prises
+## Décisions Prisses Récentes
 
 | Date | Décision |
 |------|----------|
-| 2026-06-25 | Choix du domaine : **idolbias.com** |
-| 2026-06-25 | Tagline validée |
-| 2026-06-25 | Modèle en crédits in-app (gems) |
-| 2026-06-25 | Pool pré-généré |
-| 2026-06-25 | 4 groupes au lancement (2M + 2F) |
-| 2026-06-25 | Style Illustrious SDXL semi-realistic |
-| 2026-06-25 | Compte maître réel unique sur les réseaux |
-| 2026-06-25 | Site + PWA d'abord, app native plus tard |
-| 2026-06-25 | Musiques sur YouTube |
-| 2026-07-07 | Switch DB : Supabase → Cloudflare D1 |
-| 2026-07-07 | Auth : Better Auth (Google + email) |
-| 2026-07-07 | Déploiement : wrangler, pas Cloudflare Pages |
-| 2026-07-07 | ORM : Drizzle |
-| 2026-07-13 | Discord retiré de l'auth (Google only) |
-| 2026-07-13 | Pricing gems : 1,99€ → 99,99€, bonus progressifs |
-| 2026-07-13 | Missions dynamiques avec pool |
+| 2026-07-23 | Pack = 5 cartes. Bundle 5 packs -20%. Abandon soft-pity. batchSeed anti-collision. |
+| 2026-07-23 | 12 postes (pas 13). SS = rôle FM. Group DB : toGroup() conversion. |
+| 2026-07-23 | Serial universel (toutes raretés). Mint cap = legendary 1000 / secret 100. Cap → serial=null |
+| 2026-07-23 | System B : FRAC 0.78/0.85/0.91/1.00/1.12 + jitter ±3 |
+| 2026-07-24 | Forme du jour PES-style (≠ grade). Grade = cosmétique (sera supprimé). |
+| 2026-07-24 | Match engine : trop stat-dépendant. Priorité : forme, k variable, événements rares. |
+| 2026-07-24 | Hors-jeu implémenté puis abandonné (incompatible modèle spatial). |
+| 2026-07-24 | Blessures/cartons mis de côté. |
+| 2026-07-25 | Allemagne ajoutée (33 joueuses). Plancher de chance rejeté. Ciblage de stars rejeté. |
+| 2026-07-25 | Phase 6b : technique (meta-stat), workRate, flair, concentration, complementBonus. |

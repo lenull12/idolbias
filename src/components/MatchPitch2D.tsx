@@ -28,7 +28,7 @@ function ballBezier(from: { x: number; y: number }, to: { x: number; y: number }
   return { x, y };
 }
 
-function eventLabel(e: any, homeLabel: string, awayLabel: string, homeTeamId: string): string {
+export function eventLabel(e: any, homeLabel: string, awayLabel: string, homeTeamId: string): string {
   const teamLabel = e.team === homeTeamId ? homeLabel : awayLabel;
   switch (e.type) {
     case "goal":

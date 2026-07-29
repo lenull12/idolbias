@@ -13,7 +13,7 @@ import { getPackInfo, getPackDropRates, getAllPacks } from "@/data/footballCards
 import { RARITY_ORDER } from "@/lib/gameConfig";
 import { NATION_MAP } from "@/lib/futConfig";
 import { CARDS_PER_PACK } from "@/lib/pullConfig";
-import { FRAC } from "@/lib/statGenerator";
+// FRAC import removed — stats already scaled server-side (Phase 7)
 
 const RARITY_COLORS: Record<string, string> = {
   common: "#3a3a4a", rare: "#5078d8", epic: "#7c3aed", legendary: "#c8960e", secret: "#ff69b4",
@@ -35,18 +35,23 @@ const SWIPE_THRESHOLD = 60;
 const HOLD_DURATION = 1800;
 
 function aggregateStats(card: ServerCard): { tec: number; phy: number; men: number } {
-  const frac = FRAC[card.rarity] ?? 1;
-  const scale = (vals: number[]) => {
-    const avgRaw = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
-    return Math.max(1, Math.min(99, Math.round(avgRaw * frac)));
-  };
+  // Solution B — stats déjà scalées côté serveur (Phase 7).
+  // On normalise les moyennes TEC/PHY/MEN pour qu'elles soient
+  // proportionnelles à l'OVR, tout en conservant le profil (tec > phy > men).
   const clean = (o: Record<string, any> | null) =>
     Object.values(o ?? {}).filter((v): v is number => typeof v === "number");
-  return {
-    tec: scale(clean(card.gkStats ?? card.tecStats)),
-    phy: scale(clean(card.phyStats)),
-    men: scale(clean(card.menStats)),
-  };
+  const avg = (vals: number[]) =>
+    vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 50;
+
+  const rawTec = avg(clean(card.gkStats ?? card.tecStats));
+  const rawPhy = avg(clean(card.phyStats));
+  const rawMen = avg(clean(card.menStats));
+
+  const rawAvg = (rawTec + rawPhy + rawMen) / 3;
+  const ratio = rawAvg > 0 ? Math.max(0.3, Math.min(3, card.ovr / rawAvg)) : 1;
+
+  const norm = (v: number) => Math.max(1, Math.min(99, Math.round(v * ratio)));
+  return { tec: norm(rawTec), phy: norm(rawPhy), men: norm(rawMen) };
 }
 
 function mapToFutCard(c: ServerCard): FutCardProps {

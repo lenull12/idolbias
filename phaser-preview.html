@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Engine — Phaser Preview</title>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a14;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; font-family: system-ui, sans-serif;
+  }
+  .container {
+    background: #12121e;
+    border-radius: 16px; padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px; color: #888; font-size: 13px;
+    text-transform: uppercase; letter-spacing: 2px;
+  }
+  .header .score {
+    font-size: 32px; font-weight: 800; color: #fff;
+    letter-spacing: 4px;
+  }
+  .header .team { display: flex; align-items: center; gap: 8px; }
+  .header .team .badge {
+    width: 28px; height: 28px; border-radius: 50%; display: inline-block;
+  }
+  canvas { display: block; border-radius: 10px; }
+  .info {
+    display: flex; gap: 20px; margin-top: 12px;
+    font-size: 12px; color: #666; justify-content: center;
+  }
+  .info span { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="team">
+      <span class="badge" style="background:linear-gradient(135deg,#75aadb,#4a7db5)"></span>
+      <span style="color:#aac8f0">ARGENTINE</span>
+    </div>
+    <div class="score"><span id="h">0</span> : <span id="a">0</span></div>
+    <div class="team">
+      <span style="color:#f0c8a0">JAPON</span>
+      <span class="badge" style="background:linear-gradient(135deg,#f0c8a0,#d4a070)"></span>
+    </div>
+  </div>
+  <div id="game"></div>
+  <div class="info">
+    <span><span class="dot" style="background:#75aadb"></span> Argentine</span>
+    <span><span class="dot" style="background:#f0c8a0"></span> Japon</span>
+    <span id="ball-pos">⚽ (50, 92)</span>
+    <span id="phase">Phase : engagement</span>
+  </div>
+</div>
+
+<script>
+// ─── Phaser match demo ─────────────────────────────────────────────
+const W = 620, H = 420;
+
+function makeTeam(n, color, baseY) {
+  const players = [];
+  // Formation 4-3-3 simplifiée
+  const positions = [
+    { x: 50, y: 92, role: 'GK' },
+    { x: 20, y: 72, role: 'LB' },
+    { x: 38, y: 76, role: 'CB' },
+    { x: 62, y: 76, role: 'CB' },
+    { x: 80, y: 72, role: 'RB' },
+    { x: 28, y: 50, role: 'LM' },
+    { x: 50, y: 46, role: 'CM' },
+    { x: 72, y: 50, role: 'RM' },
+    { x: 22, y: 20, role: 'LW' },
+    { x: 50, y: 14, role: 'ST' },
+    { x: 78, y: 20, role: 'RW' },
+  ];
+  for (let i = 0; i < 11; i++) {
+    const p = positions[i];
+    const name = n === 'home' ? namesHome[i] : namesAway[i];
+    players.push({
+      instanceId: `${n}-${i}`,
+      name, number: 1 + i,
+      baseX: p.x, baseY: p.y,
+      x: p.x, y: p.y,
+      targetX: p.x, targetY: p.y,
+      color, role: p.role,
+      team: n,
+      isGK: p.role === 'GK',
+    });
+  }
+  return players;
+}
+
+const namesHome = ['Esperanza','Melina','Mercedes','Pilar','Celeste','Renata','Roxy','Catalina','Reika','Soledad','Miyabi'];
+const namesAway = ['Hinata','Momo','Aya','Yuriko','Rin','Hina','Shiori','Hana','Karen','Hanako','Miyabi'];
+
+let homePlayers = makeTeam('home', 0x75aadb, 80);
+let awayPlayers = makeTeam('away', 0xf0c8a0, 20);
+let allPlayers = [...homePlayers, ...awayPlayers];
+
+// Ball
+let ball = { x: 50, y: 92, targetX: 50, targetY: 92 };
+let possession = 'home';
+let phase = 'construction';
+let minute = 0;
+let events = [];
+let score = { home: 0, away: 0 };
+
+// ─── Simulateur rapide (version allégée du match engine) ────────────
+
+const ZONES = [
+  { name: 'relance', yMin: 0, yMax: 25 },
+  { name: 'construction', yMin: 25, yMax: 45 },
+  { name: 'milieu', yMin: 45, yMax: 65 },
+  { name: 'progression', yMin: 65, yMax: 82 },
+  { name: 'finition', yMin: 82, yMax: 100 },
+];
+
+function getZone(y) {
+  for (const z of ZONES) if (y >= z.yMin && y < z.yMax) return z.name;
+  return 'finition';
+}
+
+let tickCount = 0;
+let possessionSteps = 0;
+const MIN_STEPS = 2;
+
+function simulateTick() {
+  tickCount++;
+  minute = Math.min(90, tickCount * 0.5);
+
+  const attacking = possession === 'home' ? homePlayers : awayPlayers;
+  const defending = possession === 'home' ? awayPlayers : homePlayers;
+  const zone = getZone(ball.y);
+
+  // Sélection actrice la plus proche du ballon
+  let actress = null;
+  let bestDist = 999;
+  for (const p of attacking) {
+    if (p.isGK && zone !== 'relance' && zone !== 'finition') continue;
+    const d = Math.hypot(p.x - ball.x, p.y - ball.y);
+    if (d < bestDist) { bestDist = d; actress = p; }
+  }
+
+  // Progression
+  const success = Math.random() < 0.65 + tickCount * 0.001;
+  const gain = 8 + Math.random() * 12;
+
+  if (zone === 'finition' && success) {
+    // Tir
+    const onTarget = Math.random() < 0.4;
+    if (onTarget) {
+      const scored = Math.random() < 0.25;
+      if (scored) {
+        score[possession]++;
+        events.push({ minute: Math.round(minute), type: 'goal', team: possession, player: actress?.name ?? '?' });
+        ball.x = 50; ball.y = 92;
+        possession = possession === 'home' ? 'away' : 'home';
+        possessionSteps = 0;
+        return;
+      }
+    }
+    // Sortie → corner ou dégagement
+    ball.x = 30 + Math.random() * 40;
+    ball.y = 92;
+    possession = possession === 'home' ? 'away' : 'home';
+    possessionSteps = 0;
+    return;
+  }
+
+  if (success) {
+    ball.y = Math.min(100, ball.y + gain);
+    ball.x += (Math.random() - 0.5) * 14;
+    ball.x = Math.max(5, Math.min(95, ball.x));
+    possessionSteps++;
+  } else {
+    possessionSteps++;
+    if (possessionSteps >= MIN_STEPS) {
+      // Turnover
+      ball.y = 100 - ball.y;
+      possession = possession === 'home' ? 'away' : 'home';
+      possessionSteps = 0;
+      events.push({ minute: Math.round(minute), type: 'turnover', team: possession });
+    } else {
+      ball.y = Math.max(5, ball.y - 3);
+    }
+  }
+
+  // Déplacement des joueurs vers le ballon
+  for (const p of allPlayers) {
+    if (p.isGK) {
+      p.targetX = 50;
+      p.targetY = p.team === 'home' ? 92 : 8;
+      p.targetY += (ball.y - p.targetY) * 0.05;
+    } else {
+      const roleSpread = { GK: 0, LB: 10, CB: 5, RB: 10, LM: 15, CM: 12, RM: 15, LW: 20, ST: 18, RW: 20 };
+      const spread = roleSpread[p.role] ?? 10;
+      p.targetX = p.baseX + (ball.x - p.baseX) * 0.2 + (Math.random() - 0.5) * spread;
+      p.targetY = p.baseY + (ball.y - p.baseY) * 0.15 + (Math.random() - 0.5) * spread * 0.4;
+
+      if (p.team === possession) {
+        // Attaquants avancent
+        if (p.role === 'ST' || p.role === 'LW' || p.role === 'RW') {
+          p.targetY = Math.min(p.baseY + 5, p.targetY + 3);
+        }
+        if (p.role === 'CM' || p.role === 'LM' || p.role === 'RM') {
+          p.targetY = Math.min(p.baseY + 8, p.targetY + 2);
+        }
+      } else {
+        // Défenseurs reculent
+        if (p.role === 'CB' || p.role === 'LB' || p.role === 'RB') {
+          p.targetY = Math.max(p.baseY - 5, p.targetY - 3);
+        }
+        if (p.role === 'CDM') p.targetY = Math.max(p.baseY - 3, p.targetY - 2);
+      }
+
+      p.targetX = Math.max(2, Math.min(98, p.targetX));
+      p.targetY = Math.max(2, Math.min(98, p.targetY));
+    }
+  }
+}
+
+// ─── Phaser Game ────────────────────────────────────────────────────
+const config = {
+  type: Phaser.AUTO,
+  width: W, height: H,
+  parent: 'game',
+  backgroundColor: '#1a3d1a',
+  scene: {
+    create: function() {
+      const g = this.add.graphics();
+      this.gfx = g;
+
+      // Labels OVR sur les joueurs
+      this.labels = [];
+      for (let i = 0; i < allPlayers.length; i++) {
+        const txt = this.add.text(0, 0, allPlayers[i].number.toString(), {
+          fontSize: '9px', fontFamily: 'monospace',
+          color: '#fff', fontStyle: 'bold',
+          stroke: '#000', strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(10);
+        this.labels.push(txt);
+      }
+
+      this.ballLabel = this.add.text(0, 0, '⚽', {
+        fontSize: '16px',
+      }).setOrigin(0.5).setDepth(15);
+
+      this.eventsLabel = this.add.text(W/2, H - 10, '', {
+        fontSize: '11px', fontFamily: 'system-ui',
+        color: '#ffffffcc', stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(20);
+
+      this.timer = 0;
+      this.eventTimer = 0;
+      this.pauseTicks = 0;
+      this.lastEvent = '';
+    },
+    update: function(time, delta) {
+      const g = this.gfx;
+      g.clear();
+
+      // ── Terrain ──
+      g.fillStyle(0x2d5a2d, 1);
+      g.fillRect(0, 0, W, H);
+
+      g.lineStyle(1.5, 0xffffff, 0.2);
+      g.strokeRect(W*0.04, H*0.04, W*0.92, H*0.92);
+
+      // Ligne médiane
+      g.beginPath(); g.moveTo(W*0.04, H/2); g.lineTo(W*0.96, H/2); g.strokePath();
+
+      // Cercle central
+      g.strokeCircle(W/2, H/2, H*0.12);
+      g.fillStyle(0xffffff, 0.04); g.fillCircle(W/2, H/2, H*0.12);
+
+      // Surfaces
+      g.lineStyle(1, 0xffffff, 0.15);
+      g.strokeRect(W*0.15, H*0.02, W*0.70, H*0.14);
+      g.strokeRect(W*0.15, H*0.84, W*0.70, H*0.14);
+      g.strokeRect(W*0.25, H*0.06, W*0.50, H*0.08);
+      g.strokeRect(W*0.25, H*0.86, W*0.50, H*0.08);
+
+      // ── Simulation ──
+      this.timer += delta / 1000;
+      this.eventTimer += delta / 1000;
+
+      if (this.pauseTicks > 0) {
+        this.pauseTicks--;
+      } else {
+        if (this.timer > 0.15) {
+          this.timer = 0;
+          const prevScore = {...score};
+          simulateTick();
+
+          if (this.eventTimer > 1.0 && events.length > 0) {
+            const lastEv = events[events.length - 1];
+            const msg = lastEv.type === 'goal' ? `⚽ BUT! ${lastEv.player} (${minute}')`
+              : lastEv.type === 'turnover' ? `↺ Perte de balle (${minute}')`
+              : '';
+            if (msg && msg !== this.lastEvent) {
+              this.lastEvent = msg;
+              this.eventsLabel.setText(msg);
+              this.eventTimer = 0;
+              this.pauseTicks = 15;
+            }
+            if (score.home !== prevScore.home || score.away !== prevScore.away) {
+              document.getElementById('h').textContent = score.home;
+              document.getElementById('a').textContent = score.away;
+            }
+          }
+        }
+      }
+
+      // ── Mise à jour des positions (interpolation fluide) ──
+      const speed = 0.08;
+      for (const p of allPlayers) {
+        p.x += (p.targetX - p.x) * speed;
+        p.y += (p.targetY - p.y) * speed;
+      }
+      ball.x += (ball.targetX - ball.x) * speed * 2;
+      ball.y += (ball.targetY - ball.y) * speed * 2;
+
+      // Info
+      document.getElementById('ball-pos').textContent = `⚽ (${Math.round(ball.x)}, ${Math.round(ball.y)})`;
+      document.getElementById('phase').textContent = `Phase : ${getZone(ball.y)} · ${Math.round(minute)}'`;
+
+      // ── Dessin des joueurs ──
+      for (let i = 0; i < allPlayers.length; i++) {
+        const p = allPlayers[i];
+        const px = (p.x / 100) * W;
+        const py = (p.y / 100) * H;
+        const isAttacking = p.team === possession;
+        const r = p.isGK ? 8 : 7;
+
+        // Ombres
+        g.fillStyle(0x000000, 0.2);
+        g.fillCircle(px + 1, py + 2, r);
+
+        // Corps
+        g.fillStyle(p.color, 0.9);
+        g.fillCircle(px, py, r);
+
+        // Contour
+        g.lineStyle(1.5, isAttacking ? 0xffffff : 0x888888, isAttacking ? 0.7 : 0.4);
+        g.strokeCircle(px, py, r);
+
+        // Numéro dans le cercle
+        this.labels[i].setPosition(px, py);
+      }
+
+      // ── Balle ──
+      const bx = (ball.x / 100) * W;
+      const by = (ball.y / 100) * H;
+      this.ballLabel.setPosition(bx, by);
+
+      // ── Ligne d'événements ──
+
+      // ── Chronomètre ──
+      if (minute >= 90) {
+        this.eventsLabel.setText(`⏱️ FIN DU MATCH — ${score.home} - ${score.away}`);
+      }
+    }
+  }
+};
+
+const game = new Phaser.Game(config);
+</script>
+</body>
+</html>
